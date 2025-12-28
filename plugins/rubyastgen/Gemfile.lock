@@ -1,9 +1,9 @@
 GIT
   remote: https://github.com/appthreat/ruby_ast_gen.git
-  revision: 95111b8f97d2030ede3deef93b76c9502fea67ce
-  ref: v1.1.2
+  revision: e58f82cd4b3677fe03d60061aa58f7e221716ee2
+  ref: v1.2.0
   specs:
-    ruby_ast_gen (1.1.2)
+    ruby_ast_gen (1.2.0)
 
 GEM
   remote: https://rubygems.org/
@@ -28,9 +28,6 @@ DEPENDENCIES
   prism (~> 1.7)
   racc (~> 1.8.1)
   ruby_ast_gen!
-
-RUBY VERSION
-   ruby 3.4.4p34
 
 BUNDLED WITH
    2.6.7

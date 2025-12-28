@@ -1,0 +1,41 @@
+name: Node.js CI
+on:
+  push:
+    tags:
+    - 'v*'
+  pull_request:
+    branches: [ "main" ]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+    - uses: actions/checkout@v4
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '4.x'
+        bundler-cache: false
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: '25.x'
+        registry-url: 'https://registry.npmjs.org'
+        scope: '@appthreat'
+    - name: build
+      run: |
+        npm ci
+        bash build.sh
+        sudo npm install -g .
+        astgen --version
+        phpastgen --help
+        rbastgen --help
+        npm publish --dry-run
+    - name: publish
+      run: |
+        npm publish --provenance --access=public
+      if: startsWith(github.ref, 'refs/tags/')

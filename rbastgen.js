@@ -30,7 +30,7 @@ if (
   RUBY_ASTGEN_BIN = join(PARENT_NODE_PLUGINS_HOME, "bin", "ruby_ast_gen");
 }
 // Ruby version needed
-const RUBY_VERSION_NEEDED = "3.4.x";
+const RUBY_VERSIONS_NEEDED = ["3.4.x", "4.0.x"];
 function main(argvs) {
   const cwd = process.env.ATOM_CWD || process.cwd();
   argvs.splice(0, 0, RUBY_ASTGEN_BIN);
@@ -50,9 +50,16 @@ function main(argvs) {
       env.PATH = `${rubyBinDir}${delimiter}${env.PATH}`;
     }
   }
-  if (rubyCmd === "ruby" && !detectRuby(RUBY_VERSION_NEEDED)) {
+  let rubyFound = false;
+  for (const rubyVersion of RUBY_VERSIONS_NEEDED) {
+    if (rubyCmd === "ruby" && detectRuby(rubyVersion)) {
+      rubyFound = true;
+      break;
+    }
+  }
+  if (!rubyFound) {
     console.warn(
-      `Ruby ${RUBY_VERSION_NEEDED} is not installed! Set the environment variable "ATOM_RUBY_HOME" to the Ruby ${RUBY_VERSION_NEEDED} install directory.`
+      `Ruby is not installed! Set the environment variable "ATOM_RUBY_HOME" to the install directory. Supported versions: ${RUBY_VERSIONS_NEEDED}`
     );
     return false;
   }

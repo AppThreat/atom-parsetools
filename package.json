@@ -5,7 +5,7 @@
   "main": "./index.js",
   "type": "module",
   "scripts": {
-    "pretty": "prettier --write *.cjs *.js --trailing-comma=none",
+    "pretty": "prettier --write *.js --trailing-comma=none",
     "lint": "eslint *.mjs *.js"
   },
   "dependencies": {
