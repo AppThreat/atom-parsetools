@@ -262,34 +262,29 @@ const toEjsAst = (file) => {
   let arr = originalCode.split("");
   const scriptRegex = /(<script>)([\s\S]*?)(<\/script>)/gi;
   let match;
-
   while ((match = scriptRegex.exec(originalCode)) !== null) {
     const openStart = match.index;
     const openLen = match[1].length;
     arr[openStart] = "<";
     arr[openStart + 1] = "%";
-    for (let i = 2; i < openLen; i++) arr[openStart + i] = " ";
+    for (let i = 2; i < openLen; i++) {
+      arr[openStart + i] = " ";
+    }
     const closeStart = match.index + match[0].length - match[3].length;
     const closeLen = match[3].length;
     arr[closeStart] = "%";
     arr[closeStart + 1] = ">";
-    for (let i = 2; i < closeLen; i++) arr[closeStart + i] = " ";
+    for (let i = 2; i < closeLen; i++) {
+      arr[closeStart + i] = " ";
+    }
     const content = match[2];
     const contentOffset = openStart + openLen;
     const innerRegex = /(<%[=\-_#]?)([\s\S]*?)([-_#]?%>)/g;
     let innerMatch;
     while ((innerMatch = innerRegex.exec(content)) !== null) {
       const innerAbsStart = contentOffset + innerMatch.index;
-      if (innerMatch[1] === "<%" && innerMatch[3] === "-%>") {
-        for (let k = 0; k < innerMatch[0].length; k++)
-          arr[innerAbsStart + k] = " ";
-      } else {
-        for (let k = 0; k < innerMatch[1].length; k++)
-          arr[innerAbsStart + k] = " ";
-        const endDelimStart =
-          innerAbsStart + innerMatch[0].length - innerMatch[3].length;
-        for (let k = 0; k < innerMatch[3].length; k++)
-          arr[endDelimStart + k] = " ";
+      for (let k = 0; k < innerMatch[0].length; k++) {
+        arr[innerAbsStart + k] = " ";
       }
     }
   }
@@ -299,26 +294,55 @@ const toEjsAst = (file) => {
     const c = codeWithoutScriptTag[i];
     if (c === "\n" || c === "\r") out[i] = c;
   }
-
   const tagRegex = /(<%[=\-_#]?)([\s\S]*?)([-_#]?%>)/g;
   let tagMatch;
   while ((tagMatch = tagRegex.exec(codeWithoutScriptTag)) !== null) {
     const [fullMatch, openTag, content, closeTag] = tagMatch;
     if (openTag === "<%#" || content.trim().startsWith("include ")) continue;
-    const startIndex = tagMatch.index + openTag.length;
-    const endIndex = tagMatch.index + fullMatch.length - closeTag.length;
-    for (let k = startIndex; k < endIndex; k++) {
-      out[k] = codeWithoutScriptTag[k];
+    let processedContent = content.trim();
+    if (processedContent === "end") {
+      processedContent = "}";
+    } else if (processedContent === "else") {
+      processedContent = "} else {";
+    } else if (processedContent.startsWith("else if")) {
+      let sub = processedContent.substring(4).trim();
+      const controlMatch = sub.match(/^(if)\s+(?!\()(.+)$/);
+      if (controlMatch) {
+        sub = `if (${controlMatch[2]})`;
+      }
+      processedContent = `} else ${sub} {`;
+    } else {
+      const controlMatch = processedContent.match(
+        /^(if|while|for)\s+(?!\()(.+)$/
+      );
+      if (controlMatch) {
+        const keyword = controlMatch[1];
+        const condition = controlMatch[2];
+        processedContent = `${keyword} (${condition})`;
+      }
+      if (
+        /^(if|while|for|try|switch|catch)/.test(processedContent) &&
+        !processedContent.endsWith("{") &&
+        !processedContent.endsWith("}") &&
+        !processedContent.endsWith(";")
+      ) {
+        processedContent += " {";
+      }
     }
-    const trimmed = content.trim();
     const needsSemi =
-      trimmed.length > 0 &&
-      !trimmed.endsWith("{") &&
-      !trimmed.endsWith("}") &&
-      !trimmed.endsWith(";");
-
+      processedContent.length > 0 &&
+      !processedContent.endsWith("{") &&
+      !processedContent.endsWith("}") &&
+      !processedContent.endsWith(";");
     if (needsSemi) {
-      out[endIndex] = ";";
+      processedContent += ";";
+    }
+    const startIndex = tagMatch.index;
+    const maxLen = fullMatch.length;
+    for (let k = 0; k < processedContent.length; k++) {
+      if (k < maxLen) {
+        out[startIndex + k] = processedContent[k];
+      }
     }
   }
 
