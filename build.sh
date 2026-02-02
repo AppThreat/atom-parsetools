@@ -9,6 +9,7 @@ if command -v php >/dev/null 2>&1; then
   export COMPOSER_VENDOR_DIR=plugins
   php composer.phar require nikic/php-parser:5.7.0 --ignore-platform-reqs --optimize-autoloader
   rm composer.phar
+  mv composer.json composer.lock plugins/
 else
   echo "PHP plugins not built."
 fi
