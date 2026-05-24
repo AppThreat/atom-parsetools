@@ -22,7 +22,7 @@ const HELP_TEXT = `Options:
                                                             [default: "ast_out"]
   -t, --type     Project type. Default auto-detect
   -r, --recurse  Recurse mode suitable for mono-repos  [boolean] [default: true]
-      --tsTypes  Generate type mappings using the Typescript Compiler API
+      --tsTypes  Generate type mappings using the TypeScript Compiler API
                                                        [boolean] [default: true]
       --version  Show version number                                   [boolean]
   -h, --help     Show help                                             [boolean]`;
@@ -168,7 +168,18 @@ const parseShortOption = (args, rawArgs, index) => {
       continue;
     }
     if (option?.type === "boolean") {
-      setParsedOption(args, name, inlineValue ?? true);
+      if (inlineValue !== undefined) {
+        setParsedOption(args, name, inlineValue);
+      } else if (
+        !remainingLetters &&
+        rawArgs[index + 1] !== undefined &&
+        !isOptionToken(rawArgs[index + 1])
+      ) {
+        setParsedOption(args, name, rawArgs[index + 1]);
+        return index + 1;
+      } else {
+        setParsedOption(args, name, true);
+      }
       continue;
     }
     if (remainingLetters) {
