@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
 import { join, dirname } from "path";
-import yargs from "yargs";
-import { hideBin } from "yargs/helpers";
 import { parse } from "@babel/parser";
 import { parse as parseHermes } from "hermes-parser";
 import tsc from "typescript";
@@ -17,6 +15,214 @@ import {
 import { getAllFiles } from "@appthreat/atom-common";
 
 const ASTGEN_VERSION = "4.0.0";
+
+const HELP_TEXT = `Options:
+  -i, --src      Source directory                                 [default: "."]
+  -o, --output   Output directory for generated AST JSON files
+                                                            [default: "ast_out"]
+  -t, --type     Project type. Default auto-detect
+  -r, --recurse  Recurse mode suitable for mono-repos  [boolean] [default: true]
+      --tsTypes  Generate type mappings using the Typescript Compiler API
+                                                       [boolean] [default: true]
+      --version  Show version number                                   [boolean]
+  -h, --help     Show help                                             [boolean]`;
+
+const CLI_OPTIONS = {
+  src: { alias: "i", default: ".", type: "string" },
+  output: { alias: "o", default: "ast_out", type: "string" },
+  type: { alias: "t", type: "string" },
+  recurse: { alias: "r", default: true, type: "boolean" },
+  tsTypes: { default: true, type: "boolean" }
+};
+
+const CLI_ALIASES = Object.fromEntries(
+  Object.entries(CLI_OPTIONS)
+    .filter(([, option]) => option.alias)
+    .map(([name, option]) => [option.alias, name])
+);
+
+const normalizeOptionName = (name) =>
+  name.replace(/-([a-z])/g, (_, character) => character.toUpperCase());
+
+const isOptionToken = (value) => value?.startsWith("-") && value !== "-";
+
+const parseBooleanValue = (name, value) => {
+  if (value === undefined) {
+    return true;
+  }
+  if (typeof value === "boolean") {
+    return value;
+  }
+  const normalized = String(value).toLowerCase();
+  if (["true", "1", "yes", "y"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no", "n"].includes(normalized)) {
+    return false;
+  }
+  throw new Error(`Invalid boolean value for --${name}: ${value}`);
+};
+
+const setParsedOption = (args, name, value) => {
+  const normalizedName = normalizeOptionName(name);
+  const option = CLI_OPTIONS[normalizedName];
+  if (!option) {
+    args[normalizedName] = value ?? true;
+    return;
+  }
+  args[normalizedName] =
+    option.type === "boolean"
+      ? parseBooleanValue(normalizedName, value)
+      : value;
+};
+
+const parseLongOption = (args, rawArgs, index) => {
+  const token = rawArgs[index];
+  const noPrefix = token.startsWith("--no-");
+  const optionToken = token.slice(noPrefix ? 5 : 2);
+  const equalsIndex = optionToken.indexOf("=");
+  const rawName =
+    equalsIndex === -1 ? optionToken : optionToken.slice(0, equalsIndex);
+  const name = normalizeOptionName(rawName);
+  const inlineValue =
+    equalsIndex === -1 ? undefined : optionToken.slice(equalsIndex + 1);
+  const option = CLI_OPTIONS[name];
+
+  if (noPrefix) {
+    setParsedOption(args, name, false);
+    return index;
+  }
+  if (!option) {
+    if (inlineValue !== undefined) {
+      setParsedOption(args, name, inlineValue);
+    } else if (
+      rawArgs[index + 1] !== undefined &&
+      !isOptionToken(rawArgs[index + 1])
+    ) {
+      setParsedOption(args, name, rawArgs[index + 1]);
+      return index + 1;
+    } else {
+      setParsedOption(args, name, true);
+    }
+    return index;
+  }
+  if (option?.type === "boolean") {
+    if (inlineValue !== undefined) {
+      setParsedOption(args, name, inlineValue);
+    } else if (
+      rawArgs[index + 1] !== undefined &&
+      !isOptionToken(rawArgs[index + 1])
+    ) {
+      setParsedOption(args, name, rawArgs[index + 1]);
+      return index + 1;
+    } else {
+      setParsedOption(args, name, true);
+    }
+    return index;
+  }
+  if (inlineValue !== undefined) {
+    setParsedOption(args, name, inlineValue);
+    return index;
+  }
+  if (rawArgs[index + 1] === undefined || isOptionToken(rawArgs[index + 1])) {
+    throw new Error(`Missing value for --${rawName}`);
+  }
+  setParsedOption(args, name, rawArgs[index + 1]);
+  return index + 1;
+};
+
+const parseShortOption = (args, rawArgs, index) => {
+  const token = rawArgs[index];
+  const equalsIndex = token.indexOf("=");
+  const letters = token.slice(1, equalsIndex === -1 ? undefined : equalsIndex);
+  const inlineValue =
+    equalsIndex === -1 ? undefined : token.slice(equalsIndex + 1);
+
+  for (let letterIndex = 0; letterIndex < letters.length; letterIndex++) {
+    const letter = letters[letterIndex];
+    const name = CLI_ALIASES[letter] ?? letter;
+    const option = CLI_OPTIONS[name];
+    const remainingLetters = letters.slice(letterIndex + 1);
+
+    if (letter === "h") {
+      args.help = true;
+      continue;
+    }
+    if (!option) {
+      if (remainingLetters) {
+        setParsedOption(args, name, remainingLetters);
+        return index;
+      }
+      if (inlineValue !== undefined) {
+        setParsedOption(args, name, inlineValue);
+        return index;
+      }
+      if (
+        rawArgs[index + 1] !== undefined &&
+        !isOptionToken(rawArgs[index + 1])
+      ) {
+        setParsedOption(args, name, rawArgs[index + 1]);
+        return index + 1;
+      }
+      setParsedOption(args, name, true);
+      continue;
+    }
+    if (option?.type === "boolean") {
+      setParsedOption(args, name, inlineValue ?? true);
+      continue;
+    }
+    if (remainingLetters) {
+      setParsedOption(args, name, remainingLetters);
+      return index;
+    }
+    if (inlineValue !== undefined) {
+      setParsedOption(args, name, inlineValue);
+      return index;
+    }
+    if (rawArgs[index + 1] === undefined || isOptionToken(rawArgs[index + 1])) {
+      throw new Error(`Missing value for -${letter}`);
+    }
+    setParsedOption(args, name, rawArgs[index + 1]);
+    return index + 1;
+  }
+  return index;
+};
+
+const parseCliArgs = (argvs) => {
+  const rawArgs = argvs.slice(2);
+  const args = Object.fromEntries(
+    Object.entries(CLI_OPTIONS)
+      .filter(([, option]) => option.default !== undefined)
+      .map(([name, option]) => [name, option.default])
+  );
+  args._ = [];
+
+  for (let index = 0; index < rawArgs.length; index++) {
+    const token = rawArgs[index];
+    if (token === "--") {
+      args._.push(...rawArgs.slice(index + 1));
+      break;
+    }
+    if (token === "--help") {
+      args.help = true;
+      continue;
+    }
+    if (token === "--version") {
+      args.version = true;
+      continue;
+    }
+    if (token.startsWith("--")) {
+      index = parseLongOption(args, rawArgs, index);
+      continue;
+    }
+    if (token.startsWith("-") && token !== "-") {
+      index = parseShortOption(args, rawArgs, index);
+      continue;
+    }
+    args._.push(token);
+  }
+  return args;
+};
 
 const babelParserOptions = {
   sourceType: "unambiguous",
@@ -695,34 +901,12 @@ const start = async (options) => {
 };
 
 async function main(argvs) {
-  const args = yargs(hideBin(argvs))
-    .option("src", {
-      alias: "i",
-      default: ".",
-      description: "Source directory"
-    })
-    .option("output", {
-      alias: "o",
-      default: "ast_out",
-      description: "Output directory for generated AST json files"
-    })
-    .option("type", {
-      alias: "t",
-      description: "Project type. Default auto-detect"
-    })
-    .option("recurse", {
-      alias: "r",
-      default: true,
-      type: "boolean",
-      description: "Recurse mode suitable for mono-repos"
-    })
-    .option("tsTypes", {
-      default: true,
-      type: "boolean",
-      description: "Generate type mappings using the Typescript Compiler API"
-    })
-    .version(ASTGEN_VERSION)
-    .help("h").argv;
+  const args = parseCliArgs(argvs);
+
+  if (args.help) {
+    console.log(HELP_TEXT);
+    process.exit(0);
+  }
 
   if (args.version) {
     console.log(ASTGEN_VERSION);
