@@ -1,0 +1,291 @@
+
+=== Type Inference Baseline Report ===
+
+Generated: 2026-05-26T21:30:11.839Z
+Fixture Directory: /Users/prabhu/work/AppThreat/atom-parsetools/test-fixtures/projects/simple-js
+
+--- Metrics ---
+Total Variables: 446
+Types Inferred: 207
+Inference Rate: 46.41%
+Any Types: 16
+Primitive Types: 52
+Array Types: 24
+Function Types: 25
+Object Types: 0
+Complex Types: 48
+Literal Types: 15
+Union Types: 5
+
+--- Category Distribution ---
+  primitive: 52
+  complex: 48
+  other: 29
+  function: 25
+  array: 24
+  literal: 15
+  function_return_any: 7
+  union: 5
+  function_return_void: 2
+
+--- Top Type Distribution ---
+  number: 28
+  boolean: 14
+  number[]: 10
+  string: 8
+  function => any: 7
+  RegExp: 5
+  function => number: 4
+  { x: number; y: number; }: 3
+  { a: number; }: 3
+  "default": 3
+  unique symbol: 3
+  Promise<number>: 3
+  string[]: 3
+  "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function": 3
+  { a: { b: { c: number; }; }; }: 2
+  { value: number; }: 2
+  Error: 2
+  number | undefined: 2
+  symbol: 2
+  true: 2
+
+--- Per-File Breakdown ---
+
+File: /Users/prabhu/work/AppThreat/atom-parsetools/test-fixtures/projects/simple-js/es6-features.js
+  Total Variables: 112
+  Types Inferred: 100
+  Variables:
+    { name, age } (line 6): { name: string; age: number; }
+    { x, y, z = 10 } (line 7): { x: number; y: number; }
+    { a: renamedA } (line 8): { a: number; }
+    { nested: { deep } } (line 9): { nested: { deep: string; }; }
+    [first, second, third] (line 12): [number, number, number]
+    [a, b, ...rest] (line 13): [number, number, number, number, number]
+    [[nested1, nested2]] (line 14): [[number, number]]
+    { arr: [arrFirst, arrSecond] } (line 17): { arr: [string, string]; }
+    obj1 (line 20): { a: number; b: number; }
+    obj2 (line 21): { c: number; a: number; b: number; }
+    arr1 (line 22): number[]
+    arr2 (line 23): number[]
+    merged (line 24): { d: number; c: number; a: number; b: number; }
+    obj (line 27): { a: { b: { c: number; }; }; }
+    safe1 (line 28): { b: { c: number; }; }
+    safe2 (line 29): { c: number; }
+    safe3 (line 30): number
+    safeMethod (line 31): string
+    safeArray (line 32): number
+    val1 (line 35): "default"
+    val2 (line 36): "default"
+    val3 (line 37): ""
+    val4 (line 38): 0
+    val5 (line 39): false
+    logObj (line 42): { a: number; }
+    initial (line 67): Calculator
+    fetchData (line 77): function => Promise<{ data: number[]; }>
+    data (line 81): { data: number[]; }
+    dataArray (line 82): number[]
+    Days (line 102): { MONDAY: number; TUESDAY: number; WEDNESDAY: number; THURSDAY: number; FRIDAY: number; SATURDAY: number; SUNDAY: number; }
+    Status (line 112): Readonly<{ PENDING: "pending"; APPROVED: "approved"; REJECTED: "rejected"; }>
+    target (line 119): { value: number; }
+    weakRef (line 120): WeakRef<{ value: number; }>
+    deref (line 121): { value: number; } | undefined
+    registry (line 124): FinalizationRegistry<any>
+    error (line 133): Error
+    regexV (line 138): RegExp
+    regexNames (line 139): RegExp
+    regexSet (line 140): RegExp
+    str (line 143): "hello world"
+    trimmed (line 144): string
+    trimmedEnd (line 145): string
+    replacedAll (line 146): string
+    isProto (line 147): boolean
+    structuredClone (line 148): { a: number; }
+    arr (line 151): number[]
+    atResult (line 152): number | undefined
+    findLast (line 153): any
+    findLastIndex (line 154): any
+    flat (line 155): (number | number[])[]
+    flatDeep (line 156): FlatArray<(number | (number | number[])[])[], 0 | 10 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | -1 | 8 | 9 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20>[]
+    toSorted (line 157): any
+    toReversed (line 158): any
+    toSpliced (line 159): any
+    withOp (line 160): any
+    map (line 163): Map<string, number>
+    mapKeys (line 164): MapIterator<string>
+    mapValues (line 165): MapIterator<number>
+    mapEntries (line 166): MapIterator<[string, number]>
+    mapForEach (line 167): void
+    set (line 169): Set<number>
+    setSize (line 170): number
+    setHas (line 171): boolean
+    weakMap (line 173): WeakMap<object, any>
+    weakSet (line 174): WeakSet<object>
+    objEntries (line 177): [string, number][]
+    objFromEntries (line 178): { [k: string]: number; }
+    objHasOwn (line 179): boolean
+    objGroupBy (line 180): any
+    objCreate (line 181): any
+    mathSign (line 184): number
+    mathTrunc (line 185): number
+    mathClz32 (line 186): number
+    mathImul (line 187): number
+    mathPow (line 188): number
+    mathSqrt (line 189): number
+    mathCbrt (line 190): number
+    mathLog2 (line 191): number
+    mathLog10 (line 192): number
+    numIsFinite (line 195): boolean
+    numIsInteger (line 196): boolean
+    numIsSafeInteger (line 197): boolean
+    numToInt32 (line 198): number
+    numToFloat (line 199): number
+    numEpsilon (line 200): number
+    numMaxSafe (line 201): number
+    sym1 (line 204): unique symbol
+    sym2 (line 205): unique symbol
+    symKeyFor (line 206): string | undefined
+    symIterator (line 207): symbol
+    symToString (line 208): symbol
+    targetObj (line 211): { value: number; }
+    handler (line 212): { get(target: any, prop: any): any; set(target: any, prop: any, value: any): boolean; }
+    proxy (line 221): any
+    proxyValue (line 222): any
+    reflectHas (line 225): boolean
+    reflectGet (line 226): number
+    reflectSet (line 227): boolean
+    reflectDelete (line 228): boolean
+    reflectApply (line 229): number
+    p1 (line 232): Promise<number>
+    p2 (line 233): Promise<never>
+    pAll (line 234): Promise<[number, never]>
+    pAllSettled (line 235): Promise<[PromiseSettledResult<number>, PromiseSettledResult<never>]>
+    pRace (line 236): Promise<number>
+    pAny (line 237): Promise<number>
+    pWithResolvers (line 238): any
+    generate (line 241): function => AsyncGenerator<1 | 2 | 3, void, unknown>
+    asyncGen (line 247): AsyncGenerator<1 | 2 | 3, void, unknown>
+    asyncNext (line 248): Promise<IteratorResult<1 | 2 | 3, void>>
+    iter (line 251): number[]
+    iterFrom (line 252): any
+
+File: /Users/prabhu/work/AppThreat/atom-parsetools/test-fixtures/projects/simple-js/index.js
+  Total Variables: 106
+  Types Inferred: 102
+  Variables:
+    str (line 6): "hello"
+    num (line 7): 42
+    bool (line 8): true
+    nill (line 9): null
+    und (line 10): undefined
+    bigint (line 11): 100n
+    sym (line 12): unique symbol
+    color (line 15): "red"
+    status (line 16): 200
+    flag (line 17): true
+    numArr (line 20): number[]
+    strArr (line 21): string[]
+    mixedArr (line 22): (string | number | boolean)[]
+    nestedArr (line 23): number[][]
+    arrOfObjects (line 24): { id: number; }[]
+    point (line 27): { x: number; y: number; }
+    user (line 28): { name: string; age: number; active: boolean; }
+    nestedObj (line 29): { a: { b: { c: number; }; }; }
+    objWithArray (line 30): { items: number[]; }
+    emptyObj (line 31): {}
+    add (line 34): function => any
+    greet (line 38): function => string
+    isEven (line 42): function => boolean
+    noReturn (line 46): function => void
+    returnsObject (line 50): function => { id: number; name: string; }
+    returnsArray (line 54): function => number[]
+    returnsNull (line 58): function => null
+    returnsMixed (line 62): function => 42 | "yes"
+    multiply (line 67): (a: any, b: any) => number
+    square (line 68): (x: any) => number
+    identity (line 69): (x: any) => any
+    arrowReturnsObj (line 70): () => { key: string; }
+    importedStr (line 108): "imported"
+    exportedNum (line 110): 100
+    exportedFunc (line 111): function => number
+    dynamicType (line 116): 42 | "string"
+    maybeNull (line 117): "value" | null
+    maybeUndefined (line 118): 1 | undefined
+    { x: px, y: py } (line 121): { x: number; y: number; }
+    [first, second] (line 122): number[]
+    { name: userName, age: userAge } (line 123): { name: string; age: number; active: boolean; }
+    spreadObj (line 126): { z: number; x: number; y: number; }
+    spreadArr (line 127): number[]
+    safeProp (line 130): any
+    safeMethod (line 131): any
+    safeIndex (line 132): number
+    defaultValue (line 135): "default"
+    nullDefault (line 136): "fallback"
+    ternaryStr (line 139): "yes" | "no"
+    ternaryNum (line 140): 1 | 2
+    promise (line 143): Promise<any>
+    asyncFunc (line 147): function => Promise<string>
+    asyncArrow (line 151): () => Promise<number>
+    map (line 305): function => any[]
+    set (line 157): Set<any>
+    regex (line 162): RegExp
+    regexStr (line 163): RegExp
+    date (line 166): Date
+    dateStr (line 167): Date
+    error (line 170): Error
+    typeError (line 171): TypeError
+    mathPi (line 174): number
+    mathRandom (line 175): number
+    upperCase (line 178): string
+    substring (line 179): string
+    splitArr (line 180): string[]
+    replaced (line 181): string
+    indexOf (line 182): number
+    startsWith (line 183): boolean
+    mapped (line 186): number[]
+    filtered (line 187): number[]
+    reduced (line 188): number
+    found (line 189): number | undefined
+    someResult (line 190): boolean
+    everyResult (line 191): boolean
+    joined (line 192): string
+    indexOfArr (line 193): number
+    includes (line 194): boolean
+    keys (line 197): string[]
+    values (line 198): (string | number | boolean)[]
+    entries (line 199): [string, string | number | boolean][]
+    hasProp (line 200): boolean
+    frozen (line 201): Readonly<{ a: 1; }>
+    sealed (line 202): { b: number; }
+    typeOfStr (line 205): "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+    typeOfNum (line 206): "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+    typeOfObj (line 207): "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"
+    processUsers (line 210): function => any
+    findUser (line 218): function => any
+    groupBy (line 222): function => any
+    group (line 224): any
+    pipe (line 231): function => (val: any) => any
+    compose (line 235): function => (val: any) => any
+    sum (line 240): number
+    forEachSum (line 245): number
+    whileCount (line 251): number
+    safeParse (line 257): function => any
+    classify (line 266): function => "positive" | "negative" | "zero"
+    dayName (line 277): function => "Monday" | "Tuesday" | "Other"
+    counter (line 289): function => { increment: () => number; decrement: () => number; getCount: () => number; }
+    count (line 290): number
+    forEach (line 299): function => void
+    result (line 314): any[]
+    filter (line 313): function => any[]
+    reduce (line 323): function => any
+    acc (line 324): any
+
+File: /Users/prabhu/work/AppThreat/atom-parsetools/test-fixtures/projects/simple-js/math.js
+  Total Variables: 5
+  Types Inferred: 5
+  Variables:
+    add (line 2): function => any
+    subtract (line 6): function => number
+    multiply (line 10): function => number
+    divide (line 14): function => number
+    PI (line 18): 3.14159

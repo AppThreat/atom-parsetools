@@ -674,7 +674,7 @@ function createTsc(srcFiles) {
             node.expression
           );
         }
-        // FUNCTION/METHOD SIGNATURES
+        // FUNCTION/METHOD SIGNATURES - extract return type AND parameter types
         else if (
           tsc.isFunctionLike(node) ||
           tsc.isMethodDeclaration(node) ||
@@ -687,6 +687,20 @@ function createTsc(srcFiles) {
           if (signature) {
             const returnType = typeChecker.getReturnTypeOfSignature(signature);
             typeStr = safeTypeToString(returnType);
+            // Also extract parameter types
+            if (node.parameters) {
+              for (const param of node.parameters) {
+                try {
+                  const paramType = typeChecker.getTypeAtLocation(param);
+                  const paramTypeStr = safeTypeToString(paramType);
+                  if (paramTypeStr && paramTypeStr !== "any") {
+                    seenTypes.set(param.getStart(), paramTypeStr);
+                  }
+                } catch {
+                  // ignore parameter type errors
+                }
+              }
+            }
           } else {
             const funcType = typeChecker.getTypeAtLocation(node);
             const callSignatures = typeChecker.getSignaturesOfType(
@@ -697,6 +711,21 @@ function createTsc(srcFiles) {
               typeStr = safeTypeToString(callSignatures[0].getReturnType());
             }
           }
+        }
+        // CLASS PROPERTIES - extract types for property declarations
+        else if (node.kind === tsc.SyntaxKind.PropertyDeclaration) {
+          if (node.type) {
+            const propType = typeChecker.getTypeFromTypeNode(node.type);
+            typeStr = safeTypeToString(propType);
+          } else if (node.initializer) {
+            const initType = typeChecker.getTypeAtLocation(node.initializer);
+            typeStr = safeTypeWithContextToString(initType, node.initializer);
+          }
+        }
+        // VARIABLE DECLARATIONS - extract types for loop variables and destructuring
+        else if (node.kind === tsc.SyntaxKind.VariableDeclaration && node.name) {
+          const varType = typeChecker.getTypeAtLocation(node.name);
+          typeStr = safeTypeWithContextToString(varType, node.name);
         }
         // STANDARD EXPRESSIONS & IDENTIFIERS
         else {

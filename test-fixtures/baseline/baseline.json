@@ -1,0 +1,1503 @@
+{
+  "generatedAt": "2026-05-26T21:30:11.837Z",
+  "fixtureDir": "/Users/prabhu/work/AppThreat/atom-parsetools/test-fixtures/projects/simple-js",
+  "metrics": {
+    "totalVariables": 446,
+    "inferredTypes": 207,
+    "inferenceRate": "46.41%",
+    "anyTypes": 16,
+    "primitiveTypes": 52,
+    "arrayTypes": 24,
+    "functionTypes": 25,
+    "objectTypes": 0,
+    "complexTypes": 48,
+    "literalTypes": 15,
+    "unionTypes": 5,
+    "categoryDistribution": {
+      "complex": 48,
+      "other": 29,
+      "array": 24,
+      "primitive": 52,
+      "literal": 15,
+      "function": 25,
+      "union": 5,
+      "function_return_any": 7,
+      "function_return_void": 2
+    },
+    "typeDistribution": {
+      "0": 1,
+      "42": 1,
+      "100": 1,
+      "200": 1,
+      "{ name: string; age: number; }": 1,
+      "{ x: number; y: number; }": 3,
+      "{ a: number; }": 3,
+      "{ nested: { deep: string; }; }": 1,
+      "[number, number, number]": 1,
+      "[number, number, number, number, number]": 1,
+      "[[number, number]]": 1,
+      "{ arr: [string, string]; }": 1,
+      "{ a: number; b: number; }": 1,
+      "{ c: number; a: number; b: number; }": 1,
+      "number[]": 10,
+      "{ d: number; c: number; a: number; b: number; }": 1,
+      "{ a: { b: { c: number; }; }; }": 2,
+      "{ b: { c: number; }; }": 1,
+      "{ c: number; }": 1,
+      "number": 28,
+      "string": 8,
+      "\"default\"": 3,
+      "\"\"": 1,
+      "false": 1,
+      "Calculator": 1,
+      "function => Promise<{ data: number[]; }>": 1,
+      "{ data: number[]; }": 1,
+      "{ MONDAY: number; TUESDAY: number; WEDNESDAY: number; THURSDAY: number; FRIDAY: number; SATURDAY: number; SUNDAY: number; }": 1,
+      "Readonly<{ PENDING: \"pending\"; APPROVED: \"approved\"; REJECTED: \"rejected\"; }>": 1,
+      "{ value: number; }": 2,
+      "WeakRef<{ value: number; }>": 1,
+      "{ value: number; } | undefined": 1,
+      "FinalizationRegistry<any>": 1,
+      "Error": 2,
+      "RegExp": 5,
+      "\"hello world\"": 1,
+      "boolean": 14,
+      "number | undefined": 2,
+      "(number | number[])[]": 1,
+      "FlatArray<(number | (number | number[])[])[], 0 | 10 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | -1 | 8 | 9 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20>[]": 1,
+      "Map<string, number>": 1,
+      "MapIterator<string>": 1,
+      "MapIterator<number>": 1,
+      "MapIterator<[string, number]>": 1,
+      "void": 1,
+      "Set<number>": 1,
+      "WeakMap<object, any>": 1,
+      "WeakSet<object>": 1,
+      "[string, number][]": 1,
+      "{ [k: string]: number; }": 1,
+      "unique symbol": 3,
+      "string | undefined": 1,
+      "symbol": 2,
+      "{ get(target: any, prop: any): any; set(target: any, prop: any, value: any): boolean; }": 1,
+      "Promise<number>": 3,
+      "Promise<never>": 1,
+      "Promise<[number, never]>": 1,
+      "Promise<[PromiseSettledResult<number>, PromiseSettledResult<never>]>": 1,
+      "function => AsyncGenerator<1 | 2 | 3, void, unknown>": 1,
+      "AsyncGenerator<1 | 2 | 3, void, unknown>": 1,
+      "Promise<IteratorResult<1 | 2 | 3, void>>": 1,
+      "\"hello\"": 1,
+      "true": 2,
+      "null": 1,
+      "undefined": 1,
+      "100n": 1,
+      "\"red\"": 1,
+      "string[]": 3,
+      "(string | number | boolean)[]": 2,
+      "number[][]": 1,
+      "{ id: number; }[]": 1,
+      "{ name: string; age: number; active: boolean; }": 2,
+      "{ items: number[]; }": 1,
+      "{}": 1,
+      "function => any": 7,
+      "function => string": 1,
+      "function => boolean": 1,
+      "function => void": 2,
+      "function => { id: number; name: string; }": 1,
+      "function => number[]": 1,
+      "function => null": 1,
+      "function => 42 | \"yes\"": 1,
+      "(a: any, b: any) => number": 1,
+      "(x: any) => number": 1,
+      "(x: any) => any": 1,
+      "() => { key: string; }": 1,
+      "\"imported\"": 1,
+      "function => number": 4,
+      "42 | \"string\"": 1,
+      "\"value\" | null": 1,
+      "1 | undefined": 1,
+      "{ z: number; x: number; y: number; }": 1,
+      "\"fallback\"": 1,
+      "\"yes\" | \"no\"": 1,
+      "1 | 2": 1,
+      "Promise<any>": 1,
+      "function => Promise<string>": 1,
+      "() => Promise<number>": 1,
+      "function => any[]": 2,
+      "Set<any>": 1,
+      "Date": 2,
+      "TypeError": 1,
+      "[string, string | number | boolean][]": 1,
+      "Readonly<{ a: 1; }>": 1,
+      "{ b: number; }": 1,
+      "\"string\" | \"number\" | \"bigint\" | \"boolean\" | \"symbol\" | \"undefined\" | \"object\" | \"function\"": 3,
+      "function => (val: any) => any": 2,
+      "function => \"positive\" | \"negative\" | \"zero\"": 1,
+      "function => \"Monday\" | \"Tuesday\" | \"Other\"": 1,
+      "function => { increment: () => number; decrement: () => number; getCount: () => number; }": 1,
+      "any[]": 1,
+      "3.14159": 1
+    },
+    "fileMetrics": [
+      {
+        "filePath": "/Users/prabhu/work/AppThreat/atom-parsetools/test-fixtures/projects/simple-js/es6-features.js",
+        "totalVariables": 112,
+        "typesInferred": 100,
+        "variables": [
+          {
+            "name": "{ name, age }",
+            "type": "{ name: string; age: number; }",
+            "category": "complex",
+            "line": 6
+          },
+          {
+            "name": "{ x, y, z = 10 }",
+            "type": "{ x: number; y: number; }",
+            "category": "complex",
+            "line": 7
+          },
+          {
+            "name": "{ a: renamedA }",
+            "type": "{ a: number; }",
+            "category": "complex",
+            "line": 8
+          },
+          {
+            "name": "{ nested: { deep } }",
+            "type": "{ nested: { deep: string; }; }",
+            "category": "complex",
+            "line": 9
+          },
+          {
+            "name": "[first, second, third]",
+            "type": "[number, number, number]",
+            "category": "other",
+            "line": 12
+          },
+          {
+            "name": "[a, b, ...rest]",
+            "type": "[number, number, number, number, number]",
+            "category": "other",
+            "line": 13
+          },
+          {
+            "name": "[[nested1, nested2]]",
+            "type": "[[number, number]]",
+            "category": "other",
+            "line": 14
+          },
+          {
+            "name": "{ arr: [arrFirst, arrSecond] }",
+            "type": "{ arr: [string, string]; }",
+            "category": "complex",
+            "line": 17
+          },
+          {
+            "name": "obj1",
+            "type": "{ a: number; b: number; }",
+            "category": "complex",
+            "line": 20
+          },
+          {
+            "name": "obj2",
+            "type": "{ c: number; a: number; b: number; }",
+            "category": "complex",
+            "line": 21
+          },
+          {
+            "name": "arr1",
+            "type": "number[]",
+            "category": "array",
+            "line": 22
+          },
+          {
+            "name": "arr2",
+            "type": "number[]",
+            "category": "array",
+            "line": 23
+          },
+          {
+            "name": "merged",
+            "type": "{ d: number; c: number; a: number; b: number; }",
+            "category": "complex",
+            "line": 24
+          },
+          {
+            "name": "obj",
+            "type": "{ a: { b: { c: number; }; }; }",
+            "category": "complex",
+            "line": 27
+          },
+          {
+            "name": "safe1",
+            "type": "{ b: { c: number; }; }",
+            "category": "complex",
+            "line": 28
+          },
+          {
+            "name": "safe2",
+            "type": "{ c: number; }",
+            "category": "complex",
+            "line": 29
+          },
+          {
+            "name": "safe3",
+            "type": "number",
+            "category": "primitive",
+            "line": 30
+          },
+          {
+            "name": "safeMethod",
+            "type": "string",
+            "category": "primitive",
+            "line": 31
+          },
+          {
+            "name": "safeArray",
+            "type": "number",
+            "category": "primitive",
+            "line": 32
+          },
+          {
+            "name": "val1",
+            "type": "\"default\"",
+            "category": "literal",
+            "line": 35
+          },
+          {
+            "name": "val2",
+            "type": "\"default\"",
+            "category": "literal",
+            "line": 36
+          },
+          {
+            "name": "val3",
+            "type": "\"\"",
+            "category": "literal",
+            "line": 37
+          },
+          {
+            "name": "val4",
+            "type": "0",
+            "category": "other",
+            "line": 38
+          },
+          {
+            "name": "val5",
+            "type": "false",
+            "category": "other",
+            "line": 39
+          },
+          {
+            "name": "logObj",
+            "type": "{ a: number; }",
+            "category": "complex",
+            "line": 42
+          },
+          {
+            "name": "initial",
+            "type": "Calculator",
+            "category": "other",
+            "line": 67
+          },
+          {
+            "name": "fetchData",
+            "type": "function => Promise<{ data: number[]; }>",
+            "category": "function",
+            "line": 77
+          },
+          {
+            "name": "data",
+            "type": "{ data: number[]; }",
+            "category": "array",
+            "line": 81
+          },
+          {
+            "name": "dataArray",
+            "type": "number[]",
+            "category": "array",
+            "line": 82
+          },
+          {
+            "name": "Days",
+            "type": "{ MONDAY: number; TUESDAY: number; WEDNESDAY: number; THURSDAY: number; FRIDAY: number; SATURDAY: number; SUNDAY: number; }",
+            "category": "complex",
+            "line": 102
+          },
+          {
+            "name": "Status",
+            "type": "Readonly<{ PENDING: \"pending\"; APPROVED: \"approved\"; REJECTED: \"rejected\"; }>",
+            "category": "complex",
+            "line": 112
+          },
+          {
+            "name": "target",
+            "type": "{ value: number; }",
+            "category": "complex",
+            "line": 119
+          },
+          {
+            "name": "weakRef",
+            "type": "WeakRef<{ value: number; }>",
+            "category": "complex",
+            "line": 120
+          },
+          {
+            "name": "deref",
+            "type": "{ value: number; } | undefined",
+            "category": "complex",
+            "line": 121
+          },
+          {
+            "name": "registry",
+            "type": "FinalizationRegistry<any>",
+            "category": "complex",
+            "line": 124
+          },
+          {
+            "name": "error",
+            "type": "Error",
+            "category": "other",
+            "line": 133
+          },
+          {
+            "name": "regexV",
+            "type": "RegExp",
+            "category": "other",
+            "line": 138
+          },
+          {
+            "name": "regexNames",
+            "type": "RegExp",
+            "category": "other",
+            "line": 139
+          },
+          {
+            "name": "regexSet",
+            "type": "RegExp",
+            "category": "other",
+            "line": 140
+          },
+          {
+            "name": "str",
+            "type": "\"hello world\"",
+            "category": "literal",
+            "line": 143
+          },
+          {
+            "name": "trimmed",
+            "type": "string",
+            "category": "primitive",
+            "line": 144
+          },
+          {
+            "name": "trimmedEnd",
+            "type": "string",
+            "category": "primitive",
+            "line": 145
+          },
+          {
+            "name": "replacedAll",
+            "type": "string",
+            "category": "primitive",
+            "line": 146
+          },
+          {
+            "name": "isProto",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 147
+          },
+          {
+            "name": "structuredClone",
+            "type": "{ a: number; }",
+            "category": "complex",
+            "line": 148
+          },
+          {
+            "name": "arr",
+            "type": "number[]",
+            "category": "array",
+            "line": 151
+          },
+          {
+            "name": "atResult",
+            "type": "number | undefined",
+            "category": "union",
+            "line": 152
+          },
+          {
+            "name": "findLast",
+            "type": "any",
+            "category": "any",
+            "line": 153
+          },
+          {
+            "name": "findLastIndex",
+            "type": "any",
+            "category": "any",
+            "line": 154
+          },
+          {
+            "name": "flat",
+            "type": "(number | number[])[]",
+            "category": "array",
+            "line": 155
+          },
+          {
+            "name": "flatDeep",
+            "type": "FlatArray<(number | (number | number[])[])[], 0 | 10 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | -1 | 8 | 9 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20>[]",
+            "category": "array",
+            "line": 156
+          },
+          {
+            "name": "toSorted",
+            "type": "any",
+            "category": "any",
+            "line": 157
+          },
+          {
+            "name": "toReversed",
+            "type": "any",
+            "category": "any",
+            "line": 158
+          },
+          {
+            "name": "toSpliced",
+            "type": "any",
+            "category": "any",
+            "line": 159
+          },
+          {
+            "name": "withOp",
+            "type": "any",
+            "category": "any",
+            "line": 160
+          },
+          {
+            "name": "map",
+            "type": "Map<string, number>",
+            "category": "complex",
+            "line": 163
+          },
+          {
+            "name": "mapKeys",
+            "type": "MapIterator<string>",
+            "category": "complex",
+            "line": 164
+          },
+          {
+            "name": "mapValues",
+            "type": "MapIterator<number>",
+            "category": "complex",
+            "line": 165
+          },
+          {
+            "name": "mapEntries",
+            "type": "MapIterator<[string, number]>",
+            "category": "complex",
+            "line": 166
+          },
+          {
+            "name": "mapForEach",
+            "type": "void",
+            "category": "other",
+            "line": 167
+          },
+          {
+            "name": "set",
+            "type": "Set<number>",
+            "category": "complex",
+            "line": 169
+          },
+          {
+            "name": "setSize",
+            "type": "number",
+            "category": "primitive",
+            "line": 170
+          },
+          {
+            "name": "setHas",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 171
+          },
+          {
+            "name": "weakMap",
+            "type": "WeakMap<object, any>",
+            "category": "complex",
+            "line": 173
+          },
+          {
+            "name": "weakSet",
+            "type": "WeakSet<object>",
+            "category": "complex",
+            "line": 174
+          },
+          {
+            "name": "objEntries",
+            "type": "[string, number][]",
+            "category": "array",
+            "line": 177
+          },
+          {
+            "name": "objFromEntries",
+            "type": "{ [k: string]: number; }",
+            "category": "complex",
+            "line": 178
+          },
+          {
+            "name": "objHasOwn",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 179
+          },
+          {
+            "name": "objGroupBy",
+            "type": "any",
+            "category": "any",
+            "line": 180
+          },
+          {
+            "name": "objCreate",
+            "type": "any",
+            "category": "any",
+            "line": 181
+          },
+          {
+            "name": "mathSign",
+            "type": "number",
+            "category": "primitive",
+            "line": 184
+          },
+          {
+            "name": "mathTrunc",
+            "type": "number",
+            "category": "primitive",
+            "line": 185
+          },
+          {
+            "name": "mathClz32",
+            "type": "number",
+            "category": "primitive",
+            "line": 186
+          },
+          {
+            "name": "mathImul",
+            "type": "number",
+            "category": "primitive",
+            "line": 187
+          },
+          {
+            "name": "mathPow",
+            "type": "number",
+            "category": "primitive",
+            "line": 188
+          },
+          {
+            "name": "mathSqrt",
+            "type": "number",
+            "category": "primitive",
+            "line": 189
+          },
+          {
+            "name": "mathCbrt",
+            "type": "number",
+            "category": "primitive",
+            "line": 190
+          },
+          {
+            "name": "mathLog2",
+            "type": "number",
+            "category": "primitive",
+            "line": 191
+          },
+          {
+            "name": "mathLog10",
+            "type": "number",
+            "category": "primitive",
+            "line": 192
+          },
+          {
+            "name": "numIsFinite",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 195
+          },
+          {
+            "name": "numIsInteger",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 196
+          },
+          {
+            "name": "numIsSafeInteger",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 197
+          },
+          {
+            "name": "numToInt32",
+            "type": "number",
+            "category": "primitive",
+            "line": 198
+          },
+          {
+            "name": "numToFloat",
+            "type": "number",
+            "category": "primitive",
+            "line": 199
+          },
+          {
+            "name": "numEpsilon",
+            "type": "number",
+            "category": "primitive",
+            "line": 200
+          },
+          {
+            "name": "numMaxSafe",
+            "type": "number",
+            "category": "primitive",
+            "line": 201
+          },
+          {
+            "name": "sym1",
+            "type": "unique symbol",
+            "category": "other",
+            "line": 204
+          },
+          {
+            "name": "sym2",
+            "type": "unique symbol",
+            "category": "other",
+            "line": 205
+          },
+          {
+            "name": "symKeyFor",
+            "type": "string | undefined",
+            "category": "union",
+            "line": 206
+          },
+          {
+            "name": "symIterator",
+            "type": "symbol",
+            "category": "primitive",
+            "line": 207
+          },
+          {
+            "name": "symToString",
+            "type": "symbol",
+            "category": "primitive",
+            "line": 208
+          },
+          {
+            "name": "targetObj",
+            "type": "{ value: number; }",
+            "category": "complex",
+            "line": 211
+          },
+          {
+            "name": "handler",
+            "type": "{ get(target: any, prop: any): any; set(target: any, prop: any, value: any): boolean; }",
+            "category": "complex",
+            "line": 212
+          },
+          {
+            "name": "proxy",
+            "type": "any",
+            "category": "any",
+            "line": 221
+          },
+          {
+            "name": "proxyValue",
+            "type": "any",
+            "category": "any",
+            "line": 222
+          },
+          {
+            "name": "reflectHas",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 225
+          },
+          {
+            "name": "reflectGet",
+            "type": "number",
+            "category": "primitive",
+            "line": 226
+          },
+          {
+            "name": "reflectSet",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 227
+          },
+          {
+            "name": "reflectDelete",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 228
+          },
+          {
+            "name": "reflectApply",
+            "type": "number",
+            "category": "primitive",
+            "line": 229
+          },
+          {
+            "name": "p1",
+            "type": "Promise<number>",
+            "category": "complex",
+            "line": 232
+          },
+          {
+            "name": "p2",
+            "type": "Promise<never>",
+            "category": "complex",
+            "line": 233
+          },
+          {
+            "name": "pAll",
+            "type": "Promise<[number, never]>",
+            "category": "complex",
+            "line": 234
+          },
+          {
+            "name": "pAllSettled",
+            "type": "Promise<[PromiseSettledResult<number>, PromiseSettledResult<never>]>",
+            "category": "complex",
+            "line": 235
+          },
+          {
+            "name": "pRace",
+            "type": "Promise<number>",
+            "category": "complex",
+            "line": 236
+          },
+          {
+            "name": "pAny",
+            "type": "Promise<number>",
+            "category": "complex",
+            "line": 237
+          },
+          {
+            "name": "pWithResolvers",
+            "type": "any",
+            "category": "any",
+            "line": 238
+          },
+          {
+            "name": "generate",
+            "type": "function => AsyncGenerator<1 | 2 | 3, void, unknown>",
+            "category": "function",
+            "line": 241
+          },
+          {
+            "name": "asyncGen",
+            "type": "AsyncGenerator<1 | 2 | 3, void, unknown>",
+            "category": "complex",
+            "line": 247
+          },
+          {
+            "name": "asyncNext",
+            "type": "Promise<IteratorResult<1 | 2 | 3, void>>",
+            "category": "complex",
+            "line": 248
+          },
+          {
+            "name": "iter",
+            "type": "number[]",
+            "category": "array",
+            "line": 251
+          },
+          {
+            "name": "iterFrom",
+            "type": "any",
+            "category": "any",
+            "line": 252
+          }
+        ]
+      },
+      {
+        "filePath": "/Users/prabhu/work/AppThreat/atom-parsetools/test-fixtures/projects/simple-js/index.js",
+        "totalVariables": 106,
+        "typesInferred": 102,
+        "variables": [
+          {
+            "name": "str",
+            "type": "\"hello\"",
+            "category": "literal",
+            "line": 6
+          },
+          {
+            "name": "num",
+            "type": "42",
+            "category": "other",
+            "line": 7
+          },
+          {
+            "name": "bool",
+            "type": "true",
+            "category": "other",
+            "line": 8
+          },
+          {
+            "name": "nill",
+            "type": "null",
+            "category": "other",
+            "line": 9
+          },
+          {
+            "name": "und",
+            "type": "undefined",
+            "category": "other",
+            "line": 10
+          },
+          {
+            "name": "bigint",
+            "type": "100n",
+            "category": "other",
+            "line": 11
+          },
+          {
+            "name": "sym",
+            "type": "unique symbol",
+            "category": "other",
+            "line": 12
+          },
+          {
+            "name": "color",
+            "type": "\"red\"",
+            "category": "literal",
+            "line": 15
+          },
+          {
+            "name": "status",
+            "type": "200",
+            "category": "other",
+            "line": 16
+          },
+          {
+            "name": "flag",
+            "type": "true",
+            "category": "other",
+            "line": 17
+          },
+          {
+            "name": "numArr",
+            "type": "number[]",
+            "category": "array",
+            "line": 20
+          },
+          {
+            "name": "strArr",
+            "type": "string[]",
+            "category": "array",
+            "line": 21
+          },
+          {
+            "name": "mixedArr",
+            "type": "(string | number | boolean)[]",
+            "category": "array",
+            "line": 22
+          },
+          {
+            "name": "nestedArr",
+            "type": "number[][]",
+            "category": "array",
+            "line": 23
+          },
+          {
+            "name": "arrOfObjects",
+            "type": "{ id: number; }[]",
+            "category": "array",
+            "line": 24
+          },
+          {
+            "name": "point",
+            "type": "{ x: number; y: number; }",
+            "category": "complex",
+            "line": 27
+          },
+          {
+            "name": "user",
+            "type": "{ name: string; age: number; active: boolean; }",
+            "category": "complex",
+            "line": 28
+          },
+          {
+            "name": "nestedObj",
+            "type": "{ a: { b: { c: number; }; }; }",
+            "category": "complex",
+            "line": 29
+          },
+          {
+            "name": "objWithArray",
+            "type": "{ items: number[]; }",
+            "category": "array",
+            "line": 30
+          },
+          {
+            "name": "emptyObj",
+            "type": "{}",
+            "category": "complex",
+            "line": 31
+          },
+          {
+            "name": "add",
+            "type": "function => any",
+            "category": "function_return_any",
+            "line": 34
+          },
+          {
+            "name": "greet",
+            "type": "function => string",
+            "category": "function",
+            "line": 38
+          },
+          {
+            "name": "isEven",
+            "type": "function => boolean",
+            "category": "function",
+            "line": 42
+          },
+          {
+            "name": "noReturn",
+            "type": "function => void",
+            "category": "function_return_void",
+            "line": 46
+          },
+          {
+            "name": "returnsObject",
+            "type": "function => { id: number; name: string; }",
+            "category": "function",
+            "line": 50
+          },
+          {
+            "name": "returnsArray",
+            "type": "function => number[]",
+            "category": "function",
+            "line": 54
+          },
+          {
+            "name": "returnsNull",
+            "type": "function => null",
+            "category": "function",
+            "line": 58
+          },
+          {
+            "name": "returnsMixed",
+            "type": "function => 42 | \"yes\"",
+            "category": "function",
+            "line": 62
+          },
+          {
+            "name": "multiply",
+            "type": "(a: any, b: any) => number",
+            "category": "function",
+            "line": 67
+          },
+          {
+            "name": "square",
+            "type": "(x: any) => number",
+            "category": "function",
+            "line": 68
+          },
+          {
+            "name": "identity",
+            "type": "(x: any) => any",
+            "category": "function",
+            "line": 69
+          },
+          {
+            "name": "arrowReturnsObj",
+            "type": "() => { key: string; }",
+            "category": "function",
+            "line": 70
+          },
+          {
+            "name": "importedStr",
+            "type": "\"imported\"",
+            "category": "literal",
+            "line": 108
+          },
+          {
+            "name": "exportedNum",
+            "type": "100",
+            "category": "other",
+            "line": 110
+          },
+          {
+            "name": "exportedFunc",
+            "type": "function => number",
+            "category": "function",
+            "line": 111
+          },
+          {
+            "name": "dynamicType",
+            "type": "42 | \"string\"",
+            "category": "literal",
+            "line": 116
+          },
+          {
+            "name": "maybeNull",
+            "type": "\"value\" | null",
+            "category": "literal",
+            "line": 117
+          },
+          {
+            "name": "maybeUndefined",
+            "type": "1 | undefined",
+            "category": "union",
+            "line": 118
+          },
+          {
+            "name": "{ x: px, y: py }",
+            "type": "{ x: number; y: number; }",
+            "category": "complex",
+            "line": 121
+          },
+          {
+            "name": "[first, second]",
+            "type": "number[]",
+            "category": "array",
+            "line": 122
+          },
+          {
+            "name": "{ name: userName, age: userAge }",
+            "type": "{ name: string; age: number; active: boolean; }",
+            "category": "complex",
+            "line": 123
+          },
+          {
+            "name": "spreadObj",
+            "type": "{ z: number; x: number; y: number; }",
+            "category": "complex",
+            "line": 126
+          },
+          {
+            "name": "spreadArr",
+            "type": "number[]",
+            "category": "array",
+            "line": 127
+          },
+          {
+            "name": "safeProp",
+            "type": "any",
+            "category": "any",
+            "line": 130
+          },
+          {
+            "name": "safeMethod",
+            "type": "any",
+            "category": "any",
+            "line": 131
+          },
+          {
+            "name": "safeIndex",
+            "type": "number",
+            "category": "primitive",
+            "line": 132
+          },
+          {
+            "name": "defaultValue",
+            "type": "\"default\"",
+            "category": "literal",
+            "line": 135
+          },
+          {
+            "name": "nullDefault",
+            "type": "\"fallback\"",
+            "category": "literal",
+            "line": 136
+          },
+          {
+            "name": "ternaryStr",
+            "type": "\"yes\" | \"no\"",
+            "category": "literal",
+            "line": 139
+          },
+          {
+            "name": "ternaryNum",
+            "type": "1 | 2",
+            "category": "union",
+            "line": 140
+          },
+          {
+            "name": "promise",
+            "type": "Promise<any>",
+            "category": "complex",
+            "line": 143
+          },
+          {
+            "name": "asyncFunc",
+            "type": "function => Promise<string>",
+            "category": "function",
+            "line": 147
+          },
+          {
+            "name": "asyncArrow",
+            "type": "() => Promise<number>",
+            "category": "function",
+            "line": 151
+          },
+          {
+            "name": "map",
+            "type": "function => any[]",
+            "category": "function",
+            "line": 305
+          },
+          {
+            "name": "set",
+            "type": "Set<any>",
+            "category": "complex",
+            "line": 157
+          },
+          {
+            "name": "regex",
+            "type": "RegExp",
+            "category": "other",
+            "line": 162
+          },
+          {
+            "name": "regexStr",
+            "type": "RegExp",
+            "category": "other",
+            "line": 163
+          },
+          {
+            "name": "date",
+            "type": "Date",
+            "category": "other",
+            "line": 166
+          },
+          {
+            "name": "dateStr",
+            "type": "Date",
+            "category": "other",
+            "line": 167
+          },
+          {
+            "name": "error",
+            "type": "Error",
+            "category": "other",
+            "line": 170
+          },
+          {
+            "name": "typeError",
+            "type": "TypeError",
+            "category": "other",
+            "line": 171
+          },
+          {
+            "name": "mathPi",
+            "type": "number",
+            "category": "primitive",
+            "line": 174
+          },
+          {
+            "name": "mathRandom",
+            "type": "number",
+            "category": "primitive",
+            "line": 175
+          },
+          {
+            "name": "upperCase",
+            "type": "string",
+            "category": "primitive",
+            "line": 178
+          },
+          {
+            "name": "substring",
+            "type": "string",
+            "category": "primitive",
+            "line": 179
+          },
+          {
+            "name": "splitArr",
+            "type": "string[]",
+            "category": "array",
+            "line": 180
+          },
+          {
+            "name": "replaced",
+            "type": "string",
+            "category": "primitive",
+            "line": 181
+          },
+          {
+            "name": "indexOf",
+            "type": "number",
+            "category": "primitive",
+            "line": 182
+          },
+          {
+            "name": "startsWith",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 183
+          },
+          {
+            "name": "mapped",
+            "type": "number[]",
+            "category": "array",
+            "line": 186
+          },
+          {
+            "name": "filtered",
+            "type": "number[]",
+            "category": "array",
+            "line": 187
+          },
+          {
+            "name": "reduced",
+            "type": "number",
+            "category": "primitive",
+            "line": 188
+          },
+          {
+            "name": "found",
+            "type": "number | undefined",
+            "category": "union",
+            "line": 189
+          },
+          {
+            "name": "someResult",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 190
+          },
+          {
+            "name": "everyResult",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 191
+          },
+          {
+            "name": "joined",
+            "type": "string",
+            "category": "primitive",
+            "line": 192
+          },
+          {
+            "name": "indexOfArr",
+            "type": "number",
+            "category": "primitive",
+            "line": 193
+          },
+          {
+            "name": "includes",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 194
+          },
+          {
+            "name": "keys",
+            "type": "string[]",
+            "category": "array",
+            "line": 197
+          },
+          {
+            "name": "values",
+            "type": "(string | number | boolean)[]",
+            "category": "array",
+            "line": 198
+          },
+          {
+            "name": "entries",
+            "type": "[string, string | number | boolean][]",
+            "category": "array",
+            "line": 199
+          },
+          {
+            "name": "hasProp",
+            "type": "boolean",
+            "category": "primitive",
+            "line": 200
+          },
+          {
+            "name": "frozen",
+            "type": "Readonly<{ a: 1; }>",
+            "category": "complex",
+            "line": 201
+          },
+          {
+            "name": "sealed",
+            "type": "{ b: number; }",
+            "category": "complex",
+            "line": 202
+          },
+          {
+            "name": "typeOfStr",
+            "type": "\"string\" | \"number\" | \"bigint\" | \"boolean\" | \"symbol\" | \"undefined\" | \"object\" | \"function\"",
+            "category": "literal",
+            "line": 205
+          },
+          {
+            "name": "typeOfNum",
+            "type": "\"string\" | \"number\" | \"bigint\" | \"boolean\" | \"symbol\" | \"undefined\" | \"object\" | \"function\"",
+            "category": "literal",
+            "line": 206
+          },
+          {
+            "name": "typeOfObj",
+            "type": "\"string\" | \"number\" | \"bigint\" | \"boolean\" | \"symbol\" | \"undefined\" | \"object\" | \"function\"",
+            "category": "literal",
+            "line": 207
+          },
+          {
+            "name": "processUsers",
+            "type": "function => any",
+            "category": "function_return_any",
+            "line": 210
+          },
+          {
+            "name": "findUser",
+            "type": "function => any",
+            "category": "function_return_any",
+            "line": 218
+          },
+          {
+            "name": "groupBy",
+            "type": "function => any",
+            "category": "function_return_any",
+            "line": 222
+          },
+          {
+            "name": "group",
+            "type": "any",
+            "category": "any",
+            "line": 224
+          },
+          {
+            "name": "pipe",
+            "type": "function => (val: any) => any",
+            "category": "function",
+            "line": 231
+          },
+          {
+            "name": "compose",
+            "type": "function => (val: any) => any",
+            "category": "function",
+            "line": 235
+          },
+          {
+            "name": "sum",
+            "type": "number",
+            "category": "primitive",
+            "line": 240
+          },
+          {
+            "name": "forEachSum",
+            "type": "number",
+            "category": "primitive",
+            "line": 245
+          },
+          {
+            "name": "whileCount",
+            "type": "number",
+            "category": "primitive",
+            "line": 251
+          },
+          {
+            "name": "safeParse",
+            "type": "function => any",
+            "category": "function_return_any",
+            "line": 257
+          },
+          {
+            "name": "classify",
+            "type": "function => \"positive\" | \"negative\" | \"zero\"",
+            "category": "function",
+            "line": 266
+          },
+          {
+            "name": "dayName",
+            "type": "function => \"Monday\" | \"Tuesday\" | \"Other\"",
+            "category": "function",
+            "line": 277
+          },
+          {
+            "name": "counter",
+            "type": "function => { increment: () => number; decrement: () => number; getCount: () => number; }",
+            "category": "function",
+            "line": 289
+          },
+          {
+            "name": "count",
+            "type": "number",
+            "category": "primitive",
+            "line": 290
+          },
+          {
+            "name": "forEach",
+            "type": "function => void",
+            "category": "function_return_void",
+            "line": 299
+          },
+          {
+            "name": "result",
+            "type": "any[]",
+            "category": "array",
+            "line": 314
+          },
+          {
+            "name": "filter",
+            "type": "function => any[]",
+            "category": "function",
+            "line": 313
+          },
+          {
+            "name": "reduce",
+            "type": "function => any",
+            "category": "function_return_any",
+            "line": 323
+          },
+          {
+            "name": "acc",
+            "type": "any",
+            "category": "any",
+            "line": 324
+          }
+        ]
+      },
+      {
+        "filePath": "/Users/prabhu/work/AppThreat/atom-parsetools/test-fixtures/projects/simple-js/math.js",
+        "totalVariables": 5,
+        "typesInferred": 5,
+        "variables": [
+          {
+            "name": "add",
+            "type": "function => any",
+            "category": "function_return_any",
+            "line": 2
+          },
+          {
+            "name": "subtract",
+            "type": "function => number",
+            "category": "function",
+            "line": 6
+          },
+          {
+            "name": "multiply",
+            "type": "function => number",
+            "category": "function",
+            "line": 10
+          },
+          {
+            "name": "divide",
+            "type": "function => number",
+            "category": "function",
+            "line": 14
+          },
+          {
+            "name": "PI",
+            "type": "3.14159",
+            "category": "other",
+            "line": 18
+          }
+        ]
+      }
+    ]
+  }
+}
