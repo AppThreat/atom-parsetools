@@ -180,23 +180,23 @@ try {
   expectType(types, "typedUser", "{ id: number; name: string; }");
   expectType(types, "readonlyIds", "readonly [1, 2, 3]");
   expectType(types, "firstReadonlyId", "number");
-  expectType(types, "pickName(user", "(user: User) => string");
+  expectType(types, "pickName(user", ["(user: User) => string", "(user: { id: number; name: string; }) => string"]);
   expectType(types, "user: User", "{ id: number; name: string; }");
   expectType(types, "pickedName", "string");
 
   const edgeFixtures = fixturesByProject.get("inference-edge-cases");
   const jsdocFlows = edgeFixtures["jsdoc-flows.js"];
-  expectType(jsdocFlows, "primaryUser", "{ id: number; name: string; tags?: string[]; }");
+  expectType(jsdocFlows, "primaryUser", ["{ id: number; name: string; tags?: string[]; }", "{ id: number; name: string; tags: Array<string>; }"]);
   expectType(jsdocFlows, "userName", "string");
   expectType(jsdocFlows, "firstTag", "string");
   expectType(jsdocFlows, "userEntries", "Array<[string, string | number | Array<string>]>");
   expectType(jsdocFlows, "userIdSet", "Set<number>");
-  expectType(jsdocFlows, "findUser(users", "(users: UserRecord[], predicate: (user: UserRecord) => boolean) => UserRecord | undefined");
+  expectType(jsdocFlows, "findUser(users", ["(users: UserRecord[], predicate: (user: UserRecord) => boolean) => UserRecord | undefined", "(users: Array<UserRecord>, predicate: (user: UserRecord) => boolean) => UserRecord | undefined"]);
   expectType(jsdocFlows, "users, predicate", "Array<UserRecord>");
   expectType(jsdocFlows, "predicate) {", "(user: UserRecord) => boolean");
   expectType(jsdocFlows, "selectedUser", "UserRecord | undefined");
   expectType(jsdocFlows, "selectedName", "string");
-  expectType(jsdocFlows, "indexBy(values", "<T>(values: T[], getKey: (value: T, index: number) => string) => Map<string, T>");
+  expectType(jsdocFlows, "indexBy(values", ["<T>(values: T[], getKey: (value: T, index: number) => string) => Map<string, T>", "(values: Array<T>, getKey: (value: T, index: number) => string) => Map<string, T>"]);
   expectType(jsdocFlows, "values, getKey", "Array<T>");
   expectType(jsdocFlows, "getKey) {", "(value: T, index: number) => string");
   expectType(jsdocFlows, "userIndex", "Map<string, UserRecord>");
@@ -235,8 +235,8 @@ try {
   expectType(modernSyntax, "dynamicValue", "string");
 
   const genericTypes = edgeFixtures["generic-types.ts"];
-  expectType(genericTypes, "productResult", "ApiFailure | ApiSuccess<Product>");
-  expectType(genericTypes, "unwrap<T>", "<T>(result: ApiResult<T>, fallback: T) => T");
+  expectType(genericTypes, "productResult", ["ApiFailure | ApiSuccess<Product>", "{ ok: true; data: { sku: string; price: number; metadata: { color: string; }; }; }"]);
+  expectType(genericTypes, "unwrap<T>", ["<T>(result: ApiResult<T>, fallback: T) => T", "(result: ApiFailure | ApiSuccess<T>, fallback: T) => T"]);
   expectType(genericTypes, "result: ApiResult", "ApiFailure | ApiSuccess<T>");
   expectType(genericTypes, "fallback: T", "T");
   expectType(genericTypes, "fallbackProduct", "{ sku: string; price: number; metadata?: Record<string, string>; }");

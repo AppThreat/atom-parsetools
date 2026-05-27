@@ -712,6 +712,38 @@ const detectDefaultTscOptions = (srcFiles, src) => {
   };
 };
 
+const normalizeImportedTypeSpecifier = (specifier, currentFileName) => {
+  let normalizedSpecifier = String(specifier).replaceAll("\\", "/");
+  const normalizedCurrentFileName = currentFileName?.replaceAll("\\", "/");
+
+  if (normalizedCurrentFileName && normalizedSpecifier.startsWith("/")) {
+    const relativeSpecifier = relative(
+      dirname(normalizedCurrentFileName),
+      normalizedSpecifier
+    ).replaceAll("\\", "/");
+    normalizedSpecifier = relativeSpecifier.startsWith(".")
+      ? relativeSpecifier
+      : `./${relativeSpecifier}`;
+  }
+
+  return normalizedSpecifier.replace(
+    /(\.d)?\.(tsx?|jsx?|mts|cts|mjs|cjs)$/,
+    ""
+  );
+};
+
+const normalizeTypeString = (typeStr, context) => {
+  if (!typeStr || typeof typeStr !== "string") {
+    return typeStr;
+  }
+  const currentFileName = context?.getSourceFile?.()?.fileName;
+  return typeStr.replace(
+    /import\("([^"]+)"(?:,\s*{\s*with:\s*{\s*"resolution-mode":\s*"import"\s*}\s*})?\)\./g,
+    (_, specifier) =>
+      `import("${normalizeImportedTypeSpecifier(specifier, currentFileName)}").`
+  );
+};
+
 const findTsConfig = (src) => {
   const searchRoot = resolve(src);
   return (
@@ -770,9 +802,12 @@ function createTsc(srcFiles, src) {
     const typeChecker = program.getTypeChecker();
     const seenTypes = new Map();
 
-    const safeTypeToString = (type) => {
+    const safeTypeToString = (type, context) => {
       try {
-        return typeChecker.typeToString(type, undefined, TSC_FLAGS);
+        return normalizeTypeString(
+          typeChecker.typeToString(type, context, TSC_FLAGS),
+          context
+        );
       } catch (err) {
         return "any";
       }
@@ -780,10 +815,238 @@ function createTsc(srcFiles, src) {
 
     const safeTypeWithContextToString = (node, context) => {
       try {
-        return typeChecker.typeToString(node, context, TSC_FLAGS);
+        return normalizeTypeString(
+          typeChecker.typeToString(node, context, TSC_FLAGS),
+          context
+        );
       } catch (err) {
         return "any";
       }
+    };
+
+    const addTypeAtPosition = (currentSeenTypes, position, typeStr) => {
+      const scoreTypeString = (value) => {
+        if (!value || isUnresolvedTypeString(value)) {
+          return 0;
+        }
+        if (value.includes("=>")) {
+          return 3;
+        }
+        if (value.includes("import(") || value.includes("{") || value.includes("|")) {
+          return 2;
+        }
+        return 1;
+      };
+      if (
+        Number.isInteger(position) &&
+        position >= 0 &&
+        typeStr &&
+        ![
+          "any",
+          "unknown",
+          "any[]",
+          "unknown[]",
+          "error",
+          "/*unresolved*/ any"
+        ].includes(typeStr)
+      ) {
+        const existingType = currentSeenTypes.get(position);
+        if (!existingType) {
+          currentSeenTypes.set(position, typeStr);
+          return;
+        }
+        const existingScore = scoreTypeString(existingType);
+        const nextScore = scoreTypeString(typeStr);
+        if (
+          nextScore > existingScore ||
+          (nextScore === existingScore && typeStr.length >= existingType.length)
+        ) {
+          currentSeenTypes.set(position, typeStr);
+        }
+      }
+    };
+
+    const isUnresolvedTypeString = (typeStr) =>
+      [
+        "any",
+        "unknown",
+        "any[]",
+        "unknown[]",
+        "error",
+        "/*unresolved*/ any",
+        "Promise<any>",
+        "Promise<unknown>"
+      ].includes(typeStr);
+
+    const collectReturnExpressionTypes = (node, collectedTypes = new Set()) => {
+      if (!node || !node.kind) {
+        return collectedTypes;
+      }
+      if (tsc.isReturnStatement(node) && node.expression) {
+        const returnType = safeTypeWithContextToString(
+          typeChecker.getTypeAtLocation(node.expression),
+          node.expression
+        );
+        if (returnType && !isUnresolvedTypeString(returnType)) {
+          collectedTypes.add(returnType);
+        } else {
+          const inferredSyntaxType = inferExpressionTypeFromSyntax(
+            node.expression
+          );
+          if (inferredSyntaxType && !isUnresolvedTypeString(inferredSyntaxType)) {
+            collectedTypes.add(inferredSyntaxType);
+          }
+        }
+        return collectedTypes;
+      }
+      if (
+        node !== undefined &&
+        !tsc.isFunctionDeclaration(node) &&
+        !tsc.isFunctionExpression(node) &&
+        !tsc.isArrowFunction(node) &&
+        !tsc.isMethodDeclaration(node)
+      ) {
+        tsc.forEachChild(node, (child) =>
+          collectReturnExpressionTypes(child, collectedTypes)
+        );
+      }
+      return collectedTypes;
+    };
+
+    const inferAsyncReturnTypeFromBody = (node) => {
+      if (!node.body) {
+        return undefined;
+      }
+      if (!tsc.isBlock(node.body)) {
+        const bodyType = safeTypeWithContextToString(
+          typeChecker.getTypeAtLocation(node.body),
+          node.body
+        );
+        return bodyType && !bodyType.startsWith("Promise<")
+          ? `Promise<${bodyType}>`
+          : bodyType;
+      }
+      const collectedTypes = collectReturnExpressionTypes(node.body);
+      if (collectedTypes.size === 0) {
+        return undefined;
+      }
+      const unionType = [...collectedTypes].sort().join(" | ");
+      return unionType.startsWith("Promise<") ? unionType : `Promise<${unionType}>`;
+    };
+
+    const buildFunctionSignatureType = (node, returnTypeStr) => {
+      if (!node.parameters) {
+        return undefined;
+      }
+      const parameters = node.parameters.map((param) => {
+        const parameterName = param.name?.getText?.() || "arg";
+        const parameterType = safeTypeWithContextToString(
+          typeChecker.getTypeAtLocation(param.name || param),
+          param.name || param
+        );
+        return `${parameterName}: ${parameterType}`;
+      });
+      return `(${parameters.join(", ")}) => ${returnTypeStr}`;
+    };
+
+    const inferExpressionTypeFromSyntax = (expression) => {
+      if (!expression) {
+        return undefined;
+      }
+      if (
+        tsc.isCallExpression(expression) &&
+        expression.expression.kind === tsc.SyntaxKind.ImportKeyword &&
+        expression.arguments.length > 0 &&
+        tsc.isStringLiteralLike(expression.arguments[0])
+      ) {
+        return `Promise<typeof import("${normalizeImportedTypeSpecifier(
+          expression.arguments[0].text,
+          expression.getSourceFile().fileName
+        )}")>`;
+      }
+      if (tsc.isAwaitExpression(expression)) {
+        const awaitedType = inferExpressionTypeFromSyntax(expression.expression);
+        return awaitedType?.startsWith("Promise<")
+          ? awaitedType.slice(8, -1)
+          : awaitedType;
+      }
+      if (tsc.isIdentifier(expression)) {
+        const symbol = typeChecker.getSymbolAtLocation(expression);
+        const declaration = symbol?.valueDeclaration;
+        if (tsc.isVariableDeclaration(declaration) && declaration.initializer) {
+          return inferExpressionTypeFromSyntax(declaration.initializer);
+        }
+      }
+      if (tsc.isPropertyAccessExpression(expression)) {
+        const baseType = inferExpressionTypeFromSyntax(expression.expression);
+        if (baseType) {
+          return `${baseType}.${expression.name.getText()}`;
+        }
+      }
+      return undefined;
+    };
+
+    const inferFunctionDeclarationReturnType = (declaration) => {
+      const signature = typeChecker.getSignatureFromDeclaration(declaration);
+      if (!signature) {
+        return undefined;
+      }
+      let inferredType = safeTypeToString(
+        typeChecker.getReturnTypeOfSignature(signature)
+      );
+      if (
+        isUnresolvedTypeString(inferredType) &&
+        (tsc.getCombinedModifierFlags(declaration) & tsc.ModifierFlags.Async) !==
+          0
+      ) {
+        inferredType =
+          inferAsyncReturnTypeFromSyntaxBody(declaration) ||
+          inferAsyncReturnTypeFromBody(declaration) ||
+          inferredType;
+      }
+      return inferredType;
+    };
+
+    const inferAsyncReturnTypeFromSyntaxBody = (node) => {
+      if (!node?.body) {
+        return undefined;
+      }
+      const collectedTypes = new Set();
+      const visit = (currentNode) => {
+        if (!currentNode || !currentNode.kind) {
+          return;
+        }
+        if (tsc.isReturnStatement(currentNode) && currentNode.expression) {
+          const inferredType = inferExpressionTypeFromSyntax(
+            currentNode.expression
+          );
+          if (inferredType) {
+            collectedTypes.add(inferredType);
+          }
+          return;
+        }
+        if (
+          !tsc.isFunctionDeclaration(currentNode) &&
+          !tsc.isFunctionExpression(currentNode) &&
+          !tsc.isArrowFunction(currentNode) &&
+          !tsc.isMethodDeclaration(currentNode)
+        ) {
+          tsc.forEachChild(currentNode, visit);
+        }
+      };
+      if (tsc.isBlock(node.body)) {
+        visit(node.body);
+      } else {
+        const inferredType = inferExpressionTypeFromSyntax(node.body);
+        if (inferredType) {
+          collectedTypes.add(inferredType);
+        }
+      }
+      if (collectedTypes.size === 0) {
+        return undefined;
+      }
+      const unionType = [...collectedTypes].sort().join(" | ");
+      return unionType.startsWith("Promise<") ? unionType : `Promise<${unionType}>`;
     };
 
     const addType = (node, currentSeenTypes = seenTypes) => {
@@ -833,13 +1096,26 @@ function createTsc(srcFiles, src) {
           const signature = typeChecker.getSignatureFromDeclaration(node);
           if (signature) {
             const returnType = typeChecker.getReturnTypeOfSignature(signature);
-            typeStr = safeTypeToString(returnType);
+            typeStr = safeTypeToString(returnType, node.name || node);
+            if (
+              isUnresolvedTypeString(typeStr) &&
+              (tsc.getCombinedModifierFlags(node) & tsc.ModifierFlags.Async) !==
+                0
+            ) {
+              typeStr =
+                inferAsyncReturnTypeFromSyntaxBody(node) ||
+                inferAsyncReturnTypeFromBody(node) ||
+                typeStr;
+            }
             // Also extract parameter types
             if (node.parameters) {
               for (const param of node.parameters) {
                 try {
                   const paramType = typeChecker.getTypeAtLocation(param);
-                  const paramTypeStr = safeTypeToString(paramType);
+                  const paramTypeStr = safeTypeToString(
+                    paramType,
+                    param.name || param
+                  );
                   if (paramTypeStr && paramTypeStr !== "any") {
                     currentSeenTypes.set(param.getStart(), paramTypeStr);
                   }
@@ -848,6 +1124,13 @@ function createTsc(srcFiles, src) {
                 }
               }
             }
+            if (node.name) {
+              addTypeAtPosition(
+                currentSeenTypes,
+                node.name.getStart(),
+                buildFunctionSignatureType(node, typeStr)
+              );
+            }
           } else {
             const funcType = typeChecker.getTypeAtLocation(node);
             const callSignatures = typeChecker.getSignaturesOfType(
@@ -855,7 +1138,10 @@ function createTsc(srcFiles, src) {
               tsc.SignatureKind.Call
             );
             if (callSignatures.length > 0) {
-              typeStr = safeTypeToString(callSignatures[0].getReturnType());
+              typeStr = safeTypeToString(
+                callSignatures[0].getReturnType(),
+                node.name || node
+              );
             }
           }
         }
@@ -876,6 +1162,46 @@ function createTsc(srcFiles, src) {
         ) {
           const varType = typeChecker.getTypeAtLocation(node.name);
           typeStr = safeTypeWithContextToString(varType, node.name);
+          if (node.initializer) {
+            const initializerTarget = tsc.isPropertyAccessExpression(
+              node.initializer
+            )
+              ? node.initializer.name
+              : tsc.isElementAccessExpression(node.initializer) &&
+                  node.initializer.argumentExpression
+                ? node.initializer.argumentExpression
+                : node.initializer;
+            const initializerType = safeTypeWithContextToString(
+              typeChecker.getTypeAtLocation(initializerTarget),
+              initializerTarget
+            );
+            if (
+              !isUnresolvedTypeString(initializerType) &&
+              (isUnresolvedTypeString(typeStr) ||
+                initializerType.length > typeStr.length)
+            ) {
+              typeStr = initializerType;
+            }
+            if (
+              isUnresolvedTypeString(typeStr) &&
+              tsc.isCallExpression(node.initializer) &&
+              tsc.isIdentifier(node.initializer.expression)
+            ) {
+              const symbol = typeChecker.getSymbolAtLocation(
+                node.initializer.expression
+              );
+              const declaration = symbol?.declarations?.find((candidate) =>
+                tsc.isFunctionDeclaration(candidate) ||
+                tsc.isMethodDeclaration(candidate) ||
+                tsc.isFunctionExpression(candidate) ||
+                tsc.isArrowFunction(candidate)
+              );
+              if (declaration) {
+                typeStr = inferFunctionDeclarationReturnType(declaration) || typeStr;
+              }
+            }
+          }
+          addTypeAtPosition(currentSeenTypes, node.name.getStart(), typeStr);
         }
         // BINDING ELEMENTS - capture destructured member types precisely
         else if (node.kind === tsc.SyntaxKind.BindingElement && node.name) {
@@ -900,12 +1226,32 @@ function createTsc(srcFiles, src) {
           const shorthandType = typeChecker.getTypeAtLocation(node.name);
           typeStr = safeTypeWithContextToString(shorthandType, node.name);
         }
+        // IMPORT CALLS - preserve module namespace typing for dynamic import()
+        else if (
+          node.kind === tsc.SyntaxKind.CallExpression &&
+          node.expression?.kind === tsc.SyntaxKind.ImportKeyword
+        ) {
+          const importType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(importType, node);
+        }
         // CALL EXPRESSIONS - extract return types
         else if (node.kind === tsc.SyntaxKind.CallExpression) {
           const callSig = typeChecker.getResolvedSignature(node);
           if (callSig) {
             const retType = callSig.getReturnType();
-            typeStr = safeTypeToString(retType);
+            typeStr = safeTypeToString(retType, node);
+            if (isUnresolvedTypeString(typeStr) && tsc.isIdentifier(node.expression)) {
+              const symbol = typeChecker.getSymbolAtLocation(node.expression);
+              const declaration = symbol?.declarations?.find((candidate) =>
+                tsc.isFunctionDeclaration(candidate) ||
+                tsc.isMethodDeclaration(candidate) ||
+                tsc.isFunctionExpression(candidate) ||
+                tsc.isArrowFunction(candidate)
+              );
+              if (declaration) {
+                typeStr = inferFunctionDeclarationReturnType(declaration) || typeStr;
+              }
+            }
           }
         }
         // NEW EXPRESSIONS - extract constructor return types
@@ -913,7 +1259,7 @@ function createTsc(srcFiles, src) {
           const newSig = typeChecker.getResolvedSignature(node);
           if (newSig) {
             const retType = newSig.getReturnType();
-            typeStr = safeTypeToString(retType);
+            typeStr = safeTypeToString(retType, node);
           }
         }
         // PROPERTY ACCESS - extract property types
@@ -923,6 +1269,15 @@ function createTsc(srcFiles, src) {
         ) {
           const propType = typeChecker.getTypeAtLocation(node);
           typeStr = safeTypeWithContextToString(propType, node);
+          if (node.kind === tsc.SyntaxKind.PropertyAccessExpression) {
+            addTypeAtPosition(currentSeenTypes, node.name.getStart(), typeStr);
+          } else if (node.argumentExpression) {
+            addTypeAtPosition(
+              currentSeenTypes,
+              node.argumentExpression.getStart(),
+              typeStr
+            );
+          }
         }
         // BINARY EXPRESSIONS - extract result types
         else if (node.kind === tsc.SyntaxKind.BinaryExpression) {
@@ -944,13 +1299,16 @@ function createTsc(srcFiles, src) {
           const arrowSig = typeChecker.getSignatureFromDeclaration(node);
           if (arrowSig) {
             const retType = arrowSig.getReturnType();
-            typeStr = safeTypeToString(retType);
+            typeStr = safeTypeToString(retType, node);
             // Also extract parameter types for arrow functions
             if (node.parameters) {
               for (const param of node.parameters) {
                 try {
                   const paramType = typeChecker.getTypeAtLocation(param);
-                  const paramTypeStr = safeTypeToString(paramType);
+                  const paramTypeStr = safeTypeToString(
+                    paramType,
+                    param.name || param
+                  );
                   if (paramTypeStr && paramTypeStr !== "any") {
                     currentSeenTypes.set(param.getStart(), paramTypeStr);
                   }
@@ -972,7 +1330,7 @@ function createTsc(srcFiles, src) {
             tsc.SignatureKind.Construct
           );
           if (constructSigs.length > 0) {
-            typeStr = safeTypeToString(constructSigs[0].getReturnType());
+            typeStr = safeTypeToString(constructSigs[0].getReturnType(), node);
           }
         }
         // ENUM MEMBERS - preserve literal enum member types for TypeScript projects
@@ -1044,7 +1402,7 @@ function createTsc(srcFiles, src) {
             "/*unresolved*/ any"
           ].includes(typeStr)
         ) {
-          currentSeenTypes.set(node.getStart(), typeStr);
+          addTypeAtPosition(currentSeenTypes, node.getStart(), typeStr);
         }
       } catch (err) {
         // Silently fail on type resolution errors

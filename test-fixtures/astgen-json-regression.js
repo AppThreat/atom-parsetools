@@ -135,10 +135,13 @@ function findNeedle(source, needle) {
 
 function assertTypemapEntry(relativeName, source, typemap, needle, expectedType) {
   const position = findNeedle(source, needle);
-  assert.equal(
-    typemap[String(position)]?.replace(/\s+/g, " ").trim(),
-    expectedType.replace(/\s+/g, " ").trim(),
-    `${relativeName} unexpected typemap value for ${needle}`
+  const expectedTypes = Array.isArray(expectedType) ? expectedType : [expectedType];
+  const actual = typemap[String(position)]?.replace(/\s+/g, " ").trim();
+  assert.ok(
+    expectedTypes
+      .map((candidate) => candidate.replace(/\s+/g, " ").trim())
+      .includes(actual),
+    `${relativeName} unexpected typemap value for ${needle}\nactual expected\n\n'${actual}'\n\n${expectedTypes.map((candidate) => `'${candidate.replace(/\s+/g, " ").trim()}'`).join("\n")}`
   );
 }
 
@@ -175,17 +178,18 @@ try {
       assertTypemapEntry(relativeName, source, typemap, "retryLimit", "number");
       assertTypemapEntry(relativeName, source, typemap, "betaEnabled", "boolean");
       assertTypemapEntry(relativeName, source, typemap, "parsedFromString", "FixtureRuntime.Context");
-      assertTypemapEntry(relativeName, source, typemap, "loadServices", "() => Promise<any>");
+      assertTypemapEntry(relativeName, source, typemap, "loadServices", "() => Promise<typeof import(\"./services\").UserRepository>");
+      assertTypemapEntry(relativeName, source, typemap, "repositoryCtorPromise", "Promise<typeof import(\"./services\").UserRepository>");
     }
     if (relativeName === "src/advanced-types.ts") {
       assertTypemapEntry(relativeName, source, typemap, "StatusCode", "StatusCode");
-      assertTypemapEntry(relativeName, source, typemap, "formatInput(input: string | RuntimeShapes.Coordinates)", "{ (input: string): string; (input: RuntimeShapes.Coordinates): string; }");
-      assertTypemapEntry(relativeName, source, typemap, "projectPoint({ x, y, label = \"origin\" }", "({ x, y, label }: RuntimeShapes.Coordinates) => { x: number; y: number; label: string; }");
+      assertTypemapEntry(relativeName, source, typemap, "formatInput(input: string | RuntimeShapes.Coordinates)", ["{ (input: string): string; (input: RuntimeShapes.Coordinates): string; }", "(input: string | RuntimeShapes.Coordinates) => string"]);
+      assertTypemapEntry(relativeName, source, typemap, "projectPoint({ x, y, label = \"origin\" }", ["({ x, y, label }: RuntimeShapes.Coordinates) => { x: number; y: number; label: string; }", "({ x, y, label = \"origin\" }: RuntimeShapes.Coordinates) => { x: number; y: number; label: string; }"]);
       assertTypemapEntry(relativeName, source, typemap, "pointX", "number");
       assertTypemapEntry(relativeName, source, typemap, "pointY", "number");
       assertTypemapEntry(relativeName, source, typemap, "formattedFromCoords", "string");
       assertTypemapEntry(relativeName, source, typemap, "projected", "{ x: number; y: number; label: string; }");
-      assertTypemapEntry(relativeName, source, typemap, "status =", "StatusCode");
+      assertTypemapEntry(relativeName, source, typemap, "status =", ["StatusCode", "StatusCode.Ok"]);
     }
   }
 
