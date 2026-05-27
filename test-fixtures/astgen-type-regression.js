@@ -8,24 +8,36 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const repoRoot = dirname(__dirname);
-const fixtureRoot = join(
-  __dirname,
-  "projects",
-  "type-inference-regression"
-);
 const outputRoot = mkdtempSync(join(tmpdir(), "atom-parsetools-astgen-"));
 
-const fixtureFiles = ["index.js", "util.js", "types.ts"];
+const fixtureProjects = [
+  {
+    name: "type-inference-regression",
+    files: ["index.js", "util.js", "types.ts"]
+  },
+  {
+    name: "inference-edge-cases",
+    files: ["jsdoc-flows.js", "modern-syntax.js", "generic-types.ts"]
+  }
+];
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
 }
 
-function loadFixture(fileName) {
+function getFixtureRoot(projectName) {
+  return join(__dirname, "projects", projectName);
+}
+
+function getProjectOutputRoot(projectName) {
+  return join(outputRoot, projectName);
+}
+
+function loadFixture(projectName, fileName) {
   return {
-    code: readFileSync(join(fixtureRoot, fileName), "utf8"),
-    ast: readJson(join(outputRoot, `${fileName}.json`)),
-    typemap: readJson(join(outputRoot, `${fileName}.typemap`))
+    code: readFileSync(join(getFixtureRoot(projectName), fileName), "utf8"),
+    ast: readJson(join(getProjectOutputRoot(projectName), `${fileName}.json`)),
+    typemap: readJson(join(getProjectOutputRoot(projectName), `${fileName}.typemap`))
   };
 }
 
@@ -97,15 +109,15 @@ function assertOutputShape(fileName, fixture) {
   }
 }
 
-try {
+function runAstgen(projectName) {
   execFileSync(
     process.execPath,
     [
       join(repoRoot, "astgen.js"),
       "-i",
-      fixtureRoot,
+      getFixtureRoot(projectName),
       "-o",
-      outputRoot,
+      getProjectOutputRoot(projectName),
       "-t",
       "js"
     ],
@@ -115,15 +127,26 @@ try {
       stdio: ["ignore", "pipe", "pipe"]
     }
   );
+}
 
-  const fixtures = Object.fromEntries(
-    fixtureFiles.map((fileName) => [fileName, loadFixture(fileName)])
+function loadProjectFixtures(project) {
+  return Object.fromEntries(
+    project.files.map((fileName) => [fileName, loadFixture(project.name, fileName)])
   );
+}
 
-  for (const [fileName, fixture] of Object.entries(fixtures)) {
-    assertOutputShape(fileName, fixture);
+try {
+  const fixturesByProject = new Map();
+  for (const project of fixtureProjects) {
+    runAstgen(project.name);
+    const projectFixtures = loadProjectFixtures(project);
+    fixturesByProject.set(project.name, projectFixtures);
+    for (const [fileName, fixture] of Object.entries(projectFixtures)) {
+      assertOutputShape(fileName, fixture);
+    }
   }
 
+  const fixtures = fixturesByProject.get("type-inference-regression");
   const index = fixtures["index.js"];
   expectType(index, "primitiveNumber", "number");
   expectType(index, "numericList", "Array<number>");
@@ -160,6 +183,79 @@ try {
   expectType(types, "pickName(user", "(user: User) => string");
   expectType(types, "user: User", "{ id: number; name: string; }");
   expectType(types, "pickedName", "string");
+
+  const edgeFixtures = fixturesByProject.get("inference-edge-cases");
+  const jsdocFlows = edgeFixtures["jsdoc-flows.js"];
+  expectType(jsdocFlows, "primaryUser", "{ id: number; name: string; tags?: string[]; }");
+  expectType(jsdocFlows, "userName", "string");
+  expectType(jsdocFlows, "firstTag", "string");
+  expectType(jsdocFlows, "userEntries", "Array<[string, string | number | Array<string>]>");
+  expectType(jsdocFlows, "userIdSet", "Set<number>");
+  expectType(jsdocFlows, "findUser(users", "(users: UserRecord[], predicate: (user: UserRecord) => boolean) => UserRecord | undefined");
+  expectType(jsdocFlows, "users, predicate", "Array<UserRecord>");
+  expectType(jsdocFlows, "predicate) {", "(user: UserRecord) => boolean");
+  expectType(jsdocFlows, "selectedUser", "UserRecord | undefined");
+  expectType(jsdocFlows, "selectedName", "string");
+  expectType(jsdocFlows, "indexBy(values", "<T>(values: T[], getKey: (value: T, index: number) => string) => Map<string, T>");
+  expectType(jsdocFlows, "values, getKey", "Array<T>");
+  expectType(jsdocFlows, "getKey) {", "(value: T, index: number) => string");
+  expectType(jsdocFlows, "userIndex", "Map<string, UserRecord>");
+  expectType(jsdocFlows, "indexedUser", "UserRecord | undefined");
+  expectType(jsdocFlows, "helpers =", "{ label(user: UserRecord): string; names(users: UserRecord[]): Array<string>; }");
+  expectType(jsdocFlows, "helperLabel", "string");
+  expectType(jsdocFlows, "helperNames", "Array<string>");
+  expectType(jsdocFlows, "controlledCounter", "() => Generator<number, string, boolean>");
+  expectType(jsdocFlows, "counterIterator", "Generator<number, string, boolean>");
+  expectType(jsdocFlows, "firstCounterResult", "IteratorYieldResult<number> | IteratorReturnResult<string>");
+  expectType(jsdocFlows, "loadUser()", "() => Promise<UserRecord>");
+  expectType(jsdocFlows, "loadedUserPromise", "Promise<UserRecord>");
+  expectType(jsdocFlows, "loadedUserNamePromise", "Promise<string>");
+
+  const modernSyntax = edgeFixtures["modern-syntax.js"];
+  expectType(modernSyntax, "config =", "{ mode: string; retries: number; features: { tracing: boolean; sampling: number; }; }");
+  expectType(modernSyntax, "mode =", "string");
+  expectType(modernSyntax, "tracingEnabled", "boolean");
+  expectType(modernSyntax, "samplingRate", "number");
+  expectType(modernSyntax, "mergedConfig", "{ region: string; mode: string; retries: number; features: { tracing: boolean; sampling: number; }; }");
+  expectType(modernSyntax, "records =", "Array<{ kind: string; value: number; message?: never; } | { kind: string; message: string; value?: never; }>");
+  expectType(modernSyntax, "okRecords", "Array<{ kind: string; value: number; message?: never; } | { kind: string; message: string; value?: never; }>");
+  expectType(modernSyntax, "recordKinds", "Array<string>");
+  expectType(modernSyntax, "totalValue", "number");
+  expectType(modernSyntax, "matrix =", "Array<Array<number>>");
+  expectType(modernSyntax, "flattenedMatrix", "Array<number>");
+  expectType(modernSyntax, "matrixFirst", "number | undefined");
+  expectType(modernSyntax, "formatter", "Intl.NumberFormat");
+  expectType(modernSyntax, "formattedTotal", "string");
+  expectType(modernSyntax, "url =", "URL");
+  expectType(modernSyntax, "debugParam", "string | null");
+  expectType(modernSyntax, "urlParts", "Array<string>");
+  expectType(modernSyntax, "uniqueKinds", "Set<string>");
+  expectType(modernSyntax, "kindArray", "Array<string>");
+  expectType(modernSyntax, "kindSummary", "string");
+  expectType(modernSyntax, "dynamicValue", "string");
+
+  const genericTypes = edgeFixtures["generic-types.ts"];
+  expectType(genericTypes, "productResult", "ApiFailure | ApiSuccess<Product>");
+  expectType(genericTypes, "unwrap<T>", "<T>(result: ApiResult<T>, fallback: T) => T");
+  expectType(genericTypes, "result: ApiResult", "ApiFailure | ApiSuccess<T>");
+  expectType(genericTypes, "fallback: T", "T");
+  expectType(genericTypes, "fallbackProduct", "{ sku: string; price: number; metadata?: Record<string, string>; }");
+  expectType(genericTypes, "product =", "{ sku: string; price: number; metadata?: Record<string, string>; }");
+  expectType(genericTypes, "productSku", "string");
+  expectType(genericTypes, "productColor", "string | undefined");
+  expectType(genericTypes, "pluck<T", "<T, K extends keyof T>(value: T, key: K) => T[K]");
+  expectType(genericTypes, "value: T", "T");
+  expectType(genericTypes, "key: K", "K");
+  expectType(genericTypes, "pluckedPrice", "number");
+  expectType(genericTypes, "pluckedMetadata", "Record<string, string> | undefined");
+  expectType(genericTypes, "Repository<T", "Repository<T>");
+  expectType(genericTypes, "items =", "Map<string, T>");
+  expectType(genericTypes, "add(item", "(item: T) => this");
+  expectType(genericTypes, "item: T", "T");
+  expectType(genericTypes, "get(sku", "(sku: string) => T | undefined");
+  expectType(genericTypes, "productRepository", "Repository<Product>");
+  expectType(genericTypes, "repositoryAfterAdd", "Repository<Product>");
+  expectType(genericTypes, "repositoryProduct", "Product | undefined");
 
   console.log("astgen type inference regression tests passed");
 } finally {

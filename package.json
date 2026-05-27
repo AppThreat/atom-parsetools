@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "pretty": "prettier --write *.js --trailing-comma=none",
-    "test": "node test-fixtures/astgen-type-regression.js",
+    "test": "node test-fixtures/astgen-type-regression.js && node test-fixtures/evaluate-astgen.js",
+    "test:evaluate": "node test-fixtures/evaluate-astgen.js",
     "test:fixtures": "node test-fixtures/test-suite.js"
   },
   "dependencies": {
@@ -47,5 +48,5 @@
     "plugins/",
     "LICENSE"
   ],
-  "packageManager": "npm"
+  "packageManager": "npm@11.13.0"
 }
