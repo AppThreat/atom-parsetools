@@ -17,7 +17,8 @@ const fixtureProjects = [
   { name: "complex-patterns", minTypemapEntries: 900 },
   { name: "advanced-patterns", minTypemapEntries: 2500 },
   { name: "type-inference-regression", minTypemapEntries: 100 },
-  { name: "inference-edge-cases", minTypemapEntries: 250 }
+  { name: "inference-edge-cases", minTypemapEntries: 250 },
+  { name: "typescript-parsing", minTypemapEntries: 150 }
 ];
 
 function listSourceFiles(dir) {

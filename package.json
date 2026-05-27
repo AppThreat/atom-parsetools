@@ -6,8 +6,9 @@
   "type": "module",
   "scripts": {
     "pretty": "prettier --write *.js --trailing-comma=none",
-    "test": "node test-fixtures/astgen-type-regression.js && node test-fixtures/evaluate-astgen.js",
+    "test": "node test-fixtures/astgen-type-regression.js && node test-fixtures/astgen-json-regression.js && node test-fixtures/evaluate-astgen.js",
     "test:evaluate": "node test-fixtures/evaluate-astgen.js",
+    "test:json": "node test-fixtures/astgen-json-regression.js",
     "test:fixtures": "node test-fixtures/test-suite.js"
   },
   "dependencies": {
