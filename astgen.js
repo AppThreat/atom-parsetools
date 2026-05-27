@@ -255,12 +255,16 @@ const babelSyntaxPlugins = [
 const makeTypescriptPlugin = (file) => [
   "typescript",
   {
-    dts: file.endsWith(".d.ts") || file.endsWith(".d.mts") || file.endsWith(".d.cts"),
+    dts:
+      file.endsWith(".d.ts") ||
+      file.endsWith(".d.mts") ||
+      file.endsWith(".d.cts"),
     disallowAmbiguousJSXLike: false
   }
 ];
 
-const getBabelPluginName = (plugin) => Array.isArray(plugin) ? plugin[0] : plugin;
+const getBabelPluginName = (plugin) =>
+  Array.isArray(plugin) ? plugin[0] : plugin;
 
 const mergeBabelPlugins = (...pluginGroups) => {
   const merged = [];
@@ -363,7 +367,8 @@ const shouldIncludeNodeModulesBundles =
  * 2. ASTGEN_IGNORE_DIRS is non-empty and doesn't include "node_modules"
  */
 const getAllSrcJSAndTSFiles = (src) => {
-  const filePattern = "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|xsjs|xsjslib|ejs)$";
+  const filePattern =
+    "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|xsjs|xsjslib|ejs)$";
   const bundledNodeModulesPattern =
     "node_modules[\\\\/].*[\\\\/](?:.*\\.)?(bundle|dist|index|min|app)\\.(js|cjs|mjs)$";
 
@@ -393,9 +398,8 @@ const getAllSrcJSAndTSFiles = (src) => {
   }
   // Step 2: Combine both lists
   return Promise.all([allFilesPromise, bundledFilesPromise]).then(
-    ([allFiles, bundledFiles]) => [
-      ...new Set([...allFiles, ...bundledFiles])
-    ].sort()
+    ([allFiles, bundledFiles]) =>
+      [...new Set([...allFiles, ...bundledFiles])].sort()
   );
 };
 
@@ -714,7 +718,10 @@ const detectDefaultTscOptions = (srcFiles, src) => {
 };
 
 const hasExplicitTsCompilerOption = (config, optionName) =>
-  Object.prototype.hasOwnProperty.call(config?.compilerOptions ?? {}, optionName);
+  Object.prototype.hasOwnProperty.call(
+    config?.compilerOptions ?? {},
+    optionName
+  );
 
 const normalizeImportedTypeSpecifier = (specifier, currentFileName) => {
   let normalizedSpecifier = String(specifier).replaceAll("\\", "/");
@@ -722,7 +729,10 @@ const normalizeImportedTypeSpecifier = (specifier, currentFileName) => {
 
   if (normalizedSpecifier.startsWith("file://")) {
     try {
-      normalizedSpecifier = fileURLToPath(normalizedSpecifier).replaceAll("\\", "/");
+      normalizedSpecifier = fileURLToPath(normalizedSpecifier).replaceAll(
+        "\\",
+        "/"
+      );
     } catch {
       // ignore malformed file URLs and leave the original specifier intact
     }
@@ -851,7 +861,11 @@ function createTsc(srcFiles, src) {
         if (value.includes("=>")) {
           return 3;
         }
-        if (value.includes("import(") || value.includes("{") || value.includes("|")) {
+        if (
+          value.includes("import(") ||
+          value.includes("{") ||
+          value.includes("|")
+        ) {
           return 2;
         }
         return 1;
@@ -912,7 +926,10 @@ function createTsc(srcFiles, src) {
           const inferredSyntaxType = inferExpressionTypeFromSyntax(
             node.expression
           );
-          if (inferredSyntaxType && !isUnresolvedTypeString(inferredSyntaxType)) {
+          if (
+            inferredSyntaxType &&
+            !isUnresolvedTypeString(inferredSyntaxType)
+          ) {
             collectedTypes.add(inferredSyntaxType);
           }
         }
@@ -950,7 +967,9 @@ function createTsc(srcFiles, src) {
         return undefined;
       }
       const unionType = [...collectedTypes].sort().join(" | ");
-      return unionType.startsWith("Promise<") ? unionType : `Promise<${unionType}>`;
+      return unionType.startsWith("Promise<")
+        ? unionType
+        : `Promise<${unionType}>`;
     };
 
     const buildFunctionSignatureType = (node, returnTypeStr) => {
@@ -984,7 +1003,9 @@ function createTsc(srcFiles, src) {
         )}")>`;
       }
       if (tsc.isAwaitExpression(expression)) {
-        const awaitedType = inferExpressionTypeFromSyntax(expression.expression);
+        const awaitedType = inferExpressionTypeFromSyntax(
+          expression.expression
+        );
         return awaitedType?.startsWith("Promise<")
           ? awaitedType.slice(8, -1)
           : awaitedType;
@@ -1016,7 +1037,8 @@ function createTsc(srcFiles, src) {
       );
       if (
         isUnresolvedTypeString(inferredType) &&
-        (tsc.getCombinedModifierFlags(declaration) & tsc.ModifierFlags.Async) !==
+        (tsc.getCombinedModifierFlags(declaration) &
+          tsc.ModifierFlags.Async) !==
           0
       ) {
         inferredType =
@@ -1066,7 +1088,9 @@ function createTsc(srcFiles, src) {
         return undefined;
       }
       const unionType = [...collectedTypes].sort().join(" | ");
-      return unionType.startsWith("Promise<") ? unionType : `Promise<${unionType}>`;
+      return unionType.startsWith("Promise<")
+        ? unionType
+        : `Promise<${unionType}>`;
     };
 
     const addType = (node, currentSeenTypes = seenTypes) => {
@@ -1089,6 +1113,10 @@ function createTsc(srcFiles, src) {
       }
 
       let typeStr;
+      const isDirectCalleeIdentifier =
+        tsc.isIdentifier(node) &&
+        tsc.isCallExpression(node.parent) &&
+        node.parent.expression === node;
 
       try {
         // WRAPPER NODES
@@ -1210,14 +1238,16 @@ function createTsc(srcFiles, src) {
               const symbol = typeChecker.getSymbolAtLocation(
                 node.initializer.expression
               );
-              const declaration = symbol?.declarations?.find((candidate) =>
-                tsc.isFunctionDeclaration(candidate) ||
-                tsc.isMethodDeclaration(candidate) ||
-                tsc.isFunctionExpression(candidate) ||
-                tsc.isArrowFunction(candidate)
+              const declaration = symbol?.declarations?.find(
+                (candidate) =>
+                  tsc.isFunctionDeclaration(candidate) ||
+                  tsc.isMethodDeclaration(candidate) ||
+                  tsc.isFunctionExpression(candidate) ||
+                  tsc.isArrowFunction(candidate)
               );
               if (declaration) {
-                typeStr = inferFunctionDeclarationReturnType(declaration) || typeStr;
+                typeStr =
+                  inferFunctionDeclarationReturnType(declaration) || typeStr;
               }
             }
           }
@@ -1260,16 +1290,21 @@ function createTsc(srcFiles, src) {
           if (callSig) {
             const retType = callSig.getReturnType();
             typeStr = safeTypeToString(retType, node);
-            if (isUnresolvedTypeString(typeStr) && tsc.isIdentifier(node.expression)) {
+            if (
+              isUnresolvedTypeString(typeStr) &&
+              tsc.isIdentifier(node.expression)
+            ) {
               const symbol = typeChecker.getSymbolAtLocation(node.expression);
-              const declaration = symbol?.declarations?.find((candidate) =>
-                tsc.isFunctionDeclaration(candidate) ||
-                tsc.isMethodDeclaration(candidate) ||
-                tsc.isFunctionExpression(candidate) ||
-                tsc.isArrowFunction(candidate)
+              const declaration = symbol?.declarations?.find(
+                (candidate) =>
+                  tsc.isFunctionDeclaration(candidate) ||
+                  tsc.isMethodDeclaration(candidate) ||
+                  tsc.isFunctionExpression(candidate) ||
+                  tsc.isArrowFunction(candidate)
               );
               if (declaration) {
-                typeStr = inferFunctionDeclarationReturnType(declaration) || typeStr;
+                typeStr =
+                  inferFunctionDeclarationReturnType(declaration) || typeStr;
               }
             }
           }
@@ -1412,6 +1447,7 @@ function createTsc(srcFiles, src) {
           typeStr = safeTypeWithContextToString(typeObj, node);
         }
         if (
+          !isDirectCalleeIdentifier &&
           typeStr &&
           ![
             "any",

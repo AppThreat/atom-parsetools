@@ -142,14 +142,28 @@ function assertNormalizedImportTypeStrings(relativeName, typemap) {
   }
 }
 
-function findNeedle(source, needle) {
-  const position = source.indexOf(needle);
-  assert.notEqual(position, -1, `Missing fixture needle: ${needle}`);
+function findNeedle(source, needle, occurrence = 0) {
+  let fromIndex = 0;
+  let position = -1;
+  for (let index = 0; index <= occurrence; index++) {
+    position = source.indexOf(needle, fromIndex);
+    assert.notEqual(position, -1, `Missing fixture needle: ${needle}`);
+    fromIndex = position + needle.length;
+  }
   return position;
 }
 
-function assertTypemapEntry(relativeName, source, typemap, needle, expectedType) {
-  const position = findNeedle(source, needle);
+function assertTypemapEntry(
+  relativeName,
+  source,
+  typemap,
+  needle,
+  expectedType,
+  options = {}
+) {
+  const position =
+    findNeedle(source, needle, options.occurrence ?? 0) +
+    (options.offset ?? 0);
   const expectedTypes = Array.isArray(expectedType) ? expectedType : [expectedType];
   const actual = typemap[String(position)]?.replace(/\s+/g, " ").trim();
   assert.ok(
@@ -200,6 +214,7 @@ try {
       assertTypemapEntry(relativeName, source, typemap, "parsedFromString", "FixtureRuntime.Context");
       assertTypemapEntry(relativeName, source, typemap, "loadServices", "() => Promise<typeof import(\"./services\").UserRepository>");
       assertTypemapEntry(relativeName, source, typemap, "repositoryCtorPromise", "Promise<typeof import(\"./services\").UserRepository>");
+      assertTypemapEntry(relativeName, source, typemap, "loadServices()", "Promise<typeof import(\"./services\").UserRepository>", { occurrence: 1 });
     }
     if (relativeName === "src/advanced-types.ts") {
       assertTypemapEntry(relativeName, source, typemap, "StatusCode", "StatusCode");
