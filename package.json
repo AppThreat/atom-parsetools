@@ -48,6 +48,5 @@
     "*.js",
     "plugins/",
     "LICENSE"
-  ],
-  "packageManager": "npm@11.13.0"
+  ]
 }
