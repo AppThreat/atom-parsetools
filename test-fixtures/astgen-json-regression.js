@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -250,6 +250,72 @@ try {
         'UserSummary'
       ]);
     }
+  }
+
+  const jsAssertionFixtureRoot = mkdtempSync(
+    join(tmpdir(), "atom-parsetools-js-cast-fixture-")
+  );
+  const jsAssertionOutputRoot = mkdtempSync(
+    join(tmpdir(), "atom-parsetools-js-cast-output-")
+  );
+  try {
+    const relativeName = "cast-assertions.js";
+    const source = [
+      'let imgScr: string = <string>this.imageElement;',
+      'this.imageElement = new HTMLImageElement();',
+      '(<HTMLImageElement>this.imageElement).src = imgScr;',
+      'let emptyArray = <VNode[]>[];'
+    ].join("\n");
+    writeFileSync(join(jsAssertionFixtureRoot, relativeName), source);
+    execFileSync(
+      process.execPath,
+      [
+        join(repoRoot, "astgen.js"),
+        "-i",
+        jsAssertionFixtureRoot,
+        "-o",
+        jsAssertionOutputRoot,
+        "-t",
+        "js",
+        "--tsTypes=false"
+      ],
+      {
+        cwd: repoRoot,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"]
+      }
+    );
+
+    const astOutput = readJson(join(jsAssertionOutputRoot, `${relativeName}.json`));
+    assert.deepEqual(
+      Object.keys(astOutput).sort(),
+      ["ast", "fullName", "relativeName"],
+      `${relativeName} wrapper JSON shape changed`
+    );
+    assert.equal(astOutput.relativeName, relativeName);
+    assert.equal(astOutput.ast.type, "File", `${relativeName} should emit a Babel File AST`);
+    assert.equal(
+      astOutput.ast.program?.type,
+      "Program",
+      `${relativeName} should contain Program`
+    );
+    const counts = countAstNodes(astOutput.ast);
+    assert.ok(
+      (counts.TSTypeAssertion ?? 0) >= 3,
+      `${relativeName} should preserve TypeScript assertion nodes in JS-mode fixtures`
+    );
+    assert.equal(
+      counts.JSXElement ?? 0,
+      0,
+      `${relativeName} should not be misparsed as JSX`
+    );
+    assert.ok(
+      (counts.AssignmentExpression ?? 0) >= 2,
+      `${relativeName} should retain the assignment structure around cast receivers`
+    );
+  } finally {
+    rmSync(jsAssertionFixtureRoot, { recursive: true, force: true });
+    rmSync(jsAssertionOutputRoot, { recursive: true, force: true });
   }
 
   console.log("astgen TypeScript JSON regression tests passed");

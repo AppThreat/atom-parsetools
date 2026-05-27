@@ -254,16 +254,21 @@ const babelSyntaxPlugins = [
 const isNonJsxTypeScriptFile = (file) =>
   /(?:^|\/).*\.(?:d\.)?(?:ts|mts|cts)$/i.test(file);
 
+const isJsLikeNonJsxFile = (file) => /(?:^|\/).*\.(?:js|cjs|mjs)$/i.test(file);
+
 const shouldEnableJsxSyntax = (file) => !isNonJsxTypeScriptFile(file);
 
-const makeTypescriptPlugin = (file) => [
+const makeTypescriptPlugin = (
+  file,
+  { disallowAmbiguousJSXLike = isNonJsxTypeScriptFile(file) } = {}
+) => [
   "typescript",
   {
     dts:
       file.endsWith(".d.ts") ||
       file.endsWith(".d.mts") ||
       file.endsWith(".d.cts"),
-    disallowAmbiguousJSXLike: isNonJsxTypeScriptFile(file)
+    disallowAmbiguousJSXLike
   }
 ];
 
@@ -285,20 +290,31 @@ const mergeBabelPlugins = (...pluginGroups) => {
   return merged;
 };
 
-const makeBabelOptions = (baseOptions, file, extraPlugins = []) => ({
+const makeBabelOptions = (
+  baseOptions,
+  file,
+  extraPlugins = [],
+  { enableJsxSyntax = shouldEnableJsxSyntax(file), disallowAmbiguousJSXLike } = {}
+) => ({
   ...baseOptions,
   plugins: mergeBabelPlugins(
     baseOptions.plugins,
     extraPlugins,
     babelSyntaxPlugins,
-    shouldEnableJsxSyntax(file) ? ["jsx"] : [],
+    enableJsxSyntax ? ["jsx"] : [],
     (baseOptions.plugins || []).some(
       (plugin) => getBabelPluginName(plugin) === "flow"
     )
       ? []
-      : [makeTypescriptPlugin(file)]
+      : [makeTypescriptPlugin(file, { disallowAmbiguousJSXLike })]
   )
 });
+
+const shouldTryNonJsxTypescriptFallback = (file, projectType) =>
+  projectType !== "flow" &&
+  !/\.tsx$/i.test(file) &&
+  !/\.jsx$/i.test(file) &&
+  (isNonJsxTypeScriptFile(file) || isJsLikeNonJsxFile(file));
 
 const babelParserOptions = {
   sourceType: "unambiguous",
@@ -451,9 +467,25 @@ const codeToJsAst = (file, code, projectType) => {
   const primaryOptions = makeBabelOptions(primaryBabelOptions, file);
   const secondaryOptions = makeBabelOptions(secondaryBabelOptions, file);
   const safeOptions = makeBabelOptions(babelSafeParserOptions, file);
+  const nonJsxTypeScriptFallbackOptions = shouldTryNonJsxTypescriptFallback(
+    file,
+    projectType
+  )
+    ? makeBabelOptions(primaryBabelOptions, file, [], {
+        enableJsxSyntax: false,
+        disallowAmbiguousJSXLike: true
+      })
+    : undefined;
   try {
     return parse(code, primaryOptions);
   } catch (errPrimary) {
+    if (nonJsxTypeScriptFallbackOptions) {
+      try {
+        return parse(code, nonJsxTypeScriptFallbackOptions);
+      } catch {
+        // Fall through to the broader parser fallback chain below.
+      }
+    }
     try {
       return parse(code, secondaryOptions);
     } catch (errSecondary) {
