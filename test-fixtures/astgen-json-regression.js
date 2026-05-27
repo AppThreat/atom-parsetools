@@ -127,6 +127,21 @@ function assertTypemapShape(relativeName, typemap, sourceLength) {
   }
 }
 
+function assertNormalizedImportTypeStrings(relativeName, typemap) {
+  for (const typeName of Object.values(typemap)) {
+    assert.doesNotMatch(
+      typeName,
+      /resolution-mode/,
+      `${relativeName} should not retain TypeScript resolution-mode import noise: ${typeName}`
+    );
+    assert.doesNotMatch(
+      typeName,
+      /import\("(?:\/|file:\/\/|[A-Za-z]:[\\/])/,
+      `${relativeName} should not retain absolute import type paths: ${typeName}`
+    );
+  }
+}
+
 function findNeedle(source, needle) {
   const position = source.indexOf(needle);
   assert.notEqual(position, -1, `Missing fixture needle: ${needle}`);
@@ -163,6 +178,7 @@ try {
 
     assertJsonWrapper(relativeName, astOutput);
     assertTypemapShape(relativeName, typemap, source.length);
+    assertNormalizedImportTypeStrings(relativeName, typemap);
 
     const counts = countAstNodes(astOutput.ast);
     for (const [nodeType, minimumCount] of Object.entries(expectedNodeCounts[relativeName])) {
@@ -173,7 +189,11 @@ try {
     }
 
     if (relativeName === "src/alias-consumer.ts") {
-      assertTypemapEntry(relativeName, source, typemap, "aliasUser", "User<{ department: string; }>");
+      assertTypemapEntry(relativeName, source, typemap, "aliasUser", [
+        "User<{ department: string; }>",
+        '{ id: import("@models/models").EntityId; name: string; role: import("@models/models").UserRole.Admin; metadata: { department: string; }; createdAt: Date; }'
+      ]);
+      assertTypemapEntry(relativeName, source, typemap, "aliasDepartment", "string");
       assertTypemapEntry(relativeName, source, typemap, "serviceName", "string");
       assertTypemapEntry(relativeName, source, typemap, "retryLimit", "number");
       assertTypemapEntry(relativeName, source, typemap, "betaEnabled", "boolean");
@@ -190,6 +210,10 @@ try {
       assertTypemapEntry(relativeName, source, typemap, "formattedFromCoords", "string");
       assertTypemapEntry(relativeName, source, typemap, "projected", "{ x: number; y: number; label: string; }");
       assertTypemapEntry(relativeName, source, typemap, "status =", ["StatusCode", "StatusCode.Ok"]);
+    }
+    if (relativeName === "src/index.ts") {
+      assertTypemapEntry(relativeName, source, typemap, "summaries", 'Array<{ id: import("./models").EntityId; name: string; metadata: { department: string; }; }>');
+      assertTypemapEntry(relativeName, source, typemap, "firstSummary", '{ id: import("./models").EntityId; name: string; metadata: { department: string; }; }');
     }
   }
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { join, dirname, relative, resolve } from "path";
+import { fileURLToPath } from "url";
 import { parse } from "@babel/parser";
 import { parse as parseHermes } from "hermes-parser";
 import tsc from "typescript";
@@ -712,9 +713,20 @@ const detectDefaultTscOptions = (srcFiles, src) => {
   };
 };
 
+const hasExplicitTsCompilerOption = (config, optionName) =>
+  Object.prototype.hasOwnProperty.call(config?.compilerOptions ?? {}, optionName);
+
 const normalizeImportedTypeSpecifier = (specifier, currentFileName) => {
   let normalizedSpecifier = String(specifier).replaceAll("\\", "/");
   const normalizedCurrentFileName = currentFileName?.replaceAll("\\", "/");
+
+  if (normalizedSpecifier.startsWith("file://")) {
+    try {
+      normalizedSpecifier = fileURLToPath(normalizedSpecifier).replaceAll("\\", "/");
+    } catch {
+      // ignore malformed file URLs and leave the original specifier intact
+    }
+  }
 
   if (normalizedCurrentFileName && normalizedSpecifier.startsWith("/")) {
     const relativeSpecifier = relative(
@@ -738,9 +750,9 @@ const normalizeTypeString = (typeStr, context) => {
   }
   const currentFileName = context?.getSourceFile?.()?.fileName;
   return typeStr.replace(
-    /import\("([^"]+)"(?:,\s*{\s*with:\s*{\s*"resolution-mode":\s*"import"\s*}\s*})?\)\./g,
+    /import\("([^"]+)"(?:,\s*{\s*with:\s*{\s*"resolution-mode":\s*"import"\s*}\s*})?\)/g,
     (_, specifier) =>
-      `import("${normalizeImportedTypeSpecifier(specifier, currentFileName)}").`
+      `import("${normalizeImportedTypeSpecifier(specifier, currentFileName)}")`
   );
 };
 
@@ -770,11 +782,18 @@ const createTscProgramConfig = (srcFiles, src) => {
     };
   }
 
+  const shouldRespectExplicitModuleSettings =
+    hasExplicitTsCompilerOption(configFile.config, "module") ||
+    hasExplicitTsCompilerOption(configFile.config, "moduleResolution");
+  const configParseDefaults = shouldRespectExplicitModuleSettings
+    ? DEFAULT_TSC_OPTIONS
+    : detectedDefaultOptions;
+
   const parsedConfig = tsc.parseJsonConfigFileContent(
     configFile.config,
     tsc.sys,
     dirname(configPath),
-    detectedDefaultOptions,
+    configParseDefaults,
     configPath
   );
   const rootNames = [
@@ -784,7 +803,7 @@ const createTscProgramConfig = (srcFiles, src) => {
     rootNames,
     options: {
       ...DEFAULT_TSC_OPTIONS,
-      ...detectedDefaultOptions,
+      ...(shouldRespectExplicitModuleSettings ? {} : detectedDefaultOptions),
       ...parsedConfig.options,
       allowJs: true,
       checkJs: true,
@@ -992,7 +1011,8 @@ function createTsc(srcFiles, src) {
         return undefined;
       }
       let inferredType = safeTypeToString(
-        typeChecker.getReturnTypeOfSignature(signature)
+        typeChecker.getReturnTypeOfSignature(signature),
+        declaration.name || declaration
       );
       if (
         isUnresolvedTypeString(inferredType) &&
@@ -1149,7 +1169,7 @@ function createTsc(srcFiles, src) {
         else if (node.kind === tsc.SyntaxKind.PropertyDeclaration) {
           if (node.type) {
             const propType = typeChecker.getTypeFromTypeNode(node.type);
-            typeStr = safeTypeToString(propType);
+            typeStr = safeTypeToString(propType, node.type);
           } else if (node.initializer) {
             const initType = typeChecker.getTypeAtLocation(node.initializer);
             typeStr = safeTypeWithContextToString(initType, node.initializer);
