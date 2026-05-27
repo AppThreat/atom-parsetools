@@ -248,18 +248,27 @@ const babelSyntaxPlugins = [
   "dynamicImport",
   "importAttributes",
   "explicitResourceManagement",
-  "topLevelAwait",
-  "jsx"
+  "topLevelAwait"
 ];
 
-const makeTypescriptPlugin = (file) => [
+const isNonJsxTypeScriptFile = (file) =>
+  /(?:^|\/).*\.(?:d\.)?(?:ts|mts|cts)$/i.test(file);
+
+const isJsLikeNonJsxFile = (file) => /(?:^|\/).*\.(?:js|cjs|mjs)$/i.test(file);
+
+const shouldEnableJsxSyntax = (file) => !isNonJsxTypeScriptFile(file);
+
+const makeTypescriptPlugin = (
+  file,
+  { disallowAmbiguousJSXLike = isNonJsxTypeScriptFile(file) } = {}
+) => [
   "typescript",
   {
     dts:
       file.endsWith(".d.ts") ||
       file.endsWith(".d.mts") ||
       file.endsWith(".d.cts"),
-    disallowAmbiguousJSXLike: false
+    disallowAmbiguousJSXLike
   }
 ];
 
@@ -281,19 +290,31 @@ const mergeBabelPlugins = (...pluginGroups) => {
   return merged;
 };
 
-const makeBabelOptions = (baseOptions, file, extraPlugins = []) => ({
+const makeBabelOptions = (
+  baseOptions,
+  file,
+  extraPlugins = [],
+  { enableJsxSyntax = shouldEnableJsxSyntax(file), disallowAmbiguousJSXLike } = {}
+) => ({
   ...baseOptions,
   plugins: mergeBabelPlugins(
     baseOptions.plugins,
     extraPlugins,
     babelSyntaxPlugins,
+    enableJsxSyntax ? ["jsx"] : [],
     (baseOptions.plugins || []).some(
       (plugin) => getBabelPluginName(plugin) === "flow"
     )
       ? []
-      : [makeTypescriptPlugin(file)]
+      : [makeTypescriptPlugin(file, { disallowAmbiguousJSXLike })]
   )
 });
+
+const shouldTryNonJsxTypescriptFallback = (file, projectType) =>
+  projectType !== "flow" &&
+  !/\.tsx$/i.test(file) &&
+  !/\.jsx$/i.test(file) &&
+  (isNonJsxTypeScriptFile(file) || isJsLikeNonJsxFile(file));
 
 const babelParserOptions = {
   sourceType: "unambiguous",
@@ -446,9 +467,25 @@ const codeToJsAst = (file, code, projectType) => {
   const primaryOptions = makeBabelOptions(primaryBabelOptions, file);
   const secondaryOptions = makeBabelOptions(secondaryBabelOptions, file);
   const safeOptions = makeBabelOptions(babelSafeParserOptions, file);
+  const nonJsxTypeScriptFallbackOptions = shouldTryNonJsxTypescriptFallback(
+    file,
+    projectType
+  )
+    ? makeBabelOptions(primaryBabelOptions, file, [], {
+        enableJsxSyntax: false,
+        disallowAmbiguousJSXLike: true
+      })
+    : undefined;
   try {
     return parse(code, primaryOptions);
   } catch (errPrimary) {
+    if (nonJsxTypeScriptFallbackOptions) {
+      try {
+        return parse(code, nonJsxTypeScriptFallbackOptions);
+      } catch {
+        // Fall through to the broader parser fallback chain below.
+      }
+    }
     try {
       return parse(code, secondaryOptions);
     } catch (errSecondary) {
@@ -853,6 +890,17 @@ function createTsc(srcFiles, src) {
       }
     };
 
+    const getExplicitTypeAnnotationString = (typeNode) => {
+      if (!typeNode) {
+        return undefined;
+      }
+      try {
+        return safeTypeToString(typeChecker.getTypeFromTypeNode(typeNode), typeNode);
+      } catch {
+        return undefined;
+      }
+    };
+
     const addTypeAtPosition = (currentSeenTypes, position, typeStr) => {
       const scoreTypeString = (value) => {
         if (!value || isUnresolvedTypeString(value)) {
@@ -1128,8 +1176,8 @@ function createTsc(srcFiles, src) {
           node.kind === tsc.SyntaxKind.NonNullExpression
         ) {
           typeStr = safeTypeWithContextToString(
-            typeChecker.getTypeAtLocation(node.expression),
-            node.expression
+            typeChecker.getTypeAtLocation(node),
+            node
           );
         }
         // FUNCTION/METHOD SIGNATURES - extract return type AND parameter types
@@ -1208,9 +1256,13 @@ function createTsc(srcFiles, src) {
           node.kind === tsc.SyntaxKind.VariableDeclaration &&
           node.name
         ) {
+          const explicitDeclaredType = getExplicitTypeAnnotationString(node.type);
           const varType = typeChecker.getTypeAtLocation(node.name);
-          typeStr = safeTypeWithContextToString(varType, node.name);
-          if (node.initializer) {
+          typeStr =
+            explicitDeclaredType && !isUnresolvedTypeString(explicitDeclaredType)
+              ? explicitDeclaredType
+              : safeTypeWithContextToString(varType, node.name);
+          if (node.initializer && !explicitDeclaredType) {
             const initializerTarget = tsc.isPropertyAccessExpression(
               node.initializer
             )
