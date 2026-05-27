@@ -624,9 +624,9 @@ function createTsc(srcFiles) {
     const typeChecker = program.getTypeChecker();
     const seenTypes = new Map();
 
-    const safeTypeToString = (node) => {
+    const safeTypeToString = (type) => {
       try {
-        return typeChecker.typeToString(node, TSC_FLAGS);
+        return typeChecker.typeToString(type, undefined, TSC_FLAGS);
       } catch (err) {
         return "any";
       }
@@ -640,7 +640,7 @@ function createTsc(srcFiles) {
       }
     };
 
-    const addType = (node) => {
+    const addType = (node, currentSeenTypes = seenTypes) => {
       // STRUCTURAL/CONTAINER NODES
       if (
         node.kind === tsc.SyntaxKind.SourceFile ||
@@ -655,7 +655,7 @@ function createTsc(srcFiles) {
         node.kind === tsc.SyntaxKind.InterfaceDeclaration ||
         node.kind === tsc.SyntaxKind.ModuleDeclaration
       ) {
-        tsc.forEachChild(node, addType);
+        tsc.forEachChild(node, (child) => addType(child, currentSeenTypes));
         return;
       }
 
@@ -694,7 +694,7 @@ function createTsc(srcFiles) {
                   const paramType = typeChecker.getTypeAtLocation(param);
                   const paramTypeStr = safeTypeToString(paramType);
                   if (paramTypeStr && paramTypeStr !== "any") {
-                    seenTypes.set(param.getStart(), paramTypeStr);
+                    currentSeenTypes.set(param.getStart(), paramTypeStr);
                   }
                 } catch {
                   // ignore parameter type errors
@@ -723,12 +723,18 @@ function createTsc(srcFiles) {
           }
         }
         // VARIABLE DECLARATIONS - extract types for loop variables and destructuring
-        else if (node.kind === tsc.SyntaxKind.VariableDeclaration && node.name) {
+        else if (
+          node.kind === tsc.SyntaxKind.VariableDeclaration &&
+          node.name
+        ) {
           const varType = typeChecker.getTypeAtLocation(node.name);
           typeStr = safeTypeWithContextToString(varType, node.name);
         }
         // OBJECT LITERAL PROPERTIES - extract property value types
-        else if (node.kind === tsc.SyntaxKind.PropertyAssignment && node.initializer) {
+        else if (
+          node.kind === tsc.SyntaxKind.PropertyAssignment &&
+          node.initializer
+        ) {
           const propType = typeChecker.getTypeAtLocation(node.initializer);
           typeStr = safeTypeWithContextToString(propType, node.initializer);
         }
@@ -749,7 +755,10 @@ function createTsc(srcFiles) {
           }
         }
         // PROPERTY ACCESS - extract property types
-        else if (node.kind === tsc.SyntaxKind.PropertyAccessExpression || node.kind === tsc.SyntaxKind.ElementAccessExpression) {
+        else if (
+          node.kind === tsc.SyntaxKind.PropertyAccessExpression ||
+          node.kind === tsc.SyntaxKind.ElementAccessExpression
+        ) {
           const propType = typeChecker.getTypeAtLocation(node);
           typeStr = safeTypeWithContextToString(propType, node);
         }
@@ -781,7 +790,7 @@ function createTsc(srcFiles) {
                   const paramType = typeChecker.getTypeAtLocation(param);
                   const paramTypeStr = safeTypeToString(paramType);
                   if (paramTypeStr && paramTypeStr !== "any") {
-                    seenTypes.set(param.getStart(), paramTypeStr);
+                    currentSeenTypes.set(param.getStart(), paramTypeStr);
                   }
                 } catch {
                   // ignore
@@ -791,15 +800,24 @@ function createTsc(srcFiles) {
           }
         }
         // CLASS DECLARATIONS - extract class instance types
-        else if (node.kind === tsc.SyntaxKind.ClassDeclaration || node.kind === tsc.SyntaxKind.ClassExpression) {
+        else if (
+          node.kind === tsc.SyntaxKind.ClassDeclaration ||
+          node.kind === tsc.SyntaxKind.ClassExpression
+        ) {
           const classType = typeChecker.getTypeAtLocation(node);
-          const constructSigs = typeChecker.getSignaturesOfType(classType, tsc.SignatureKind.Construct);
+          const constructSigs = typeChecker.getSignaturesOfType(
+            classType,
+            tsc.SignatureKind.Construct
+          );
           if (constructSigs.length > 0) {
             typeStr = safeTypeToString(constructSigs[0].getReturnType());
           }
         }
         // TEMPLATE EXPRESSIONS - extract string types
-        else if (node.kind === tsc.SyntaxKind.TemplateExpression || node.kind === tsc.SyntaxKind.NoSubstitutionTemplateLiteral) {
+        else if (
+          node.kind === tsc.SyntaxKind.TemplateExpression ||
+          node.kind === tsc.SyntaxKind.NoSubstitutionTemplateLiteral
+        ) {
           const tmplType = typeChecker.getTypeAtLocation(node);
           typeStr = safeTypeWithContextToString(tmplType, node);
         }
@@ -859,18 +877,25 @@ function createTsc(srcFiles) {
             "/*unresolved*/ any"
           ].includes(typeStr)
         ) {
-          seenTypes.set(node.getStart(), typeStr);
+          currentSeenTypes.set(node.getStart(), typeStr);
         }
       } catch (err) {
         // Silently fail on type resolution errors
       }
-      tsc.forEachChild(node, addType);
+      tsc.forEachChild(node, (child) => addType(child, currentSeenTypes));
+    };
+
+    const collectTypes = (sourceFile) => {
+      const fileSeenTypes = new Map();
+      tsc.forEachChild(sourceFile, (node) => addType(node, fileSeenTypes));
+      return fileSeenTypes;
     };
 
     return {
       program: program,
       typeChecker: typeChecker,
       addType: addType,
+      collectTypes: collectTypes,
       seenTypes: seenTypes
     };
   } catch (err) {
@@ -926,9 +951,15 @@ const processFile = (file, options, ts) => {
       try {
         const tsAst = ts.program.getSourceFile(file);
         if (tsAst) {
-          tsc.forEachChild(tsAst, ts.addType);
-          writeTypesFile(file, ts.seenTypes, options);
-          ts.seenTypes.clear();
+          const seenTypes = ts.collectTypes
+            ? ts.collectTypes(tsAst)
+            : (() => {
+                tsc.forEachChild(tsAst, ts.addType);
+                const collectedTypes = new Map(ts.seenTypes);
+                ts.seenTypes.clear();
+                return collectedTypes;
+              })();
+          writeTypesFile(file, seenTypes, options);
         }
       } catch (err) {
         console.warn("Process file", file, ":", err.message);

@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "pretty": "prettier --write *.js --trailing-comma=none",
-    "lint": "eslint *.mjs *.js"
+    "lint": "eslint *.mjs *.js",
+    "test": "node test-fixtures/astgen-type-regression.js",
+    "test:fixtures": "node test-fixtures/test-suite.js"
   },
   "dependencies": {
     "@appthreat/atom-common": "^1.1.0",
