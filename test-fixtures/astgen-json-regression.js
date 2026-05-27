@@ -12,6 +12,8 @@ const fixtureRoot = join(__dirname, "projects", "typescript-parsing");
 const outputRoot = mkdtempSync(join(tmpdir(), "atom-parsetools-json-"));
 
 const expectedFiles = [
+  "src/alias-consumer.ts",
+  "src/ambient.d.ts",
   "src/index.ts",
   "src/models.ts",
   "src/services.ts",
@@ -19,6 +21,21 @@ const expectedFiles = [
 ];
 
 const expectedNodeCounts = {
+  "src/alias-consumer.ts": {
+    ImportDeclaration: 3,
+    ImportAttribute: 1,
+    AwaitExpression: 1,
+    Import: 1,
+    CallExpression: 4,
+    TSTypeLiteral: 1
+  },
+  "src/ambient.d.ts": {
+    TSModuleDeclaration: 2,
+    TSInterfaceDeclaration: 2,
+    TSDeclareFunction: 2,
+    ExportNamedDeclaration: 2,
+    TSQualifiedName: 2
+  },
   "src/models.ts": {
     TSEnumDeclaration: 1,
     TSInterfaceDeclaration: 2,
@@ -100,6 +117,21 @@ function assertTypemapShape(relativeName, typemap, sourceLength) {
   }
 }
 
+function findNeedle(source, needle) {
+  const position = source.indexOf(needle);
+  assert.notEqual(position, -1, `Missing fixture needle: ${needle}`);
+  return position;
+}
+
+function assertTypemapEntry(relativeName, source, typemap, needle, expectedType) {
+  const position = findNeedle(source, needle);
+  assert.equal(
+    typemap[String(position)]?.replace(/\s+/g, " ").trim(),
+    expectedType.replace(/\s+/g, " ").trim(),
+    `${relativeName} unexpected typemap value for ${needle}`
+  );
+}
+
 try {
   execFileSync(
     process.execPath,
@@ -125,6 +157,16 @@ try {
         (counts[nodeType] ?? 0) >= minimumCount,
         `${relativeName} expected at least ${minimumCount} ${nodeType} nodes, got ${counts[nodeType] ?? 0}`
       );
+    }
+
+    if (relativeName === "src/alias-consumer.ts") {
+      assertTypemapEntry(relativeName, source, typemap, "aliasUser", "User<{ department: string; }>");
+      assertTypemapEntry(relativeName, source, typemap, "aliasDepartment", "string");
+      assertTypemapEntry(relativeName, source, typemap, "serviceName", "string");
+      assertTypemapEntry(relativeName, source, typemap, "retryLimit", "number");
+      assertTypemapEntry(relativeName, source, typemap, "betaEnabled", "boolean");
+      assertTypemapEntry(relativeName, source, typemap, "parsedFromString", "FixtureRuntime.Context");
+      assertTypemapEntry(relativeName, source, typemap, "repositoryCtorPromise", "Promise<typeof import(\"./services\").UserRepository>");
     }
   }
 

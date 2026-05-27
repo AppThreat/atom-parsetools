@@ -5,6 +5,12 @@
     "moduleResolution": "Node",
     "jsx": "preserve",
     "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@models/*": ["src/*"],
+      "@fixtures/*": ["src/fixtures/*"]
+    },
+    "resolveJsonModule": true,
     "experimentalDecorators": true,
     "useDefineForClassFields": true
   },

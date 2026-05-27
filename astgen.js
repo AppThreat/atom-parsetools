@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { join, dirname } from "path";
+import { join, dirname, relative, resolve } from "path";
 import { parse } from "@babel/parser";
 import { parse as parseHermes } from "hermes-parser";
 import tsc from "typescript";
@@ -235,6 +235,61 @@ const parseCliArgs = (argvs) => {
   return args;
 };
 
+const babelSyntaxPlugins = [
+  "optionalChaining",
+  "classProperties",
+  "classPrivateProperties",
+  "classPrivateMethods",
+  "decorators-legacy",
+  "exportDefaultFrom",
+  "doExpressions",
+  "numericSeparator",
+  "dynamicImport",
+  "importAttributes",
+  "explicitResourceManagement",
+  "topLevelAwait",
+  "jsx"
+];
+
+const makeTypescriptPlugin = (file) => [
+  "typescript",
+  {
+    dts: file.endsWith(".d.ts") || file.endsWith(".d.mts") || file.endsWith(".d.cts"),
+    disallowAmbiguousJSXLike: false
+  }
+];
+
+const getBabelPluginName = (plugin) => Array.isArray(plugin) ? plugin[0] : plugin;
+
+const mergeBabelPlugins = (...pluginGroups) => {
+  const merged = [];
+  const seen = new Set();
+  for (const plugins of pluginGroups) {
+    for (const plugin of plugins || []) {
+      const pluginName = getBabelPluginName(plugin);
+      if (!seen.has(pluginName)) {
+        seen.add(pluginName);
+        merged.push(plugin);
+      }
+    }
+  }
+  return merged;
+};
+
+const makeBabelOptions = (baseOptions, file, extraPlugins = []) => ({
+  ...baseOptions,
+  plugins: mergeBabelPlugins(
+    baseOptions.plugins,
+    extraPlugins,
+    babelSyntaxPlugins,
+    (baseOptions.plugins || []).some(
+      (plugin) => getBabelPluginName(plugin) === "flow"
+    )
+      ? []
+      : [makeTypescriptPlugin(file)]
+  )
+});
+
 const babelParserOptions = {
   sourceType: "unambiguous",
   allowImportExportEverywhere: true,
@@ -243,18 +298,7 @@ const babelParserOptions = {
   allowReturnOutsideFunction: true,
   allowSuperOutsideMethod: true,
   allowUndeclaredExports: true,
-  errorRecovery: true,
-  plugins: [
-    "optionalChaining",
-    "classProperties",
-    "decorators-legacy",
-    "exportDefaultFrom",
-    "doExpressions",
-    "numericSeparator",
-    "dynamicImport",
-    "jsx",
-    "typescript"
-  ]
+  errorRecovery: true
 };
 
 const babelFlowParserOptions = {
@@ -284,17 +328,7 @@ const babelSafeParserOptions = {
   allowImportExportEverywhere: true,
   allowAwaitOutsideFunction: true,
   allowReturnOutsideFunction: true,
-  errorRecovery: true,
-  plugins: [
-    "optionalChaining",
-    "classProperties",
-    "decorators-legacy",
-    "exportDefaultFrom",
-    "doExpressions",
-    "numericSeparator",
-    "dynamicImport",
-    "typescript"
-  ]
+  errorRecovery: true
 };
 
 const babelSafeFlowParserOptions = {
@@ -328,7 +362,7 @@ const shouldIncludeNodeModulesBundles =
  * 2. ASTGEN_IGNORE_DIRS is non-empty and doesn't include "node_modules"
  */
 const getAllSrcJSAndTSFiles = (src) => {
-  const filePattern = "\\.(js|jsx|cjs|mjs|ts|tsx|vue|svelte|xsjs|xsjslib|ejs)$";
+  const filePattern = "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|xsjs|xsjslib|ejs)$";
   const bundledNodeModulesPattern =
     "node_modules[\\\\/].*[\\\\/](?:.*\\.)?(bundle|dist|index|min|app)\\.(js|cjs|mjs)$";
 
@@ -358,7 +392,9 @@ const getAllSrcJSAndTSFiles = (src) => {
   }
   // Step 2: Combine both lists
   return Promise.all([allFilesPromise, bundledFilesPromise]).then(
-    ([allFiles, bundledFiles]) => [...allFiles, ...bundledFiles]
+    ([allFiles, bundledFiles]) => [
+      ...new Set([...allFiles, ...bundledFiles])
+    ].sort()
   );
 };
 
@@ -402,14 +438,17 @@ const codeToJsAst = (file, code, projectType) => {
     primaryBabelOptions = babelFlowParserOptions;
     secondaryBabelOptions = babelParserOptions;
   }
+  const primaryOptions = makeBabelOptions(primaryBabelOptions, file);
+  const secondaryOptions = makeBabelOptions(secondaryBabelOptions, file);
+  const safeOptions = makeBabelOptions(babelSafeParserOptions, file);
   try {
-    return parse(code, primaryBabelOptions);
+    return parse(code, primaryOptions);
   } catch (errPrimary) {
     try {
-      return parse(code, secondaryBabelOptions);
+      return parse(code, secondaryOptions);
     } catch (errSecondary) {
       try {
-        return parse(code, babelSafeParserOptions);
+        return parse(code, safeOptions);
       } catch (errSafe) {
         try {
           return parse(code, babelSafeFlowParserOptions);
@@ -597,30 +636,86 @@ const toEjsAst = (file) => {
   return codeToJsAst(file, out.join(""), "ts");
 };
 
-function createTsc(srcFiles) {
-  try {
-    const program = tsc.createProgram(srcFiles, {
-      target: tsc.ScriptTarget.ES2022,
-      module: tsc.ModuleKind.CommonJS,
-      moduleResolution: tsc.ModuleResolutionKind.Node10,
-      allowImportingTsExtensions: false,
-      allowArbitraryExtensions: false,
-      allowSyntheticDefaultImports: true,
-      allowUmdGlobalAccess: true,
+const DEFAULT_TSC_OPTIONS = {
+  target: tsc.ScriptTarget.ES2022,
+  module: tsc.ModuleKind.CommonJS,
+  moduleResolution: tsc.ModuleResolutionKind.Node10,
+  allowImportingTsExtensions: false,
+  allowArbitraryExtensions: false,
+  allowSyntheticDefaultImports: true,
+  allowUmdGlobalAccess: true,
+  allowJs: true,
+  checkJs: true,
+  allowUnreachableCode: true,
+  allowUnusedLabels: true,
+  alwaysStrict: false,
+  emitDecoratorMetadata: true,
+  exactOptionalPropertyTypes: true,
+  experimentalDecorators: true,
+  ignoreDeprecations: "6.0",
+  noStrictGenericChecks: true,
+  noUncheckedIndexedAccess: false,
+  noPropertyAccessFromIndexSignature: false,
+  noEmit: true,
+  skipLibCheck: true,
+  resolveJsonModule: true,
+  jsx: tsc.JsxEmit.Preserve,
+  lib: ["lib.es2022.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"]
+};
+
+const findTsConfig = (src) => {
+  const searchRoot = resolve(src);
+  return (
+    tsc.findConfigFile(searchRoot, tsc.sys.fileExists, "tsconfig.json") ||
+    tsc.findConfigFile(searchRoot, tsc.sys.fileExists, "jsconfig.json")
+  );
+};
+
+const createTscProgramConfig = (srcFiles, src) => {
+  const configPath = findTsConfig(src);
+  if (!configPath) {
+    return {
+      rootNames: srcFiles,
+      options: DEFAULT_TSC_OPTIONS
+    };
+  }
+
+  const configFile = tsc.readConfigFile(configPath, tsc.sys.readFile);
+  if (configFile.error) {
+    return {
+      rootNames: srcFiles,
+      options: DEFAULT_TSC_OPTIONS
+    };
+  }
+
+  const parsedConfig = tsc.parseJsonConfigFileContent(
+    configFile.config,
+    tsc.sys,
+    dirname(configPath),
+    DEFAULT_TSC_OPTIONS,
+    configPath
+  );
+  const rootNames = [
+    ...new Set([...srcFiles, ...parsedConfig.fileNames])
+  ].sort();
+  return {
+    rootNames,
+    options: {
+      ...DEFAULT_TSC_OPTIONS,
+      ...parsedConfig.options,
       allowJs: true,
       checkJs: true,
-      allowUnreachableCode: true,
-      allowUnusedLabels: true,
-      alwaysStrict: false,
-      emitDecoratorMetadata: true,
-      exactOptionalPropertyTypes: true,
-      experimentalDecorators: false,
-      ignoreDeprecations: true,
-      noStrictGenericChecks: true,
-      noUncheckedIndexedAccess: false,
-      noPropertyAccessFromIndexSignature: false,
-      lib: ["lib.es2022.d.ts", "lib.dom.d.ts"]
-    });
+      noEmit: true,
+      skipLibCheck: true,
+      resolveJsonModule: true
+    }
+  };
+};
+
+function createTsc(srcFiles, src) {
+  try {
+    const tscConfig = createTscProgramConfig(srcFiles, src);
+    const program = tsc.createProgram(tscConfig.rootNames, tscConfig.options);
     const typeChecker = program.getTypeChecker();
     const seenTypes = new Map();
 
@@ -894,6 +989,7 @@ function createTsc(srcFiles) {
     return {
       program: program,
       typeChecker: typeChecker,
+      rootNames: tscConfig.rootNames,
       addType: addType,
       collectTypes: collectTypes,
       seenTypes: seenTypes
@@ -909,18 +1005,41 @@ function createTsc(srcFiles) {
 const createJSAst = async (options) => {
   try {
     const promiseMap = await getAllSrcJSAndTSFiles(options.src);
-    const srcFiles = promiseMap.flatMap((d) => d);
-    const CONCURRENCY_LIMIT = 10;
-    const chunks = [];
-    for (let i = 0; i < srcFiles.length; i += CONCURRENCY_LIMIT) {
-      chunks.push(srcFiles.slice(i, i + CONCURRENCY_LIMIT));
-    }
+    let srcFiles = promiseMap.flatMap((d) => d).sort();
     let ts;
     if (options.tsTypes) {
       const projectFiles = !shouldIncludeNodeModulesBundles
         ? srcFiles.filter((file) => !file.includes("node_modules"))
         : srcFiles;
-      ts = createTsc(projectFiles);
+      ts = createTsc(projectFiles, options.src);
+      if (ts?.rootNames) {
+        const srcRoot = resolve(options.src);
+        const srcFileByResolvedPath = new Map(
+          srcFiles.map((file) => [resolve(file), file])
+        );
+        for (const file of ts.rootNames) {
+          const resolvedFile = resolve(file);
+          if (
+            resolvedFile.startsWith(srcRoot) &&
+            /\.(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)$/.test(file) &&
+            !srcFileByResolvedPath.has(resolvedFile)
+          ) {
+            srcFileByResolvedPath.set(
+              resolvedFile,
+              join(options.src, relative(srcRoot, resolvedFile))
+            );
+          }
+        }
+        srcFiles = [...srcFileByResolvedPath.values()].sort();
+      }
+    }
+    const CONCURRENCY_LIMIT = Math.max(
+      1,
+      Number.parseInt(process.env.ASTGEN_CONCURRENCY || "10", 10) || 10
+    );
+    const chunks = [];
+    for (let i = 0; i < srcFiles.length; i += CONCURRENCY_LIMIT) {
+      chunks.push(srcFiles.slice(i, i + CONCURRENCY_LIMIT));
     }
     for (const chunk of chunks) {
       await Promise.all(chunk.map((file) => processFile(file, options, ts)));

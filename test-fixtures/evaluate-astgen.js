@@ -18,8 +18,33 @@ const fixtureProjects = [
   { name: "advanced-patterns", minTypemapEntries: 2500 },
   { name: "type-inference-regression", minTypemapEntries: 100 },
   { name: "inference-edge-cases", minTypemapEntries: 250 },
-  { name: "typescript-parsing", minTypemapEntries: 150 }
+  { name: "typescript-parsing", minTypemapEntries: 300 }
 ];
+
+function classifyType(typeName) {
+  if (/\bany\b|unknown|unresolved|error/.test(typeName)) {
+    return "unresolved";
+  }
+  if (/=>|^\([^)]*\)\s*=>|^<[^>]+>\(/.test(typeName)) {
+    return "functionTypes";
+  }
+  if (/\|/.test(typeName)) {
+    return "unionTypes";
+  }
+  if (
+    typeName.endsWith("[]") ||
+    /\b(?:Array|ReadonlyArray|Set|Map|Promise|Record)<|^readonly \[|^\[/.test(typeName)
+  ) {
+    return "genericTypes";
+  }
+  if (/^{.*}$/.test(typeName)) {
+    return "objectTypes";
+  }
+  if (["string", "number", "boolean", "bigint", "symbol", "null", "undefined", "void"].includes(typeName)) {
+    return "primitiveTypes";
+  }
+  return "otherTypes";
+}
 
 function listSourceFiles(dir) {
   const entries = readdirSync(dir);
@@ -33,7 +58,7 @@ function listSourceFiles(dir) {
       files.push(fullPath);
     }
   }
-  return files;
+  return files.sort();
 }
 
 function readJson(path) {
@@ -65,6 +90,15 @@ function analyzeProject(project) {
   let astFiles = 0;
   let typemapFiles = 0;
   const uniqueTypes = new Set();
+  const quality = {
+    primitiveTypes: 0,
+    objectTypes: 0,
+    functionTypes: 0,
+    genericTypes: 0,
+    unionTypes: 0,
+    unresolved: 0,
+    otherTypes: 0
+  };
 
   for (const sourceFile of sourceFiles) {
     const relativeName = relative(fixtureRoot, sourceFile);
@@ -82,6 +116,7 @@ function analyzeProject(project) {
     typemapEntries += Object.keys(typemap).length;
     for (const typeName of Object.values(typemap)) {
       uniqueTypes.add(typeName);
+      quality[classifyType(typeName)]++;
     }
   }
 
@@ -99,7 +134,10 @@ function analyzeProject(project) {
     durationMs: Number(durationMs.toFixed(2)),
     typemapEntries,
     uniqueTypes: uniqueTypes.size,
-    entriesPerKb: Number((typemapEntries / Math.max(sourceBytes / 1024, 1)).toFixed(2))
+    entriesPerKb: Number((typemapEntries / Math.max(sourceBytes / 1024, 1)).toFixed(2)),
+    entriesPerMs: Number((typemapEntries / Math.max(durationMs, 1)).toFixed(2)),
+    unresolved: quality.unresolved,
+    complexTypes: quality.objectTypes + quality.functionTypes + quality.genericTypes + quality.unionTypes
   };
 }
 
