@@ -727,6 +727,112 @@ function createTsc(srcFiles) {
           const varType = typeChecker.getTypeAtLocation(node.name);
           typeStr = safeTypeWithContextToString(varType, node.name);
         }
+        // OBJECT LITERAL PROPERTIES - extract property value types
+        else if (node.kind === tsc.SyntaxKind.PropertyAssignment && node.initializer) {
+          const propType = typeChecker.getTypeAtLocation(node.initializer);
+          typeStr = safeTypeWithContextToString(propType, node.initializer);
+        }
+        // CALL EXPRESSIONS - extract return types
+        else if (node.kind === tsc.SyntaxKind.CallExpression) {
+          const callSig = typeChecker.getResolvedSignature(node);
+          if (callSig) {
+            const retType = callSig.getReturnType();
+            typeStr = safeTypeToString(retType);
+          }
+        }
+        // NEW EXPRESSIONS - extract constructor return types
+        else if (node.kind === tsc.SyntaxKind.NewExpression) {
+          const newSig = typeChecker.getResolvedSignature(node);
+          if (newSig) {
+            const retType = newSig.getReturnType();
+            typeStr = safeTypeToString(retType);
+          }
+        }
+        // PROPERTY ACCESS - extract property types
+        else if (node.kind === tsc.SyntaxKind.PropertyAccessExpression || node.kind === tsc.SyntaxKind.ElementAccessExpression) {
+          const propType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(propType, node);
+        }
+        // BINARY EXPRESSIONS - extract result types
+        else if (node.kind === tsc.SyntaxKind.BinaryExpression) {
+          const binType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(binType, node);
+        }
+        // CONDITIONAL EXPRESSIONS - extract union types
+        else if (node.kind === tsc.SyntaxKind.ConditionalExpression) {
+          const condType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(condType, node);
+        }
+        // LOGICAL EXPRESSIONS - extract result types
+        else if (node.kind === tsc.SyntaxKind.LogicalExpression) {
+          const logType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(logType, node);
+        }
+        // ARROW FUNCTION EXPRESSIONS - extract return types
+        else if (node.kind === tsc.SyntaxKind.ArrowFunction) {
+          const arrowSig = typeChecker.getSignatureFromDeclaration(node);
+          if (arrowSig) {
+            const retType = arrowSig.getReturnType();
+            typeStr = safeTypeToString(retType);
+            // Also extract parameter types for arrow functions
+            if (node.parameters) {
+              for (const param of node.parameters) {
+                try {
+                  const paramType = typeChecker.getTypeAtLocation(param);
+                  const paramTypeStr = safeTypeToString(paramType);
+                  if (paramTypeStr && paramTypeStr !== "any") {
+                    seenTypes.set(param.getStart(), paramTypeStr);
+                  }
+                } catch {
+                  // ignore
+                }
+              }
+            }
+          }
+        }
+        // CLASS DECLARATIONS - extract class instance types
+        else if (node.kind === tsc.SyntaxKind.ClassDeclaration || node.kind === tsc.SyntaxKind.ClassExpression) {
+          const classType = typeChecker.getTypeAtLocation(node);
+          const constructSigs = typeChecker.getSignaturesOfType(classType, tsc.SignatureKind.Construct);
+          if (constructSigs.length > 0) {
+            typeStr = safeTypeToString(constructSigs[0].getReturnType());
+          }
+        }
+        // TEMPLATE EXPRESSIONS - extract string types
+        else if (node.kind === tsc.SyntaxKind.TemplateExpression || node.kind === tsc.SyntaxKind.NoSubstitutionTemplateLiteral) {
+          const tmplType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(tmplType, node);
+        }
+        // TAGGED TEMPLATE EXPRESSIONS - extract tagged template types
+        else if (node.kind === tsc.SyntaxKind.TaggedTemplateExpression) {
+          const tagType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(tagType, node);
+        }
+        // YIELD EXPRESSIONS - extract yielded types
+        else if (node.kind === tsc.SyntaxKind.YieldExpression) {
+          const yieldType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(yieldType, node);
+        }
+        // SPREAD ELEMENTS - extract spread element types
+        else if (node.kind === tsc.SyntaxKind.SpreadElement) {
+          const spreadType = typeChecker.getTypeAtLocation(node.expression);
+          typeStr = safeTypeWithContextToString(spreadType, node.expression);
+        }
+        // DELETE EXPRESSIONS - extract result types
+        else if (node.kind === tsc.SyntaxKind.DeleteExpression) {
+          const delType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(delType, node);
+        }
+        // TYPEOF EXPRESSIONS - extract result types
+        else if (node.kind === tsc.SyntaxKind.TypeOfExpression) {
+          const typeofType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(typeofType, node);
+        }
+        // VOID EXPRESSIONS - extract result types
+        else if (node.kind === tsc.SyntaxKind.VoidExpression) {
+          const voidType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(voidType, node);
+        }
         // STANDARD EXPRESSIONS & IDENTIFIERS
         else {
           let typeObj = typeChecker.getTypeAtLocation(node);

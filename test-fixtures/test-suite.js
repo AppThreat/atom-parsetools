@@ -409,6 +409,196 @@ function addBuiltInTests(suite) {
 }
 
 /**
+ * Define test cases for binary expressions
+ */
+function addBinaryExpressionTests(suite) {
+  suite.addTestCase(
+    "Addition expression",
+    "const sum = 10 + 20;",
+    new Map([["sum", "number"]])
+  );
+
+  suite.addTestCase(
+    "Subtraction expression",
+    "const diff = 100 - 42;",
+    new Map([["diff", "number"]])
+  );
+
+  suite.addTestCase(
+    "Multiplication expression",
+    "const prod = 6 * 7;",
+    new Map([["prod", "number"]])
+  );
+
+  suite.addTestCase(
+    "Division expression",
+    "const quot = 100 / 4;",
+    new Map([["quot", "number"]])
+  );
+
+  suite.addTestCase(
+    "Comparison expression",
+    "const isGreater = 10 > 5;",
+    new Map([["isGreater", "boolean"]])
+  );
+
+  suite.addTestCase(
+    "Equality expression",
+    "const isEqual = 5 === 5;",
+    new Map([["isEqual", "boolean"]])
+  );
+
+  suite.addTestCase(
+    "String concatenation",
+    'const concat = "Hello" + " " + "World";',
+    new Map([["concat", "string"]])
+  );
+}
+
+/**
+ * Define test cases for conditional expressions
+ */
+function addConditionalTests(suite) {
+  suite.addTestCase(
+    "Simple ternary",
+    'const positive = 10 > 0 ? "yes" : "no";',
+    new Map([["positive", "string"]])
+  );
+
+  suite.addTestCase(
+    "Nested ternary",
+    'const sign = -5 > 0 ? 1 : (-5 < 0 ? -1 : 0);',
+    new Map([["sign", "number"]])
+  );
+}
+
+/**
+ * Define test cases for logical expressions
+ */
+function addLogicalTests(suite) {
+  suite.addTestCase(
+    "Logical AND",
+    "const bothTrue = true && false;",
+    new Map([["bothTrue", "boolean"]])
+  );
+
+  suite.addTestCase(
+    "Logical OR",
+    "const eitherTrue = true || false;",
+    new Map([["eitherTrue", "boolean"]])
+  );
+
+  suite.addTestCase(
+    "Logical NOT",
+    "const notTrue = !false;",
+    new Map([["notTrue", "boolean"]])
+  );
+}
+
+/**
+ * Define test cases for call expressions
+ */
+function addCallExpressionTests(suite) {
+  suite.addTestCase(
+    "Math.max call",
+    "const maxVal = Math.max(1, 2, 3);",
+    new Map([["maxVal", "number"]])
+  );
+
+  suite.addTestCase(
+    "Math.min call",
+    "const minVal = Math.min(1, 2, 3);",
+    new Map([["minVal", "number"]])
+  );
+
+  suite.addTestCase(
+    "String method call",
+    'const upper = "hello".toUpperCase();',
+    new Map([["upper", "string"]])
+  );
+
+  suite.addTestCase(
+    "Array method call",
+    "const len = [1, 2, 3].length;",
+    new Map([["len", "number"]])
+  );
+}
+
+/**
+ * Define test cases for constructor calls
+ */
+function addConstructorTests(suite) {
+  suite.addTestCase(
+    "Date constructor",
+    "const date = new Date();",
+    new Map([["date", "Date"]])
+  );
+
+  suite.addTestCase(
+    "Error constructor",
+    'const err = new Error("message");',
+    new Map([["err", "Error"]])
+  );
+
+  suite.addTestCase(
+    "RegExp constructor",
+    "const regex = new RegExp('test');",
+    new Map([["regex", "RegExp"]])
+  );
+}
+
+/**
+ * Define test cases for template literals
+ */
+function addTemplateLiteralTests(suite) {
+  suite.addTestCase(
+    "Simple template literal",
+    'const tmpl = `Hello, World`;',
+    new Map([["tmpl", "string"]])
+  );
+
+  suite.addTestCase(
+    "Template with interpolation",
+    'const name = "Alice"; const tmpl = `Hello, ${name}`;',
+    new Map([["name", '"Alice"'], ["tmpl", "string"]])
+  );
+}
+
+/**
+ * Define test cases for class patterns
+ */
+function addClassTests(suite) {
+  suite.addTestCase(
+    "Class instance",
+    "class Point { constructor(x, y) { this.x = x; this.y = y; } } const p = new Point(10, 20);",
+    new Map([["p", "Point"]])
+  );
+}
+
+/**
+ * Define test cases for arrow functions
+ */
+function addArrowFunctionTests(suite) {
+  suite.addTestCase(
+    "Arrow function returning number",
+    "const double = (x) => x * 2;",
+    new Map([["double", "(x: any) => number"]])
+  );
+
+  suite.addTestCase(
+    "Arrow function returning string",
+    "const greet = (name) => \"Hello, \" + name;",
+    new Map([["greet", "(name: any) => string"]])
+  );
+
+  suite.addTestCase(
+    "Arrow function returning object",
+    "const createPoint = (x, y) => ({ x, y });",
+    new Map([["createPoint", "(x: any, y: any) => { x: any; y: any; }"]])
+  );
+}
+
+/**
  * Run all test suites
  */
 function runAllTests() {
@@ -421,6 +611,14 @@ function runAllTests() {
   addFunctionTests(suite);
   addES6Tests(suite);
   addBuiltInTests(suite);
+  addBinaryExpressionTests(suite);
+  addConditionalTests(suite);
+  addLogicalTests(suite);
+  addCallExpressionTests(suite);
+  addConstructorTests(suite);
+  addTemplateLiteralTests(suite);
+  addClassTests(suite);
+  addArrowFunctionTests(suite);
 
   // Run tests
   return suite.run();
