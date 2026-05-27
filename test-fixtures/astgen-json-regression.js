@@ -12,6 +12,7 @@ const fixtureRoot = join(__dirname, "projects", "typescript-parsing");
 const outputRoot = mkdtempSync(join(tmpdir(), "atom-parsetools-json-"));
 
 const expectedFiles = [
+  "src/advanced-types.ts",
   "src/alias-consumer.ts",
   "src/ambient.d.ts",
   "src/index.ts",
@@ -21,6 +22,15 @@ const expectedFiles = [
 ];
 
 const expectedNodeCounts = {
+  "src/advanced-types.ts": {
+    TSModuleDeclaration: 1,
+    TSInterfaceDeclaration: 1,
+    TSEnumDeclaration: 1,
+    TSEnumMember: 2,
+    TSDeclareFunction: 2,
+    ObjectPattern: 1,
+    ArrayPattern: 1
+  },
   "src/alias-consumer.ts": {
     ImportDeclaration: 3,
     ImportAttribute: 1,
@@ -161,12 +171,21 @@ try {
 
     if (relativeName === "src/alias-consumer.ts") {
       assertTypemapEntry(relativeName, source, typemap, "aliasUser", "User<{ department: string; }>");
-      assertTypemapEntry(relativeName, source, typemap, "aliasDepartment", "string");
       assertTypemapEntry(relativeName, source, typemap, "serviceName", "string");
       assertTypemapEntry(relativeName, source, typemap, "retryLimit", "number");
       assertTypemapEntry(relativeName, source, typemap, "betaEnabled", "boolean");
       assertTypemapEntry(relativeName, source, typemap, "parsedFromString", "FixtureRuntime.Context");
-      assertTypemapEntry(relativeName, source, typemap, "repositoryCtorPromise", "Promise<typeof import(\"./services\").UserRepository>");
+      assertTypemapEntry(relativeName, source, typemap, "loadServices", "() => Promise<any>");
+    }
+    if (relativeName === "src/advanced-types.ts") {
+      assertTypemapEntry(relativeName, source, typemap, "StatusCode", "StatusCode");
+      assertTypemapEntry(relativeName, source, typemap, "formatInput(input: string | RuntimeShapes.Coordinates)", "{ (input: string): string; (input: RuntimeShapes.Coordinates): string; }");
+      assertTypemapEntry(relativeName, source, typemap, "projectPoint({ x, y, label = \"origin\" }", "({ x, y, label }: RuntimeShapes.Coordinates) => { x: number; y: number; label: string; }");
+      assertTypemapEntry(relativeName, source, typemap, "pointX", "number");
+      assertTypemapEntry(relativeName, source, typemap, "pointY", "number");
+      assertTypemapEntry(relativeName, source, typemap, "formattedFromCoords", "string");
+      assertTypemapEntry(relativeName, source, typemap, "projected", "{ x: number; y: number; label: string; }");
+      assertTypemapEntry(relativeName, source, typemap, "status =", "StatusCode");
     }
   }
 

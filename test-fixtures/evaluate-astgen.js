@@ -18,7 +18,7 @@ const fixtureProjects = [
   { name: "advanced-patterns", minTypemapEntries: 2500 },
   { name: "type-inference-regression", minTypemapEntries: 100 },
   { name: "inference-edge-cases", minTypemapEntries: 250 },
-  { name: "typescript-parsing", minTypemapEntries: 300 }
+  { name: "typescript-parsing", minTypemapEntries: 450 }
 ];
 
 function classifyType(typeName) {

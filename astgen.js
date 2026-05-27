@@ -663,6 +663,55 @@ const DEFAULT_TSC_OPTIONS = {
   lib: ["lib.es2022.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"]
 };
 
+const readJsonFileIfExists = (file) => {
+  try {
+    if (!existsSync(file)) {
+      return undefined;
+    }
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    return undefined;
+  }
+};
+
+const findNearestPackageJson = (src) => {
+  let currentDir = resolve(src);
+  while (true) {
+    const packageJsonPath = join(currentDir, "package.json");
+    if (existsSync(packageJsonPath)) {
+      return packageJsonPath;
+    }
+    const parentDir = dirname(currentDir);
+    if (parentDir === currentDir) {
+      return undefined;
+    }
+    currentDir = parentDir;
+  }
+};
+
+const detectDefaultTscOptions = (srcFiles, src) => {
+  const packageJson = readJsonFileIfExists(findNearestPackageJson(src));
+  const usesNodeNextModuleResolution =
+    packageJson?.type === "module" ||
+    Boolean(packageJson?.exports) ||
+    Boolean(packageJson?.imports) ||
+    srcFiles.some((file) => /\.(?:mts|cts)$/.test(file));
+
+  if (!usesNodeNextModuleResolution) {
+    return DEFAULT_TSC_OPTIONS;
+  }
+
+  return {
+    ...DEFAULT_TSC_OPTIONS,
+    module: tsc.ModuleKind.NodeNext,
+    moduleResolution: tsc.ModuleResolutionKind.NodeNext,
+    resolvePackageJsonExports: true,
+    resolvePackageJsonImports: true,
+    allowImportingTsExtensions: true,
+    verbatimModuleSyntax: true
+  };
+};
+
 const findTsConfig = (src) => {
   const searchRoot = resolve(src);
   return (
@@ -672,11 +721,12 @@ const findTsConfig = (src) => {
 };
 
 const createTscProgramConfig = (srcFiles, src) => {
+  const detectedDefaultOptions = detectDefaultTscOptions(srcFiles, src);
   const configPath = findTsConfig(src);
   if (!configPath) {
     return {
       rootNames: srcFiles,
-      options: DEFAULT_TSC_OPTIONS
+      options: detectedDefaultOptions
     };
   }
 
@@ -684,7 +734,7 @@ const createTscProgramConfig = (srcFiles, src) => {
   if (configFile.error) {
     return {
       rootNames: srcFiles,
-      options: DEFAULT_TSC_OPTIONS
+      options: detectedDefaultOptions
     };
   }
 
@@ -692,7 +742,7 @@ const createTscProgramConfig = (srcFiles, src) => {
     configFile.config,
     tsc.sys,
     dirname(configPath),
-    DEFAULT_TSC_OPTIONS,
+    detectedDefaultOptions,
     configPath
   );
   const rootNames = [
@@ -702,6 +752,7 @@ const createTscProgramConfig = (srcFiles, src) => {
     rootNames,
     options: {
       ...DEFAULT_TSC_OPTIONS,
+      ...detectedDefaultOptions,
       ...parsedConfig.options,
       allowJs: true,
       checkJs: true,
@@ -762,7 +813,8 @@ function createTsc(srcFiles, src) {
           (tsc.SyntaxKind.SatisfiesExpression &&
             node.kind === tsc.SyntaxKind.SatisfiesExpression) ||
           node.kind === tsc.SyntaxKind.AsExpression ||
-          node.kind === tsc.SyntaxKind.TypeAssertionExpression
+          node.kind === tsc.SyntaxKind.TypeAssertionExpression ||
+          node.kind === tsc.SyntaxKind.NonNullExpression
         ) {
           typeStr = safeTypeWithContextToString(
             typeChecker.getTypeAtLocation(node.expression),
@@ -825,6 +877,16 @@ function createTsc(srcFiles, src) {
           const varType = typeChecker.getTypeAtLocation(node.name);
           typeStr = safeTypeWithContextToString(varType, node.name);
         }
+        // BINDING ELEMENTS - capture destructured member types precisely
+        else if (node.kind === tsc.SyntaxKind.BindingElement && node.name) {
+          const bindingType = typeChecker.getTypeAtLocation(node.name);
+          typeStr = safeTypeWithContextToString(bindingType, node.name);
+        }
+        // PARAMETERS - capture parameter types even when not covered by signature extraction
+        else if (node.kind === tsc.SyntaxKind.Parameter && node.name) {
+          const parameterType = typeChecker.getTypeAtLocation(node.name);
+          typeStr = safeTypeWithContextToString(parameterType, node.name);
+        }
         // OBJECT LITERAL PROPERTIES - extract property value types
         else if (
           node.kind === tsc.SyntaxKind.PropertyAssignment &&
@@ -832,6 +894,11 @@ function createTsc(srcFiles, src) {
         ) {
           const propType = typeChecker.getTypeAtLocation(node.initializer);
           typeStr = safeTypeWithContextToString(propType, node.initializer);
+        }
+        // SHORTHAND OBJECT PROPERTIES - preserve referenced symbol type
+        else if (node.kind === tsc.SyntaxKind.ShorthandPropertyAssignment) {
+          const shorthandType = typeChecker.getTypeAtLocation(node.name);
+          typeStr = safeTypeWithContextToString(shorthandType, node.name);
         }
         // CALL EXPRESSIONS - extract return types
         else if (node.kind === tsc.SyntaxKind.CallExpression) {
@@ -907,6 +974,11 @@ function createTsc(srcFiles, src) {
           if (constructSigs.length > 0) {
             typeStr = safeTypeToString(constructSigs[0].getReturnType());
           }
+        }
+        // ENUM MEMBERS - preserve literal enum member types for TypeScript projects
+        else if (node.kind === tsc.SyntaxKind.EnumMember) {
+          const enumMemberType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(enumMemberType, node);
         }
         // TEMPLATE EXPRESSIONS - extract string types
         else if (
