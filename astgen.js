@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { join, dirname } from "path";
+import { join, dirname, relative, resolve } from "path";
+import { fileURLToPath } from "url";
 import { parse } from "@babel/parser";
 import { parse as parseHermes } from "hermes-parser";
 import tsc from "typescript";
@@ -235,6 +236,65 @@ const parseCliArgs = (argvs) => {
   return args;
 };
 
+const babelSyntaxPlugins = [
+  "optionalChaining",
+  "classProperties",
+  "classPrivateProperties",
+  "classPrivateMethods",
+  "decorators-legacy",
+  "exportDefaultFrom",
+  "doExpressions",
+  "numericSeparator",
+  "dynamicImport",
+  "importAttributes",
+  "explicitResourceManagement",
+  "topLevelAwait",
+  "jsx"
+];
+
+const makeTypescriptPlugin = (file) => [
+  "typescript",
+  {
+    dts:
+      file.endsWith(".d.ts") ||
+      file.endsWith(".d.mts") ||
+      file.endsWith(".d.cts"),
+    disallowAmbiguousJSXLike: false
+  }
+];
+
+const getBabelPluginName = (plugin) =>
+  Array.isArray(plugin) ? plugin[0] : plugin;
+
+const mergeBabelPlugins = (...pluginGroups) => {
+  const merged = [];
+  const seen = new Set();
+  for (const plugins of pluginGroups) {
+    for (const plugin of plugins || []) {
+      const pluginName = getBabelPluginName(plugin);
+      if (!seen.has(pluginName)) {
+        seen.add(pluginName);
+        merged.push(plugin);
+      }
+    }
+  }
+  return merged;
+};
+
+const makeBabelOptions = (baseOptions, file, extraPlugins = []) => ({
+  ...baseOptions,
+  plugins: mergeBabelPlugins(
+    baseOptions.plugins,
+    extraPlugins,
+    babelSyntaxPlugins,
+    (baseOptions.plugins || []).some(
+      (plugin) => getBabelPluginName(plugin) === "flow"
+    )
+      ? []
+      : [makeTypescriptPlugin(file)]
+  )
+});
+
 const babelParserOptions = {
   sourceType: "unambiguous",
   allowImportExportEverywhere: true,
@@ -243,18 +303,7 @@ const babelParserOptions = {
   allowReturnOutsideFunction: true,
   allowSuperOutsideMethod: true,
   allowUndeclaredExports: true,
-  errorRecovery: true,
-  plugins: [
-    "optionalChaining",
-    "classProperties",
-    "decorators-legacy",
-    "exportDefaultFrom",
-    "doExpressions",
-    "numericSeparator",
-    "dynamicImport",
-    "jsx",
-    "typescript"
-  ]
+  errorRecovery: true
 };
 
 const babelFlowParserOptions = {
@@ -284,17 +333,7 @@ const babelSafeParserOptions = {
   allowImportExportEverywhere: true,
   allowAwaitOutsideFunction: true,
   allowReturnOutsideFunction: true,
-  errorRecovery: true,
-  plugins: [
-    "optionalChaining",
-    "classProperties",
-    "decorators-legacy",
-    "exportDefaultFrom",
-    "doExpressions",
-    "numericSeparator",
-    "dynamicImport",
-    "typescript"
-  ]
+  errorRecovery: true
 };
 
 const babelSafeFlowParserOptions = {
@@ -328,7 +367,8 @@ const shouldIncludeNodeModulesBundles =
  * 2. ASTGEN_IGNORE_DIRS is non-empty and doesn't include "node_modules"
  */
 const getAllSrcJSAndTSFiles = (src) => {
-  const filePattern = "\\.(js|jsx|cjs|mjs|ts|tsx|vue|svelte|xsjs|xsjslib|ejs)$";
+  const filePattern =
+    "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|xsjs|xsjslib|ejs)$";
   const bundledNodeModulesPattern =
     "node_modules[\\\\/].*[\\\\/](?:.*\\.)?(bundle|dist|index|min|app)\\.(js|cjs|mjs)$";
 
@@ -358,7 +398,8 @@ const getAllSrcJSAndTSFiles = (src) => {
   }
   // Step 2: Combine both lists
   return Promise.all([allFilesPromise, bundledFilesPromise]).then(
-    ([allFiles, bundledFiles]) => [...allFiles, ...bundledFiles]
+    ([allFiles, bundledFiles]) =>
+      [...new Set([...allFiles, ...bundledFiles])].sort()
   );
 };
 
@@ -402,14 +443,17 @@ const codeToJsAst = (file, code, projectType) => {
     primaryBabelOptions = babelFlowParserOptions;
     secondaryBabelOptions = babelParserOptions;
   }
+  const primaryOptions = makeBabelOptions(primaryBabelOptions, file);
+  const secondaryOptions = makeBabelOptions(secondaryBabelOptions, file);
+  const safeOptions = makeBabelOptions(babelSafeParserOptions, file);
   try {
-    return parse(code, primaryBabelOptions);
+    return parse(code, primaryOptions);
   } catch (errPrimary) {
     try {
-      return parse(code, secondaryBabelOptions);
+      return parse(code, secondaryOptions);
     } catch (errSecondary) {
       try {
-        return parse(code, babelSafeParserOptions);
+        return parse(code, safeOptions);
       } catch (errSafe) {
         try {
           return parse(code, babelSafeFlowParserOptions);
@@ -597,36 +641,202 @@ const toEjsAst = (file) => {
   return codeToJsAst(file, out.join(""), "ts");
 };
 
-function createTsc(srcFiles) {
+const DEFAULT_TSC_OPTIONS = {
+  target: tsc.ScriptTarget.ES2022,
+  module: tsc.ModuleKind.CommonJS,
+  moduleResolution: tsc.ModuleResolutionKind.Node10,
+  allowImportingTsExtensions: false,
+  allowArbitraryExtensions: false,
+  allowSyntheticDefaultImports: true,
+  allowUmdGlobalAccess: true,
+  allowJs: true,
+  checkJs: true,
+  allowUnreachableCode: true,
+  allowUnusedLabels: true,
+  alwaysStrict: false,
+  emitDecoratorMetadata: true,
+  exactOptionalPropertyTypes: true,
+  experimentalDecorators: true,
+  ignoreDeprecations: "6.0",
+  noStrictGenericChecks: true,
+  noUncheckedIndexedAccess: false,
+  noPropertyAccessFromIndexSignature: false,
+  noEmit: true,
+  skipLibCheck: true,
+  resolveJsonModule: true,
+  jsx: tsc.JsxEmit.Preserve,
+  lib: ["lib.es2022.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"]
+};
+
+const readJsonFileIfExists = (file) => {
   try {
-    const program = tsc.createProgram(srcFiles, {
-      target: tsc.ScriptTarget.ES2022,
-      module: tsc.ModuleKind.CommonJS,
-      moduleResolution: tsc.ModuleResolutionKind.Node10,
-      allowImportingTsExtensions: false,
-      allowArbitraryExtensions: false,
-      allowSyntheticDefaultImports: true,
-      allowUmdGlobalAccess: true,
+    if (!existsSync(file)) {
+      return undefined;
+    }
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    return undefined;
+  }
+};
+
+const findNearestPackageJson = (src) => {
+  let currentDir = resolve(src);
+  while (true) {
+    const packageJsonPath = join(currentDir, "package.json");
+    if (existsSync(packageJsonPath)) {
+      return packageJsonPath;
+    }
+    const parentDir = dirname(currentDir);
+    if (parentDir === currentDir) {
+      return undefined;
+    }
+    currentDir = parentDir;
+  }
+};
+
+const detectDefaultTscOptions = (srcFiles, src) => {
+  const packageJson = readJsonFileIfExists(findNearestPackageJson(src));
+  const usesNodeNextModuleResolution =
+    packageJson?.type === "module" ||
+    Boolean(packageJson?.exports) ||
+    Boolean(packageJson?.imports) ||
+    srcFiles.some((file) => /\.(?:mts|cts)$/.test(file));
+
+  if (!usesNodeNextModuleResolution) {
+    return DEFAULT_TSC_OPTIONS;
+  }
+
+  return {
+    ...DEFAULT_TSC_OPTIONS,
+    module: tsc.ModuleKind.NodeNext,
+    moduleResolution: tsc.ModuleResolutionKind.NodeNext,
+    resolvePackageJsonExports: true,
+    resolvePackageJsonImports: true,
+    allowImportingTsExtensions: true,
+    verbatimModuleSyntax: true
+  };
+};
+
+const hasExplicitTsCompilerOption = (config, optionName) =>
+  Object.prototype.hasOwnProperty.call(
+    config?.compilerOptions ?? {},
+    optionName
+  );
+
+const normalizeImportedTypeSpecifier = (specifier, currentFileName) => {
+  let normalizedSpecifier = String(specifier).replaceAll("\\", "/");
+  const normalizedCurrentFileName = currentFileName?.replaceAll("\\", "/");
+
+  if (normalizedSpecifier.startsWith("file://")) {
+    try {
+      normalizedSpecifier = fileURLToPath(normalizedSpecifier).replaceAll(
+        "\\",
+        "/"
+      );
+    } catch {
+      // ignore malformed file URLs and leave the original specifier intact
+    }
+  }
+
+  if (normalizedCurrentFileName && normalizedSpecifier.startsWith("/")) {
+    const relativeSpecifier = relative(
+      dirname(normalizedCurrentFileName),
+      normalizedSpecifier
+    ).replaceAll("\\", "/");
+    normalizedSpecifier = relativeSpecifier.startsWith(".")
+      ? relativeSpecifier
+      : `./${relativeSpecifier}`;
+  }
+
+  return normalizedSpecifier.replace(
+    /(\.d)?\.(tsx?|jsx?|mts|cts|mjs|cjs)$/,
+    ""
+  );
+};
+
+const normalizeTypeString = (typeStr, context) => {
+  if (!typeStr || typeof typeStr !== "string") {
+    return typeStr;
+  }
+  const currentFileName = context?.getSourceFile?.()?.fileName;
+  return typeStr.replace(
+    /import\("([^"]+)"(?:,\s*{\s*with:\s*{\s*"resolution-mode":\s*"import"\s*}\s*})?\)/g,
+    (_, specifier) =>
+      `import("${normalizeImportedTypeSpecifier(specifier, currentFileName)}")`
+  );
+};
+
+const findTsConfig = (src) => {
+  const searchRoot = resolve(src);
+  return (
+    tsc.findConfigFile(searchRoot, tsc.sys.fileExists, "tsconfig.json") ||
+    tsc.findConfigFile(searchRoot, tsc.sys.fileExists, "jsconfig.json")
+  );
+};
+
+const createTscProgramConfig = (srcFiles, src) => {
+  const detectedDefaultOptions = detectDefaultTscOptions(srcFiles, src);
+  const configPath = findTsConfig(src);
+  if (!configPath) {
+    return {
+      rootNames: srcFiles,
+      options: detectedDefaultOptions
+    };
+  }
+
+  const configFile = tsc.readConfigFile(configPath, tsc.sys.readFile);
+  if (configFile.error) {
+    return {
+      rootNames: srcFiles,
+      options: detectedDefaultOptions
+    };
+  }
+
+  const shouldRespectExplicitModuleSettings =
+    hasExplicitTsCompilerOption(configFile.config, "module") ||
+    hasExplicitTsCompilerOption(configFile.config, "moduleResolution");
+  const configParseDefaults = shouldRespectExplicitModuleSettings
+    ? DEFAULT_TSC_OPTIONS
+    : detectedDefaultOptions;
+
+  const parsedConfig = tsc.parseJsonConfigFileContent(
+    configFile.config,
+    tsc.sys,
+    dirname(configPath),
+    configParseDefaults,
+    configPath
+  );
+  const rootNames = [
+    ...new Set([...srcFiles, ...parsedConfig.fileNames])
+  ].sort();
+  return {
+    rootNames,
+    options: {
+      ...DEFAULT_TSC_OPTIONS,
+      ...(shouldRespectExplicitModuleSettings ? {} : detectedDefaultOptions),
+      ...parsedConfig.options,
       allowJs: true,
       checkJs: true,
-      allowUnreachableCode: true,
-      allowUnusedLabels: true,
-      alwaysStrict: false,
-      emitDecoratorMetadata: true,
-      exactOptionalPropertyTypes: true,
-      experimentalDecorators: false,
-      ignoreDeprecations: true,
-      noStrictGenericChecks: true,
-      noUncheckedIndexedAccess: false,
-      noPropertyAccessFromIndexSignature: false,
-      lib: ["lib.es2022.d.ts", "lib.dom.d.ts"]
-    });
+      noEmit: true,
+      skipLibCheck: true,
+      resolveJsonModule: true
+    }
+  };
+};
+
+function createTsc(srcFiles, src) {
+  try {
+    const tscConfig = createTscProgramConfig(srcFiles, src);
+    const program = tsc.createProgram(tscConfig.rootNames, tscConfig.options);
     const typeChecker = program.getTypeChecker();
     const seenTypes = new Map();
 
-    const safeTypeToString = (node) => {
+    const safeTypeToString = (type, context) => {
       try {
-        return typeChecker.typeToString(node, TSC_FLAGS);
+        return normalizeTypeString(
+          typeChecker.typeToString(type, context, TSC_FLAGS),
+          context
+        );
       } catch (err) {
         return "any";
       }
@@ -634,13 +844,256 @@ function createTsc(srcFiles) {
 
     const safeTypeWithContextToString = (node, context) => {
       try {
-        return typeChecker.typeToString(node, context, TSC_FLAGS);
+        return normalizeTypeString(
+          typeChecker.typeToString(node, context, TSC_FLAGS),
+          context
+        );
       } catch (err) {
         return "any";
       }
     };
 
-    const addType = (node) => {
+    const addTypeAtPosition = (currentSeenTypes, position, typeStr) => {
+      const scoreTypeString = (value) => {
+        if (!value || isUnresolvedTypeString(value)) {
+          return 0;
+        }
+        if (value.includes("=>")) {
+          return 3;
+        }
+        if (
+          value.includes("import(") ||
+          value.includes("{") ||
+          value.includes("|")
+        ) {
+          return 2;
+        }
+        return 1;
+      };
+      if (
+        Number.isInteger(position) &&
+        position >= 0 &&
+        typeStr &&
+        ![
+          "any",
+          "unknown",
+          "any[]",
+          "unknown[]",
+          "error",
+          "/*unresolved*/ any"
+        ].includes(typeStr)
+      ) {
+        const existingType = currentSeenTypes.get(position);
+        if (!existingType) {
+          currentSeenTypes.set(position, typeStr);
+          return;
+        }
+        const existingScore = scoreTypeString(existingType);
+        const nextScore = scoreTypeString(typeStr);
+        if (
+          nextScore > existingScore ||
+          (nextScore === existingScore && typeStr.length >= existingType.length)
+        ) {
+          currentSeenTypes.set(position, typeStr);
+        }
+      }
+    };
+
+    const isUnresolvedTypeString = (typeStr) =>
+      [
+        "any",
+        "unknown",
+        "any[]",
+        "unknown[]",
+        "error",
+        "/*unresolved*/ any",
+        "Promise<any>",
+        "Promise<unknown>"
+      ].includes(typeStr);
+
+    const collectReturnExpressionTypes = (node, collectedTypes = new Set()) => {
+      if (!node || !node.kind) {
+        return collectedTypes;
+      }
+      if (tsc.isReturnStatement(node) && node.expression) {
+        const returnType = safeTypeWithContextToString(
+          typeChecker.getTypeAtLocation(node.expression),
+          node.expression
+        );
+        if (returnType && !isUnresolvedTypeString(returnType)) {
+          collectedTypes.add(returnType);
+        } else {
+          const inferredSyntaxType = inferExpressionTypeFromSyntax(
+            node.expression
+          );
+          if (
+            inferredSyntaxType &&
+            !isUnresolvedTypeString(inferredSyntaxType)
+          ) {
+            collectedTypes.add(inferredSyntaxType);
+          }
+        }
+        return collectedTypes;
+      }
+      if (
+        node !== undefined &&
+        !tsc.isFunctionDeclaration(node) &&
+        !tsc.isFunctionExpression(node) &&
+        !tsc.isArrowFunction(node) &&
+        !tsc.isMethodDeclaration(node)
+      ) {
+        tsc.forEachChild(node, (child) =>
+          collectReturnExpressionTypes(child, collectedTypes)
+        );
+      }
+      return collectedTypes;
+    };
+
+    const inferAsyncReturnTypeFromBody = (node) => {
+      if (!node.body) {
+        return undefined;
+      }
+      if (!tsc.isBlock(node.body)) {
+        const bodyType = safeTypeWithContextToString(
+          typeChecker.getTypeAtLocation(node.body),
+          node.body
+        );
+        return bodyType && !bodyType.startsWith("Promise<")
+          ? `Promise<${bodyType}>`
+          : bodyType;
+      }
+      const collectedTypes = collectReturnExpressionTypes(node.body);
+      if (collectedTypes.size === 0) {
+        return undefined;
+      }
+      const unionType = [...collectedTypes].sort().join(" | ");
+      return unionType.startsWith("Promise<")
+        ? unionType
+        : `Promise<${unionType}>`;
+    };
+
+    const buildFunctionSignatureType = (node, returnTypeStr) => {
+      if (!node.parameters) {
+        return undefined;
+      }
+      const parameters = node.parameters.map((param) => {
+        const parameterName = param.name?.getText?.() || "arg";
+        const parameterType = safeTypeWithContextToString(
+          typeChecker.getTypeAtLocation(param.name || param),
+          param.name || param
+        );
+        return `${parameterName}: ${parameterType}`;
+      });
+      return `(${parameters.join(", ")}) => ${returnTypeStr}`;
+    };
+
+    const inferExpressionTypeFromSyntax = (expression) => {
+      if (!expression) {
+        return undefined;
+      }
+      if (
+        tsc.isCallExpression(expression) &&
+        expression.expression.kind === tsc.SyntaxKind.ImportKeyword &&
+        expression.arguments.length > 0 &&
+        tsc.isStringLiteralLike(expression.arguments[0])
+      ) {
+        return `Promise<typeof import("${normalizeImportedTypeSpecifier(
+          expression.arguments[0].text,
+          expression.getSourceFile().fileName
+        )}")>`;
+      }
+      if (tsc.isAwaitExpression(expression)) {
+        const awaitedType = inferExpressionTypeFromSyntax(
+          expression.expression
+        );
+        return awaitedType?.startsWith("Promise<")
+          ? awaitedType.slice(8, -1)
+          : awaitedType;
+      }
+      if (tsc.isIdentifier(expression)) {
+        const symbol = typeChecker.getSymbolAtLocation(expression);
+        const declaration = symbol?.valueDeclaration;
+        if (tsc.isVariableDeclaration(declaration) && declaration.initializer) {
+          return inferExpressionTypeFromSyntax(declaration.initializer);
+        }
+      }
+      if (tsc.isPropertyAccessExpression(expression)) {
+        const baseType = inferExpressionTypeFromSyntax(expression.expression);
+        if (baseType) {
+          return `${baseType}.${expression.name.getText()}`;
+        }
+      }
+      return undefined;
+    };
+
+    const inferFunctionDeclarationReturnType = (declaration) => {
+      const signature = typeChecker.getSignatureFromDeclaration(declaration);
+      if (!signature) {
+        return undefined;
+      }
+      let inferredType = safeTypeToString(
+        typeChecker.getReturnTypeOfSignature(signature),
+        declaration.name || declaration
+      );
+      if (
+        isUnresolvedTypeString(inferredType) &&
+        (tsc.getCombinedModifierFlags(declaration) &
+          tsc.ModifierFlags.Async) !==
+          0
+      ) {
+        inferredType =
+          inferAsyncReturnTypeFromSyntaxBody(declaration) ||
+          inferAsyncReturnTypeFromBody(declaration) ||
+          inferredType;
+      }
+      return inferredType;
+    };
+
+    const inferAsyncReturnTypeFromSyntaxBody = (node) => {
+      if (!node?.body) {
+        return undefined;
+      }
+      const collectedTypes = new Set();
+      const visit = (currentNode) => {
+        if (!currentNode || !currentNode.kind) {
+          return;
+        }
+        if (tsc.isReturnStatement(currentNode) && currentNode.expression) {
+          const inferredType = inferExpressionTypeFromSyntax(
+            currentNode.expression
+          );
+          if (inferredType) {
+            collectedTypes.add(inferredType);
+          }
+          return;
+        }
+        if (
+          !tsc.isFunctionDeclaration(currentNode) &&
+          !tsc.isFunctionExpression(currentNode) &&
+          !tsc.isArrowFunction(currentNode) &&
+          !tsc.isMethodDeclaration(currentNode)
+        ) {
+          tsc.forEachChild(currentNode, visit);
+        }
+      };
+      if (tsc.isBlock(node.body)) {
+        visit(node.body);
+      } else {
+        const inferredType = inferExpressionTypeFromSyntax(node.body);
+        if (inferredType) {
+          collectedTypes.add(inferredType);
+        }
+      }
+      if (collectedTypes.size === 0) {
+        return undefined;
+      }
+      const unionType = [...collectedTypes].sort().join(" | ");
+      return unionType.startsWith("Promise<")
+        ? unionType
+        : `Promise<${unionType}>`;
+    };
+
+    const addType = (node, currentSeenTypes = seenTypes) => {
       // STRUCTURAL/CONTAINER NODES
       if (
         node.kind === tsc.SyntaxKind.SourceFile ||
@@ -655,11 +1108,15 @@ function createTsc(srcFiles) {
         node.kind === tsc.SyntaxKind.InterfaceDeclaration ||
         node.kind === tsc.SyntaxKind.ModuleDeclaration
       ) {
-        tsc.forEachChild(node, addType);
+        tsc.forEachChild(node, (child) => addType(child, currentSeenTypes));
         return;
       }
 
       let typeStr;
+      const isDirectCalleeIdentifier =
+        tsc.isIdentifier(node) &&
+        tsc.isCallExpression(node.parent) &&
+        node.parent.expression === node;
 
       try {
         // WRAPPER NODES
@@ -667,14 +1124,15 @@ function createTsc(srcFiles) {
           (tsc.SyntaxKind.SatisfiesExpression &&
             node.kind === tsc.SyntaxKind.SatisfiesExpression) ||
           node.kind === tsc.SyntaxKind.AsExpression ||
-          node.kind === tsc.SyntaxKind.TypeAssertionExpression
+          node.kind === tsc.SyntaxKind.TypeAssertionExpression ||
+          node.kind === tsc.SyntaxKind.NonNullExpression
         ) {
           typeStr = safeTypeWithContextToString(
             typeChecker.getTypeAtLocation(node.expression),
             node.expression
           );
         }
-        // FUNCTION/METHOD SIGNATURES
+        // FUNCTION/METHOD SIGNATURES - extract return type AND parameter types
         else if (
           tsc.isFunctionLike(node) ||
           tsc.isMethodDeclaration(node) ||
@@ -686,7 +1144,41 @@ function createTsc(srcFiles) {
           const signature = typeChecker.getSignatureFromDeclaration(node);
           if (signature) {
             const returnType = typeChecker.getReturnTypeOfSignature(signature);
-            typeStr = safeTypeToString(returnType);
+            typeStr = safeTypeToString(returnType, node.name || node);
+            if (
+              isUnresolvedTypeString(typeStr) &&
+              (tsc.getCombinedModifierFlags(node) & tsc.ModifierFlags.Async) !==
+                0
+            ) {
+              typeStr =
+                inferAsyncReturnTypeFromSyntaxBody(node) ||
+                inferAsyncReturnTypeFromBody(node) ||
+                typeStr;
+            }
+            // Also extract parameter types
+            if (node.parameters) {
+              for (const param of node.parameters) {
+                try {
+                  const paramType = typeChecker.getTypeAtLocation(param);
+                  const paramTypeStr = safeTypeToString(
+                    paramType,
+                    param.name || param
+                  );
+                  if (paramTypeStr && paramTypeStr !== "any") {
+                    currentSeenTypes.set(param.getStart(), paramTypeStr);
+                  }
+                } catch {
+                  // ignore parameter type errors
+                }
+              }
+            }
+            if (node.name) {
+              addTypeAtPosition(
+                currentSeenTypes,
+                node.name.getStart(),
+                buildFunctionSignatureType(node, typeStr)
+              );
+            }
           } else {
             const funcType = typeChecker.getTypeAtLocation(node);
             const callSignatures = typeChecker.getSignaturesOfType(
@@ -694,9 +1186,250 @@ function createTsc(srcFiles) {
               tsc.SignatureKind.Call
             );
             if (callSignatures.length > 0) {
-              typeStr = safeTypeToString(callSignatures[0].getReturnType());
+              typeStr = safeTypeToString(
+                callSignatures[0].getReturnType(),
+                node.name || node
+              );
             }
           }
+        }
+        // CLASS PROPERTIES - extract types for property declarations
+        else if (node.kind === tsc.SyntaxKind.PropertyDeclaration) {
+          if (node.type) {
+            const propType = typeChecker.getTypeFromTypeNode(node.type);
+            typeStr = safeTypeToString(propType, node.type);
+          } else if (node.initializer) {
+            const initType = typeChecker.getTypeAtLocation(node.initializer);
+            typeStr = safeTypeWithContextToString(initType, node.initializer);
+          }
+        }
+        // VARIABLE DECLARATIONS - extract types for loop variables and destructuring
+        else if (
+          node.kind === tsc.SyntaxKind.VariableDeclaration &&
+          node.name
+        ) {
+          const varType = typeChecker.getTypeAtLocation(node.name);
+          typeStr = safeTypeWithContextToString(varType, node.name);
+          if (node.initializer) {
+            const initializerTarget = tsc.isPropertyAccessExpression(
+              node.initializer
+            )
+              ? node.initializer.name
+              : tsc.isElementAccessExpression(node.initializer) &&
+                  node.initializer.argumentExpression
+                ? node.initializer.argumentExpression
+                : node.initializer;
+            const initializerType = safeTypeWithContextToString(
+              typeChecker.getTypeAtLocation(initializerTarget),
+              initializerTarget
+            );
+            if (
+              !isUnresolvedTypeString(initializerType) &&
+              (isUnresolvedTypeString(typeStr) ||
+                initializerType.length > typeStr.length)
+            ) {
+              typeStr = initializerType;
+            }
+            if (
+              isUnresolvedTypeString(typeStr) &&
+              tsc.isCallExpression(node.initializer) &&
+              tsc.isIdentifier(node.initializer.expression)
+            ) {
+              const symbol = typeChecker.getSymbolAtLocation(
+                node.initializer.expression
+              );
+              const declaration = symbol?.declarations?.find(
+                (candidate) =>
+                  tsc.isFunctionDeclaration(candidate) ||
+                  tsc.isMethodDeclaration(candidate) ||
+                  tsc.isFunctionExpression(candidate) ||
+                  tsc.isArrowFunction(candidate)
+              );
+              if (declaration) {
+                typeStr =
+                  inferFunctionDeclarationReturnType(declaration) || typeStr;
+              }
+            }
+          }
+          addTypeAtPosition(currentSeenTypes, node.name.getStart(), typeStr);
+        }
+        // BINDING ELEMENTS - capture destructured member types precisely
+        else if (node.kind === tsc.SyntaxKind.BindingElement && node.name) {
+          const bindingType = typeChecker.getTypeAtLocation(node.name);
+          typeStr = safeTypeWithContextToString(bindingType, node.name);
+        }
+        // PARAMETERS - capture parameter types even when not covered by signature extraction
+        else if (node.kind === tsc.SyntaxKind.Parameter && node.name) {
+          const parameterType = typeChecker.getTypeAtLocation(node.name);
+          typeStr = safeTypeWithContextToString(parameterType, node.name);
+        }
+        // OBJECT LITERAL PROPERTIES - extract property value types
+        else if (
+          node.kind === tsc.SyntaxKind.PropertyAssignment &&
+          node.initializer
+        ) {
+          const propType = typeChecker.getTypeAtLocation(node.initializer);
+          typeStr = safeTypeWithContextToString(propType, node.initializer);
+        }
+        // SHORTHAND OBJECT PROPERTIES - preserve referenced symbol type
+        else if (node.kind === tsc.SyntaxKind.ShorthandPropertyAssignment) {
+          const shorthandType = typeChecker.getTypeAtLocation(node.name);
+          typeStr = safeTypeWithContextToString(shorthandType, node.name);
+        }
+        // IMPORT CALLS - preserve module namespace typing for dynamic import()
+        else if (
+          node.kind === tsc.SyntaxKind.CallExpression &&
+          node.expression?.kind === tsc.SyntaxKind.ImportKeyword
+        ) {
+          const importType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(importType, node);
+        }
+        // CALL EXPRESSIONS - extract return types
+        else if (node.kind === tsc.SyntaxKind.CallExpression) {
+          const callSig = typeChecker.getResolvedSignature(node);
+          if (callSig) {
+            const retType = callSig.getReturnType();
+            typeStr = safeTypeToString(retType, node);
+            if (
+              isUnresolvedTypeString(typeStr) &&
+              tsc.isIdentifier(node.expression)
+            ) {
+              const symbol = typeChecker.getSymbolAtLocation(node.expression);
+              const declaration = symbol?.declarations?.find(
+                (candidate) =>
+                  tsc.isFunctionDeclaration(candidate) ||
+                  tsc.isMethodDeclaration(candidate) ||
+                  tsc.isFunctionExpression(candidate) ||
+                  tsc.isArrowFunction(candidate)
+              );
+              if (declaration) {
+                typeStr =
+                  inferFunctionDeclarationReturnType(declaration) || typeStr;
+              }
+            }
+          }
+        }
+        // NEW EXPRESSIONS - extract constructor return types
+        else if (node.kind === tsc.SyntaxKind.NewExpression) {
+          const newSig = typeChecker.getResolvedSignature(node);
+          if (newSig) {
+            const retType = newSig.getReturnType();
+            typeStr = safeTypeToString(retType, node);
+          }
+        }
+        // PROPERTY ACCESS - extract property types
+        else if (
+          node.kind === tsc.SyntaxKind.PropertyAccessExpression ||
+          node.kind === tsc.SyntaxKind.ElementAccessExpression
+        ) {
+          const propType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(propType, node);
+          if (node.kind === tsc.SyntaxKind.PropertyAccessExpression) {
+            addTypeAtPosition(currentSeenTypes, node.name.getStart(), typeStr);
+          } else if (node.argumentExpression) {
+            addTypeAtPosition(
+              currentSeenTypes,
+              node.argumentExpression.getStart(),
+              typeStr
+            );
+          }
+        }
+        // BINARY EXPRESSIONS - extract result types
+        else if (node.kind === tsc.SyntaxKind.BinaryExpression) {
+          const binType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(binType, node);
+        }
+        // CONDITIONAL EXPRESSIONS - extract union types
+        else if (node.kind === tsc.SyntaxKind.ConditionalExpression) {
+          const condType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(condType, node);
+        }
+        // LOGICAL EXPRESSIONS - extract result types
+        else if (node.kind === tsc.SyntaxKind.LogicalExpression) {
+          const logType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(logType, node);
+        }
+        // ARROW FUNCTION EXPRESSIONS - extract return types
+        else if (node.kind === tsc.SyntaxKind.ArrowFunction) {
+          const arrowSig = typeChecker.getSignatureFromDeclaration(node);
+          if (arrowSig) {
+            const retType = arrowSig.getReturnType();
+            typeStr = safeTypeToString(retType, node);
+            // Also extract parameter types for arrow functions
+            if (node.parameters) {
+              for (const param of node.parameters) {
+                try {
+                  const paramType = typeChecker.getTypeAtLocation(param);
+                  const paramTypeStr = safeTypeToString(
+                    paramType,
+                    param.name || param
+                  );
+                  if (paramTypeStr && paramTypeStr !== "any") {
+                    currentSeenTypes.set(param.getStart(), paramTypeStr);
+                  }
+                } catch {
+                  // ignore
+                }
+              }
+            }
+          }
+        }
+        // CLASS DECLARATIONS - extract class instance types
+        else if (
+          node.kind === tsc.SyntaxKind.ClassDeclaration ||
+          node.kind === tsc.SyntaxKind.ClassExpression
+        ) {
+          const classType = typeChecker.getTypeAtLocation(node);
+          const constructSigs = typeChecker.getSignaturesOfType(
+            classType,
+            tsc.SignatureKind.Construct
+          );
+          if (constructSigs.length > 0) {
+            typeStr = safeTypeToString(constructSigs[0].getReturnType(), node);
+          }
+        }
+        // ENUM MEMBERS - preserve literal enum member types for TypeScript projects
+        else if (node.kind === tsc.SyntaxKind.EnumMember) {
+          const enumMemberType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(enumMemberType, node);
+        }
+        // TEMPLATE EXPRESSIONS - extract string types
+        else if (
+          node.kind === tsc.SyntaxKind.TemplateExpression ||
+          node.kind === tsc.SyntaxKind.NoSubstitutionTemplateLiteral
+        ) {
+          const tmplType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(tmplType, node);
+        }
+        // TAGGED TEMPLATE EXPRESSIONS - extract tagged template types
+        else if (node.kind === tsc.SyntaxKind.TaggedTemplateExpression) {
+          const tagType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(tagType, node);
+        }
+        // YIELD EXPRESSIONS - extract yielded types
+        else if (node.kind === tsc.SyntaxKind.YieldExpression) {
+          const yieldType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(yieldType, node);
+        }
+        // SPREAD ELEMENTS - extract spread element types
+        else if (node.kind === tsc.SyntaxKind.SpreadElement) {
+          const spreadType = typeChecker.getTypeAtLocation(node.expression);
+          typeStr = safeTypeWithContextToString(spreadType, node.expression);
+        }
+        // DELETE EXPRESSIONS - extract result types
+        else if (node.kind === tsc.SyntaxKind.DeleteExpression) {
+          const delType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(delType, node);
+        }
+        // TYPEOF EXPRESSIONS - extract result types
+        else if (node.kind === tsc.SyntaxKind.TypeOfExpression) {
+          const typeofType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(typeofType, node);
+        }
+        // VOID EXPRESSIONS - extract result types
+        else if (node.kind === tsc.SyntaxKind.VoidExpression) {
+          const voidType = typeChecker.getTypeAtLocation(node);
+          typeStr = safeTypeWithContextToString(voidType, node);
         }
         // STANDARD EXPRESSIONS & IDENTIFIERS
         else {
@@ -714,6 +1447,7 @@ function createTsc(srcFiles) {
           typeStr = safeTypeWithContextToString(typeObj, node);
         }
         if (
+          !isDirectCalleeIdentifier &&
           typeStr &&
           ![
             "any",
@@ -724,18 +1458,26 @@ function createTsc(srcFiles) {
             "/*unresolved*/ any"
           ].includes(typeStr)
         ) {
-          seenTypes.set(node.getStart(), typeStr);
+          addTypeAtPosition(currentSeenTypes, node.getStart(), typeStr);
         }
       } catch (err) {
         // Silently fail on type resolution errors
       }
-      tsc.forEachChild(node, addType);
+      tsc.forEachChild(node, (child) => addType(child, currentSeenTypes));
+    };
+
+    const collectTypes = (sourceFile) => {
+      const fileSeenTypes = new Map();
+      tsc.forEachChild(sourceFile, (node) => addType(node, fileSeenTypes));
+      return fileSeenTypes;
     };
 
     return {
       program: program,
       typeChecker: typeChecker,
+      rootNames: tscConfig.rootNames,
       addType: addType,
+      collectTypes: collectTypes,
       seenTypes: seenTypes
     };
   } catch (err) {
@@ -749,18 +1491,41 @@ function createTsc(srcFiles) {
 const createJSAst = async (options) => {
   try {
     const promiseMap = await getAllSrcJSAndTSFiles(options.src);
-    const srcFiles = promiseMap.flatMap((d) => d);
-    const CONCURRENCY_LIMIT = 10;
-    const chunks = [];
-    for (let i = 0; i < srcFiles.length; i += CONCURRENCY_LIMIT) {
-      chunks.push(srcFiles.slice(i, i + CONCURRENCY_LIMIT));
-    }
+    let srcFiles = promiseMap.flatMap((d) => d).sort();
     let ts;
     if (options.tsTypes) {
       const projectFiles = !shouldIncludeNodeModulesBundles
         ? srcFiles.filter((file) => !file.includes("node_modules"))
         : srcFiles;
-      ts = createTsc(projectFiles);
+      ts = createTsc(projectFiles, options.src);
+      if (ts?.rootNames) {
+        const srcRoot = resolve(options.src);
+        const srcFileByResolvedPath = new Map(
+          srcFiles.map((file) => [resolve(file), file])
+        );
+        for (const file of ts.rootNames) {
+          const resolvedFile = resolve(file);
+          if (
+            resolvedFile.startsWith(srcRoot) &&
+            /\.(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)$/.test(file) &&
+            !srcFileByResolvedPath.has(resolvedFile)
+          ) {
+            srcFileByResolvedPath.set(
+              resolvedFile,
+              join(options.src, relative(srcRoot, resolvedFile))
+            );
+          }
+        }
+        srcFiles = [...srcFileByResolvedPath.values()].sort();
+      }
+    }
+    const CONCURRENCY_LIMIT = Math.max(
+      1,
+      Number.parseInt(process.env.ASTGEN_CONCURRENCY || "10", 10) || 10
+    );
+    const chunks = [];
+    for (let i = 0; i < srcFiles.length; i += CONCURRENCY_LIMIT) {
+      chunks.push(srcFiles.slice(i, i + CONCURRENCY_LIMIT));
     }
     for (const chunk of chunks) {
       await Promise.all(chunk.map((file) => processFile(file, options, ts)));
@@ -791,9 +1556,15 @@ const processFile = (file, options, ts) => {
       try {
         const tsAst = ts.program.getSourceFile(file);
         if (tsAst) {
-          tsc.forEachChild(tsAst, ts.addType);
-          writeTypesFile(file, ts.seenTypes, options);
-          ts.seenTypes.clear();
+          const seenTypes = ts.collectTypes
+            ? ts.collectTypes(tsAst)
+            : (() => {
+                tsc.forEachChild(tsAst, ts.addType);
+                const collectedTypes = new Map(ts.seenTypes);
+                ts.seenTypes.clear();
+                return collectedTypes;
+              })();
+          writeTypesFile(file, seenTypes, options);
         }
       } catch (err) {
         console.warn("Process file", file, ":", err.message);

@@ -1,21 +1,21 @@
 {
   "name": "@appthreat/atom-parsetools",
-  "version": "1.1.5",
+  "version": "1.2.0",
   "description": "Parsing tools that complement the @appthreat/atom project.",
   "main": "./index.js",
   "type": "module",
   "scripts": {
     "pretty": "prettier --write *.js --trailing-comma=none",
-    "lint": "eslint *.mjs *.js"
+    "test": "node test-fixtures/astgen-type-regression.js && node test-fixtures/astgen-json-regression.js && node test-fixtures/evaluate-astgen.js",
+    "test:evaluate": "node test-fixtures/evaluate-astgen.js",
+    "test:json": "node test-fixtures/astgen-json-regression.js",
+    "test:fixtures": "node test-fixtures/test-suite.js"
   },
   "dependencies": {
     "@appthreat/atom-common": "^1.1.0",
     "@babel/parser": "^7.29.3",
     "hermes-parser": "^0.36.1",
     "typescript": "^6.0.3"
-  },
-  "devDependencies": {
-    "eslint": "8.57.0"
   },
   "bin": {
     "astgen": "astgen.js",
@@ -48,6 +48,5 @@
     "*.js",
     "plugins/",
     "LICENSE"
-  ],
-  "packageManager": "npm"
+  ]
 }

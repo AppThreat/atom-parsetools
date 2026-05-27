@@ -1,0 +1,8 @@
+{
+  "serviceName": "atom-fixture",
+  "retryLimit": 5,
+  "features": {
+    "beta": true,
+    "rollout": 0.5
+  }
+}

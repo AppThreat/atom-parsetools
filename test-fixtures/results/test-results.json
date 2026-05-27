@@ -1,0 +1,421 @@
+{
+  "generatedAt": "2026-05-27T15:57:35.460Z",
+  "results": [
+    {
+      "testCase": "String literal",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "str": "\"hello\""
+      }
+    },
+    {
+      "testCase": "Number literal",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "num": "42"
+      }
+    },
+    {
+      "testCase": "Boolean literal",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "bool": "true"
+      }
+    },
+    {
+      "testCase": "Null literal",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "nill": "null"
+      }
+    },
+    {
+      "testCase": "Undefined literal",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "und": "undefined"
+      }
+    },
+    {
+      "testCase": "BigInt literal",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "big": "100n"
+      }
+    },
+    {
+      "testCase": "Number array",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "nums": "number[]"
+      }
+    },
+    {
+      "testCase": "String array",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "strs": "string[]"
+      }
+    },
+    {
+      "testCase": "Mixed array",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "mixed": "(string | number | boolean)[]"
+      }
+    },
+    {
+      "testCase": "Nested array",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "nested": "number[][]"
+      }
+    },
+    {
+      "testCase": "Simple object",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "point": "{ x: number; y: number; }"
+      }
+    },
+    {
+      "testCase": "Nested object",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "nested": "{ a: { b: { c: number; }; }; }"
+      }
+    },
+    {
+      "testCase": "Object with array",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "obj": "{ items: number[]; }"
+      }
+    },
+    {
+      "testCase": "Function returning number",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "add": "(a: any, b: any) => any"
+      }
+    },
+    {
+      "testCase": "Function returning string",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "greet": "(name: any) => string"
+      }
+    },
+    {
+      "testCase": "Function returning boolean",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "isEven": "(n: any) => boolean"
+      }
+    },
+    {
+      "testCase": "Function returning void",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "log": "(msg: any) => void"
+      }
+    },
+    {
+      "testCase": "Nullish coalescing",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "val": "\"default\""
+      }
+    },
+    {
+      "testCase": "Optional chaining",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "obj": "{ a: { b: number; }; }",
+        "val": "number"
+      }
+    },
+    {
+      "testCase": "Spread operator",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "a": "number[]",
+        "b": "number[]"
+      }
+    },
+    {
+      "testCase": "Destructuring",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "{ x, y }": "{ x: number; y: number; }"
+      }
+    },
+    {
+      "testCase": "Date",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "date": "Date"
+      }
+    },
+    {
+      "testCase": "RegExp",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "regex": "RegExp"
+      }
+    },
+    {
+      "testCase": "Error",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "err": "Error"
+      }
+    },
+    {
+      "testCase": "Map",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "map": "Map<any, any>"
+      }
+    },
+    {
+      "testCase": "Set",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "set": "Set<any>"
+      }
+    },
+    {
+      "testCase": "Addition expression",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "sum": "number"
+      }
+    },
+    {
+      "testCase": "Subtraction expression",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "diff": "number"
+      }
+    },
+    {
+      "testCase": "Multiplication expression",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "prod": "number"
+      }
+    },
+    {
+      "testCase": "Division expression",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "quot": "number"
+      }
+    },
+    {
+      "testCase": "Comparison expression",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "isGreater": "boolean"
+      }
+    },
+    {
+      "testCase": "Equality expression",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "isEqual": "boolean"
+      }
+    },
+    {
+      "testCase": "String concatenation",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "concat": "string"
+      }
+    },
+    {
+      "testCase": "Simple ternary",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "positive": "\"yes\" | \"no\""
+      }
+    },
+    {
+      "testCase": "Nested ternary",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "sign": "0 | 1 | -1"
+      }
+    },
+    {
+      "testCase": "Logical AND",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "bothTrue": "false"
+      }
+    },
+    {
+      "testCase": "Logical OR",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "eitherTrue": "true"
+      }
+    },
+    {
+      "testCase": "Logical NOT",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "notTrue": "true"
+      }
+    },
+    {
+      "testCase": "Math.max call",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "maxVal": "number"
+      }
+    },
+    {
+      "testCase": "Math.min call",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "minVal": "number"
+      }
+    },
+    {
+      "testCase": "String method call",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "upper": "string"
+      }
+    },
+    {
+      "testCase": "Array method call",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "len": "number"
+      }
+    },
+    {
+      "testCase": "Date constructor",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "date": "Date"
+      }
+    },
+    {
+      "testCase": "Error constructor",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "err": "Error"
+      }
+    },
+    {
+      "testCase": "RegExp constructor",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "regex": "RegExp"
+      }
+    },
+    {
+      "testCase": "Simple template literal",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "tmpl": "\"Hello, World\""
+      }
+    },
+    {
+      "testCase": "Template with interpolation",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "name": "\"Alice\"",
+        "tmpl": "string"
+      }
+    },
+    {
+      "testCase": "Class instance",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "p": "Point"
+      }
+    },
+    {
+      "testCase": "Arrow function returning number",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "double": "(x: any) => number"
+      }
+    },
+    {
+      "testCase": "Arrow function returning string",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "greet": "(name: any) => string"
+      }
+    },
+    {
+      "testCase": "Arrow function returning object",
+      "passed": true,
+      "failures": [],
+      "actualTypes": {
+        "createPoint": "(x: any, y: any) => { x: any; y: any; }"
+      }
+    }
+  ],
+  "summary": {
+    "total": 51,
+    "passed": 51,
+    "failed": 0
+  }
+}
