@@ -1,0 +1,59 @@
+# Development and CI/CD files
+.git/
+.github/
+.gitignore
+.idea/
+.env
+.env.local
+
+# Documentation files  
+*.md
+!LICENSE
+
+# Test and development fixtures
+test-fixtures/
+test/
+tests/
+spec/
+examples/
+.mocha*
+.nyc_output/
+coverage/
+
+# Development tools
+*.ps1
+php.ini
+
+# Node modules (will be rebuilt)
+node_modules/
+package-lock.json
+
+# IDE files
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# Build artifacts
+dist/
+build/
+
+# Ruby/PHP development files (docs, tests, etc kept only in build script cleanup)
+plugins/**/*.md
+plugins/**/*.yml
+plugins/**/*.yaml
+plugins/**/doc/
+plugins/**/docs/
+plugins/**/test/
+plugins/**/tests/
+plugins/**/spec/
+plugins/**/examples/
+plugins/**/example/
+plugins/**/.git*
+plugins/**/gemspec
+plugins/rubyastgen/Gemfile*
+plugins/rubyastgen/.bundle/
+plugins/rubyastgen/bundle/ruby/*/cache/
+plugins/rubyastgen/bundle/ruby/*/build_info/
+plugins/rubyastgen/bundle/ruby/*/doc/
+plugins/rubyastgen/bundle/ruby/*/specifications/
