@@ -3,7 +3,7 @@
 source "https://rubygems.org"
 
 group :frontend do
-    gem "ruby_ast_gen", github: 'appthreat/ruby_ast_gen', ref: 'v1.3.0'
+    gem "ruby_ast_gen", github: 'appthreat/ruby_ast_gen', ref: 'cc312ebf06b4b5b1a8ef4c3c9c71ca98eb9fcd01'
     gem "parser", "~> 3.3.11.1"
     gem "prism", "~> 1.9"
     gem "ostruct", "~> 0.6.3"

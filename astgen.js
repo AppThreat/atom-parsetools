@@ -248,9 +248,13 @@ const babelSyntaxPlugins = [
   "dynamicImport",
   "importAttributes",
   "explicitResourceManagement",
-  "topLevelAwait",
-  "jsx"
+  "topLevelAwait"
 ];
+
+const isNonJsxTypeScriptFile = (file) =>
+  /(?:^|\/).*\.(?:d\.)?(?:ts|mts|cts)$/i.test(file);
+
+const shouldEnableJsxSyntax = (file) => !isNonJsxTypeScriptFile(file);
 
 const makeTypescriptPlugin = (file) => [
   "typescript",
@@ -259,7 +263,7 @@ const makeTypescriptPlugin = (file) => [
       file.endsWith(".d.ts") ||
       file.endsWith(".d.mts") ||
       file.endsWith(".d.cts"),
-    disallowAmbiguousJSXLike: false
+    disallowAmbiguousJSXLike: isNonJsxTypeScriptFile(file)
   }
 ];
 
@@ -287,6 +291,7 @@ const makeBabelOptions = (baseOptions, file, extraPlugins = []) => ({
     baseOptions.plugins,
     extraPlugins,
     babelSyntaxPlugins,
+    shouldEnableJsxSyntax(file) ? ["jsx"] : [],
     (baseOptions.plugins || []).some(
       (plugin) => getBabelPluginName(plugin) === "flow"
     )
@@ -853,6 +858,17 @@ function createTsc(srcFiles, src) {
       }
     };
 
+    const getExplicitTypeAnnotationString = (typeNode) => {
+      if (!typeNode) {
+        return undefined;
+      }
+      try {
+        return safeTypeToString(typeChecker.getTypeFromTypeNode(typeNode), typeNode);
+      } catch {
+        return undefined;
+      }
+    };
+
     const addTypeAtPosition = (currentSeenTypes, position, typeStr) => {
       const scoreTypeString = (value) => {
         if (!value || isUnresolvedTypeString(value)) {
@@ -1128,8 +1144,8 @@ function createTsc(srcFiles, src) {
           node.kind === tsc.SyntaxKind.NonNullExpression
         ) {
           typeStr = safeTypeWithContextToString(
-            typeChecker.getTypeAtLocation(node.expression),
-            node.expression
+            typeChecker.getTypeAtLocation(node),
+            node
           );
         }
         // FUNCTION/METHOD SIGNATURES - extract return type AND parameter types
@@ -1208,9 +1224,13 @@ function createTsc(srcFiles, src) {
           node.kind === tsc.SyntaxKind.VariableDeclaration &&
           node.name
         ) {
+          const explicitDeclaredType = getExplicitTypeAnnotationString(node.type);
           const varType = typeChecker.getTypeAtLocation(node.name);
-          typeStr = safeTypeWithContextToString(varType, node.name);
-          if (node.initializer) {
+          typeStr =
+            explicitDeclaredType && !isUnresolvedTypeString(explicitDeclaredType)
+              ? explicitDeclaredType
+              : safeTypeWithContextToString(varType, node.name);
+          if (node.initializer && !explicitDeclaredType) {
             const initializerTarget = tsc.isPropertyAccessExpression(
               node.initializer
             )

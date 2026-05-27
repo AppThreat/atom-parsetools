@@ -15,6 +15,7 @@ const expectedFiles = [
   "src/advanced-types.ts",
   "src/alias-consumer.ts",
   "src/ambient.d.ts",
+  "src/assertions.ts",
   "src/index.ts",
   "src/models.ts",
   "src/services.ts",
@@ -45,6 +46,12 @@ const expectedNodeCounts = {
     TSDeclareFunction: 2,
     ExportNamedDeclaration: 2,
     TSQualifiedName: 2
+  },
+  "src/assertions.ts": {
+    TSTypeAssertion: 3,
+    ClassDeclaration: 2,
+    AssignmentExpression: 2,
+    NewExpression: 2
   },
   "src/models.ts": {
     TSEnumDeclaration: 1,
@@ -226,9 +233,22 @@ try {
       assertTypemapEntry(relativeName, source, typemap, "projected", "{ x: number; y: number; label: string; }");
       assertTypemapEntry(relativeName, source, typemap, "status =", ["StatusCode", "StatusCode.Ok"]);
     }
+    if (relativeName === "src/assertions.ts") {
+      assertTypemapEntry(relativeName, source, typemap, "imgScr", "string");
+      assertTypemapEntry(relativeName, source, typemap, "emptyArray", ["VNode[]", "Array<VNode>"]);
+      assertTypemapEntry(relativeName, source, typemap, "var x: string", "string", { offset: 4 });
+      assertTypemapEntry(relativeName, source, typemap, "var y: Foo", "Foo", { offset: 4 });
+      assertTypemapEntry(relativeName, source, typemap, "src = imgScr", "string");
+    }
     if (relativeName === "src/index.ts") {
-      assertTypemapEntry(relativeName, source, typemap, "summaries", 'Array<{ id: import("./models").EntityId; name: string; metadata: { department: string; }; }>');
-      assertTypemapEntry(relativeName, source, typemap, "firstSummary", '{ id: import("./models").EntityId; name: string; metadata: { department: string; }; }');
+      assertTypemapEntry(relativeName, source, typemap, "summaries", [
+        'Array<{ id: import("./models").EntityId; name: string; metadata: { department: string; }; }>',
+        'Array<UserSummary>'
+      ]);
+      assertTypemapEntry(relativeName, source, typemap, "firstSummary", [
+        '{ id: import("./models").EntityId; name: string; metadata: { department: string; }; }',
+        'UserSummary'
+      ]);
     }
   }
 
