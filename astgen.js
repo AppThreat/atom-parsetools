@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 
-import { join, dirname, relative, resolve } from "path";
+import { join, dirname, relative, resolve, basename } from "path";
 import { fileURLToPath } from "url";
 import { parse } from "@babel/parser";
 import { parse as parseHermes } from "hermes-parser";
 import tsc from "typescript";
+import { tmpdir } from "os";
 import {
   readFileSync,
   mkdirSync,
   writeFileSync,
   accessSync,
   constants,
-  existsSync
+  existsSync,
+  mkdtempSync,
+  rmSync
 } from "fs";
 import { getAllFiles } from "@appthreat/atom-common";
 
@@ -294,7 +297,10 @@ const makeBabelOptions = (
   baseOptions,
   file,
   extraPlugins = [],
-  { enableJsxSyntax = shouldEnableJsxSyntax(file), disallowAmbiguousJSXLike } = {}
+  {
+    enableJsxSyntax = shouldEnableJsxSyntax(file),
+    disallowAmbiguousJSXLike
+  } = {}
 ) => ({
   ...baseOptions,
   plugins: mergeBabelPlugins(
@@ -427,9 +433,9 @@ const getAllSrcJSAndTSFiles = (src) => {
 /**
  * Convert a single JS/TS file to AST
  */
-const fileToJsAst = (file, projectType) => {
+const fileToJsAst = (file, projectType, tsInstance) => {
   if (file.endsWith(".vue") || file.endsWith(".svelte")) {
-    return toVueAst(file);
+    return toVueAst(file, tsInstance);
   }
   if (file.endsWith(".ejs")) {
     return toEjsAst(file);
@@ -515,6 +521,82 @@ const vueCommentRegex = /<!--[\s\S]*?-->/gi;
 const vueBindRegex = /(:\[)([\s\S]*?)(\])/gi;
 const vuePropRegex = /\s([.:@])([a-zA-Z]*?=)/gi;
 const vueOpenImgTag = /(<img)((?!>)[\s\S]+?)( [^/]>)/gi;
+const vueScriptTagRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+
+const VUE_COMPILER_MACRO_SHIMS = `
+declare function defineProps<T = any>(): T;
+declare function defineEmits<T = any>(): T;
+declare function defineExpose<T = any>(value?: T): void;
+declare function defineSlots<T = any>(): T;
+declare function defineModel<T = any>(
+  options?: { required?: boolean; default?: T }
+): import("vue").Ref<T>;
+declare function defineModel<T = any>(
+  name: string,
+  options?: { required?: boolean; default?: T }
+): import("vue").Ref<T>;
+declare function withDefaults<T, D>(props: T, defaults: D): T & D;
+
+declare module "vue" {
+  export type Ref<T = any> = { value: T };
+  export type ComputedRef<T = any> = { readonly value: T };
+  export type InjectionKey<T> = symbol & { __type?: T };
+  export function ref<T>(value: T): Ref<T>;
+  export function ref<T = any>(): Ref<T | undefined>;
+  export function shallowRef<T>(value: T): Ref<T>;
+  export function computed<T>(getter: () => T): ComputedRef<T>;
+  export function inject<T>(key: any, defaultValue?: T): T;
+  export function provide<T>(key: any, value: T): void;
+  export function watch(...args: any[]): void;
+  export function watchEffect(effect: () => void): void;
+  export function onMounted(cb: () => void): void;
+  export function onUnmounted(cb: () => void): void;
+}
+`;
+
+const maskNonNewlineChars = (value) => value.replace(/[^\r\n]/g, " ");
+
+const createVueVirtualTypeSource = (code) => {
+  const output = maskNonNewlineChars(code).split("");
+  let hasScriptContent = false;
+  let scriptMatch;
+  vueScriptTagRegex.lastIndex = 0;
+  while ((scriptMatch = vueScriptTagRegex.exec(code)) !== null) {
+    const fullMatch = scriptMatch[0];
+    const scriptContent = scriptMatch[1] || "";
+    const contentStart = scriptMatch.index + fullMatch.indexOf(scriptContent);
+    if (scriptContent.trim().length > 0) {
+      hasScriptContent = true;
+    }
+    for (let index = 0; index < scriptContent.length; index++) {
+      output[contentStart + index] = scriptContent[index];
+    }
+  }
+  return {
+    source: output.join(""),
+    hasScriptContent
+  };
+};
+
+const collectVueTypesWithVirtualProgram = (file, virtualSource) => {
+  const tempDir = mkdtempSync(join(tmpdir(), "atom-parsetools-vue-"));
+  const virtualFile = join(tempDir, `${basename(file)}.ts`);
+  const shimFile = join(tempDir, "vue-shims.d.ts");
+  try {
+    writeFileSync(virtualFile, virtualSource, "utf8");
+    writeFileSync(shimFile, VUE_COMPILER_MACRO_SHIMS, "utf8");
+    const virtualTs = createTsc([virtualFile, shimFile], tempDir);
+    const sourceFile = virtualTs?.program?.getSourceFile(virtualFile);
+    if (!virtualTs || !sourceFile) {
+      return new Map();
+    }
+    return virtualTs.collectTypes(sourceFile);
+  } catch {
+    return new Map();
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+};
 
 const TSC_FLAGS =
   tsc.TypeFormatFlags.NoTruncation |
@@ -526,9 +608,10 @@ const TSC_FLAGS =
   tsc.TypeFormatFlags.NoTypeReduction;
 
 /**
- * Convert a single vue file to AST
+ * Convert a single vue file to AST.
+ * When `tsInstance` is present also collect type inference from TSC and return both AST & types.
  */
-const toVueAst = (file) => {
+const toVueAst = (file, tsInstance) => {
   const code = readFileSync(file, "utf-8");
   const cleanedCode = code
     .replace(vueCommentRegex, function (match) {
@@ -549,7 +632,27 @@ const toVueAst = (file) => {
     .replace(vueTemplateRegex, function (match, grA, grB, grC) {
       return grA + grB.replaceAll("{{", "{ ").replaceAll("}}", " }") + grC;
     });
-  return codeToJsAst(file, cleanedCode, "ts");
+  const ast = codeToJsAst(file, cleanedCode, "ts");
+  let seenTypes;
+  if (tsInstance?.program) {
+    try {
+      const tsSrc = tsInstance.program.getSourceFile(file);
+      if (tsSrc) {
+        seenTypes = tsInstance.collectTypes(tsSrc);
+      }
+    } catch {
+      // Ignore and continue with virtual source fallback below.
+    }
+  }
+
+  if (!seenTypes || seenTypes.size === 0) {
+    const virtualSource = createVueVirtualTypeSource(code);
+    if (virtualSource.hasScriptContent) {
+      seenTypes = collectVueTypesWithVirtualProgram(file, virtualSource.source);
+    }
+  }
+
+  return seenTypes && seenTypes.size > 0 ? { ast, seenTypes } : ast;
 };
 
 /**
@@ -895,7 +998,10 @@ function createTsc(srcFiles, src) {
         return undefined;
       }
       try {
-        return safeTypeToString(typeChecker.getTypeFromTypeNode(typeNode), typeNode);
+        return safeTypeToString(
+          typeChecker.getTypeFromTypeNode(typeNode),
+          typeNode
+        );
       } catch {
         return undefined;
       }
@@ -1256,10 +1362,13 @@ function createTsc(srcFiles, src) {
           node.kind === tsc.SyntaxKind.VariableDeclaration &&
           node.name
         ) {
-          const explicitDeclaredType = getExplicitTypeAnnotationString(node.type);
+          const explicitDeclaredType = getExplicitTypeAnnotationString(
+            node.type
+          );
           const varType = typeChecker.getTypeAtLocation(node.name);
           typeStr =
-            explicitDeclaredType && !isUnresolvedTypeString(explicitDeclaredType)
+            explicitDeclaredType &&
+            !isUnresolvedTypeString(explicitDeclaredType)
               ? explicitDeclaredType
               : safeTypeWithContextToString(varType, node.name);
           if (node.initializer && !explicitDeclaredType) {
@@ -1602,24 +1711,35 @@ const createJSAst = async (options) => {
 
 const processFile = (file, options, ts) => {
   try {
-    const ast = fileToJsAst(file, options.type);
-    writeAstFile(file, ast, options);
-    if (ts) {
-      try {
-        const tsAst = ts.program.getSourceFile(file);
-        if (tsAst) {
-          const seenTypes = ts.collectTypes
-            ? ts.collectTypes(tsAst)
-            : (() => {
-                tsc.forEachChild(tsAst, ts.addType);
-                const collectedTypes = new Map(ts.seenTypes);
-                ts.seenTypes.clear();
-                return collectedTypes;
-              })();
-          writeTypesFile(file, seenTypes, options);
-        }
-      } catch (err) {
-        console.warn("Process file", file, ":", err.message);
+    const astOrResult = fileToJsAst(file, options.type, ts);
+    let ast = astOrResult;
+
+    // When toVueAst returns { ast, seenTypes } we write the typemap directly.
+    if (
+      astOrResult &&
+      typeof astOrResult === "object" &&
+      astOrResult.seenTypes
+    ) {
+      ast = astOrResult.ast;
+      writeAstFile(file, ast, options);
+      writeTypesFile(file, astOrResult.seenTypes, options);
+    } else {
+      writeAstFile(file, ast, options);
+      if (ts) {
+        try {
+          const tsAst = ts.program.getSourceFile(file);
+          if (tsAst) {
+            const seenTypes = ts.collectTypes
+              ? ts.collectTypes(tsAst)
+              : (() => {
+                  tsc.forEachChild(tsAst, ts.addType);
+                  const collectedTypes = new Map(ts.seenTypes);
+                  ts.seenTypes.clear();
+                  return collectedTypes;
+                })();
+            writeTypesFile(file, seenTypes, options);
+          }
+        } catch (err) {}
       }
     }
   } catch (err) {
