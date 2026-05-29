@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 
-import { join, dirname, relative, resolve } from "path";
+import { join, dirname, relative, resolve, basename } from "path";
 import { fileURLToPath } from "url";
 import { parse } from "@babel/parser";
 import { parse as parseHermes } from "hermes-parser";
 import tsc from "typescript";
+import { tmpdir } from "os";
 import {
   readFileSync,
   mkdirSync,
   writeFileSync,
   accessSync,
   constants,
-  existsSync
+  existsSync,
+  mkdtempSync,
+  rmSync
 } from "fs";
 import { getAllFiles } from "@appthreat/atom-common";
 
@@ -294,7 +297,10 @@ const makeBabelOptions = (
   baseOptions,
   file,
   extraPlugins = [],
-  { enableJsxSyntax = shouldEnableJsxSyntax(file), disallowAmbiguousJSXLike } = {}
+  {
+    enableJsxSyntax = shouldEnableJsxSyntax(file),
+    disallowAmbiguousJSXLike
+  } = {}
 ) => ({
   ...baseOptions,
   plugins: mergeBabelPlugins(
@@ -427,9 +433,9 @@ const getAllSrcJSAndTSFiles = (src) => {
 /**
  * Convert a single JS/TS file to AST
  */
-const fileToJsAst = (file, projectType) => {
+const fileToJsAst = (file, projectType, tsInstance) => {
   if (file.endsWith(".vue") || file.endsWith(".svelte")) {
-    return toVueAst(file);
+    return toVueAst(file, tsInstance);
   }
   if (file.endsWith(".ejs")) {
     return toEjsAst(file);
@@ -509,12 +515,209 @@ const codeToJsAst = (file, code, projectType) => {
   }
 };
 
+const vueScriptTagOnlyRegex = /<\/?script[^>]*>/gi;
+const vueScriptBlockRegex = /<script\b[^>]*>[\s\S]*?<\/script>/gi;
+const vueStyleBlockRegex = /<style\b[^>]*>[\s\S]*?<\/style>/gi;
+const vueBrTagRegex = /<\/?br>/gi;
 const vueCleaningRegex = /<\/*script.*>|<style[\s\S]*style>|<\/*br>/gi;
 const vueTemplateRegex = /(<template.*>)([\s\S]*)(<\/template>)/gi;
 const vueCommentRegex = /<!--[\s\S]*?-->/gi;
 const vueBindRegex = /(:\[)([\s\S]*?)(\])/gi;
 const vuePropRegex = /\s([.:@])([a-zA-Z]*?=)/gi;
 const vueOpenImgTag = /(<img)((?!>)[\s\S]+?)( [^/]>)/gi;
+const vueScriptTagRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+
+const VUE_COMPILER_MACRO_SHIMS = `
+declare function defineProps<T = any>(): T;
+declare function defineEmits<T = any>(): T;
+declare function defineExpose<T = any>(value?: T): void;
+declare function defineSlots<T = any>(): T;
+declare function defineModel<T = any>(
+  options?: { required?: boolean; default?: T }
+): import("vue").Ref<T>;
+declare function defineModel<T = any>(
+  name: string,
+  options?: { required?: boolean; default?: T }
+): import("vue").Ref<T>;
+declare function withDefaults<T, D>(props: T, defaults: D): T & D;
+
+declare module "vue" {
+  export type Ref<T = any> = { value: T };
+  export type ComputedRef<T = any> = { readonly value: T };
+  export type InjectionKey<T> = symbol & { __type?: T };
+  export function ref<T>(value: T): Ref<T>;
+  export function ref<T = any>(): Ref<T | undefined>;
+  export function shallowRef<T>(value: T): Ref<T>;
+  export function computed<T>(getter: () => T): ComputedRef<T>;
+  export function inject<T>(key: any, defaultValue?: T): T;
+  export function provide<T>(key: any, value: T): void;
+  export function watch(...args: any[]): void;
+  export function watchEffect(effect: () => void): void;
+  export function onMounted(cb: () => void): void;
+  export function onUnmounted(cb: () => void): void;
+}
+`;
+
+const maskNonNewlineChars = (value) => value.replace(/[^\r\n]/g, " ");
+
+const cleanVueCodeForParsing = (code, { includeScripts = true } = {}) => {
+  let cleanedCode = code
+    .replace(vueCommentRegex, (match) => maskNonNewlineChars(match))
+    .replace(vueStyleBlockRegex, (match) => maskNonNewlineChars(match));
+
+  if (includeScripts) {
+    cleanedCode = cleanedCode.replace(vueScriptTagOnlyRegex, (match) => {
+      const masked = maskNonNewlineChars(match);
+      return masked.length > 0 ? `${masked.slice(1)};` : masked;
+    });
+  } else {
+    cleanedCode = cleanedCode.replace(vueScriptBlockRegex, (match) =>
+      maskNonNewlineChars(match)
+    );
+  }
+
+  return cleanedCode
+    .replace(vueBrTagRegex, (match) => {
+      const masked = maskNonNewlineChars(match);
+      return masked.length > 0 ? `${masked.slice(1)};` : masked;
+    })
+    .replace(vueBindRegex, (match, grA, grB, grC) => {
+      return maskNonNewlineChars(grA) + grB + maskNonNewlineChars(grC);
+    })
+    .replace(vuePropRegex, (match, grA, grB) => {
+      return " " + grA.replace(/[.:@]/g, " ") + grB.replaceAll(".", "-");
+    })
+    .replace(vueOpenImgTag, (match, grA, grB, grC) => {
+      return grA + grB + grC.replace(" >", "/>");
+    })
+    .replace(vueTemplateRegex, (match, grA, grB, grC) => {
+      return grA + grB.replaceAll("{{", "{ ").replaceAll("}}", " }") + grC;
+    });
+};
+
+const extractVueScriptContent = (code) => {
+  const scriptChunks = [];
+  let scriptMatch;
+  vueScriptBlockRegex.lastIndex = 0;
+  while ((scriptMatch = vueScriptBlockRegex.exec(code)) !== null) {
+    const fullMatch = scriptMatch[0] || "";
+    const content = fullMatch
+      .replace(/^<script\b[^>]*>/i, "")
+      .replace(/<\/script>$/i, "");
+    if (content.trim().length > 0) {
+      scriptChunks.push(content);
+    }
+  }
+  return scriptChunks.join("\n");
+};
+
+const buildVueParseCandidates = (code) => {
+  const fullCandidate = cleanVueCodeForParsing(code, { includeScripts: true });
+  const templateOnlyCandidate = cleanVueCodeForParsing(code, {
+    includeScripts: false
+  });
+  const scriptOnlyCandidate = extractVueScriptContent(code);
+  const combinedCandidate = scriptOnlyCandidate
+    ? `${scriptOnlyCandidate}\n${templateOnlyCandidate}`
+    : templateOnlyCandidate;
+
+  const candidates = [
+    { name: "full", code: fullCandidate },
+    { name: "combined", code: combinedCandidate },
+    { name: "template-only", code: templateOnlyCandidate },
+    { name: "script-only", code: scriptOnlyCandidate }
+  ];
+
+  const seenCandidateCode = new Set();
+  return candidates.filter((candidate) => {
+    if (!candidate.code || !candidate.code.trim()) {
+      return false;
+    }
+    if (seenCandidateCode.has(candidate.code)) {
+      return false;
+    }
+    seenCandidateCode.add(candidate.code);
+    return true;
+  });
+};
+
+const parseVueAstWithFallback = (file, code) => {
+  const candidates = buildVueParseCandidates(code);
+  let lastError;
+  for (const candidate of candidates) {
+    try {
+      return codeToJsAst(file, candidate.code, "ts");
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error(`Unable to parse Vue file: ${file}`);
+};
+
+const createVueVirtualTypeSource = (code) => {
+  const output = maskNonNewlineChars(code).split("");
+  let hasScriptContent = false;
+  let scriptMatch;
+  vueScriptTagRegex.lastIndex = 0;
+  while ((scriptMatch = vueScriptTagRegex.exec(code)) !== null) {
+    const fullMatch = scriptMatch[0];
+    const scriptContent = scriptMatch[1] || "";
+    const contentStart = scriptMatch.index + fullMatch.indexOf(scriptContent);
+    if (scriptContent.trim().length > 0) {
+      hasScriptContent = true;
+    }
+    for (let index = 0; index < scriptContent.length; index++) {
+      output[contentStart + index] = scriptContent[index];
+    }
+  }
+  return {
+    source: output.join(""),
+    hasScriptContent
+  };
+};
+
+const collectVueTypesWithVirtualProgram = (file, virtualSource) => {
+  const tempDir = mkdtempSync(join(tmpdir(), "atom-parsetools-vue-"));
+  const virtualFile = join(tempDir, `${basename(file)}.ts`);
+  const shimFile = join(tempDir, "vue-shims.d.ts");
+  try {
+    writeFileSync(virtualFile, virtualSource, "utf8");
+    writeFileSync(shimFile, VUE_COMPILER_MACRO_SHIMS, "utf8");
+    const virtualTs = createTsc([virtualFile, shimFile], tempDir);
+    const sourceFile = virtualTs?.program?.getSourceFile(virtualFile);
+    if (!virtualTs || !sourceFile) {
+      return new Map();
+    }
+    return virtualTs.collectTypes(sourceFile);
+  } catch {
+    return new Map();
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
+};
+
+const collectVueSeenTypes = (file, code, tsInstance) => {
+  let seenTypes;
+  if (tsInstance?.program) {
+    try {
+      const tsSrc = tsInstance.program.getSourceFile(file);
+      if (tsSrc) {
+        seenTypes = tsInstance.collectTypes(tsSrc);
+      }
+    } catch {
+      // Ignore and continue with virtual source fallback below.
+    }
+  }
+
+  if (!seenTypes || seenTypes.size === 0) {
+    const virtualSource = createVueVirtualTypeSource(code);
+    if (virtualSource.hasScriptContent) {
+      seenTypes = collectVueTypesWithVirtualProgram(file, virtualSource.source);
+    }
+  }
+
+  return seenTypes;
+};
 
 const TSC_FLAGS =
   tsc.TypeFormatFlags.NoTruncation |
@@ -526,30 +729,43 @@ const TSC_FLAGS =
   tsc.TypeFormatFlags.NoTypeReduction;
 
 /**
- * Convert a single vue file to AST
+ * Convert a single vue file to AST.
+ * When `tsInstance` is present also collect type inference from TSC and return both AST & types.
  */
-const toVueAst = (file) => {
+const toVueAst = (file, tsInstance) => {
   const code = readFileSync(file, "utf-8");
-  const cleanedCode = code
-    .replace(vueCommentRegex, function (match) {
-      return match.replaceAll(/\S/g, " ");
-    })
-    .replace(vueCleaningRegex, function (match) {
-      return match.replaceAll(/\S/g, " ").substring(1) + ";";
-    })
-    .replace(vueBindRegex, function (match, grA, grB, grC) {
-      return grA.replaceAll(/\S/g, " ") + grB + grC.replaceAll(/\S/g, " ");
-    })
-    .replace(vuePropRegex, function (match, grA, grB) {
-      return " " + grA.replace(/[.:@]/g, " ") + grB.replaceAll(".", "-");
-    })
-    .replace(vueOpenImgTag, function (match, grA, grB, grC) {
-      return grA + grB + grC.replace(" >", "/>");
-    })
-    .replace(vueTemplateRegex, function (match, grA, grB, grC) {
-      return grA + grB.replaceAll("{{", "{ ").replaceAll("}}", " }") + grC;
-    });
-  return codeToJsAst(file, cleanedCode, "ts");
+  return parseVueAstWithFallback(file, code);
+};
+
+const collectSeenTypesForFile = (file, ts, options) => {
+  if (!options?.tsTypes) {
+    return undefined;
+  }
+
+  if (file.endsWith(".vue")) {
+    return collectVueSeenTypes(file, readFileSync(file, "utf-8"), ts);
+  }
+
+  if (!ts?.program) {
+    return undefined;
+  }
+
+  try {
+    const tsAst = ts.program.getSourceFile(file);
+    if (!tsAst) {
+      return undefined;
+    }
+    return ts.collectTypes
+      ? ts.collectTypes(tsAst)
+      : (() => {
+          tsc.forEachChild(tsAst, ts.addType);
+          const collectedTypes = new Map(ts.seenTypes);
+          ts.seenTypes.clear();
+          return collectedTypes;
+        })();
+  } catch {
+    return undefined;
+  }
 };
 
 /**
@@ -707,7 +923,7 @@ const DEFAULT_TSC_OPTIONS = {
 
 const readJsonFileIfExists = (file) => {
   try {
-    if (!existsSync(file)) {
+    if (!file || !existsSync(file)) {
       return undefined;
     }
     return JSON.parse(readFileSync(file, "utf8"));
@@ -732,7 +948,10 @@ const findNearestPackageJson = (src) => {
 };
 
 const detectDefaultTscOptions = (srcFiles, src) => {
-  const packageJson = readJsonFileIfExists(findNearestPackageJson(src));
+  const nearPackageJson = findNearestPackageJson(src);
+  const packageJson = nearPackageJson
+    ? readJsonFileIfExists(nearPackageJson)
+    : undefined;
   const usesNodeNextModuleResolution =
     packageJson?.type === "module" ||
     Boolean(packageJson?.exports) ||
@@ -895,7 +1114,10 @@ function createTsc(srcFiles, src) {
         return undefined;
       }
       try {
-        return safeTypeToString(typeChecker.getTypeFromTypeNode(typeNode), typeNode);
+        return safeTypeToString(
+          typeChecker.getTypeFromTypeNode(typeNode),
+          typeNode
+        );
       } catch {
         return undefined;
       }
@@ -984,7 +1206,6 @@ function createTsc(srcFiles, src) {
         return collectedTypes;
       }
       if (
-        node !== undefined &&
         !tsc.isFunctionDeclaration(node) &&
         !tsc.isFunctionExpression(node) &&
         !tsc.isArrowFunction(node) &&
@@ -1256,10 +1477,13 @@ function createTsc(srcFiles, src) {
           node.kind === tsc.SyntaxKind.VariableDeclaration &&
           node.name
         ) {
-          const explicitDeclaredType = getExplicitTypeAnnotationString(node.type);
+          const explicitDeclaredType = getExplicitTypeAnnotationString(
+            node.type
+          );
           const varType = typeChecker.getTypeAtLocation(node.name);
           typeStr =
-            explicitDeclaredType && !isUnresolvedTypeString(explicitDeclaredType)
+            explicitDeclaredType &&
+            !isUnresolvedTypeString(explicitDeclaredType)
               ? explicitDeclaredType
               : safeTypeWithContextToString(varType, node.name);
           if (node.initializer && !explicitDeclaredType) {
@@ -1602,25 +1826,12 @@ const createJSAst = async (options) => {
 
 const processFile = (file, options, ts) => {
   try {
-    const ast = fileToJsAst(file, options.type);
+    const ast = fileToJsAst(file, options.type, ts);
     writeAstFile(file, ast, options);
-    if (ts) {
-      try {
-        const tsAst = ts.program.getSourceFile(file);
-        if (tsAst) {
-          const seenTypes = ts.collectTypes
-            ? ts.collectTypes(tsAst)
-            : (() => {
-                tsc.forEachChild(tsAst, ts.addType);
-                const collectedTypes = new Map(ts.seenTypes);
-                ts.seenTypes.clear();
-                return collectedTypes;
-              })();
-          writeTypesFile(file, seenTypes, options);
-        }
-      } catch (err) {
-        console.warn("Process file", file, ":", err.message);
-      }
+
+    const seenTypes = collectSeenTypesForFile(file, ts, options);
+    if (seenTypes && seenTypes.size > 0) {
+      writeTypesFile(file, seenTypes, options);
     }
   } catch (err) {
     console.error("Failure:", file, err?.message);
