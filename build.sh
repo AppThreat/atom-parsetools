@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-rm -rf plugins/bin
+rm -rf plugins/bin plugins/rubyastgen/bundle/
 
 if command -v php >/dev/null 2>&1; then
   php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"

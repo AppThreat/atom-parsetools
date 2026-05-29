@@ -515,6 +515,10 @@ const codeToJsAst = (file, code, projectType) => {
   }
 };
 
+const vueScriptTagOnlyRegex = /<\/?script[^>]*>/gi;
+const vueScriptBlockRegex = /<script\b[^>]*>[\s\S]*?<\/script>/gi;
+const vueStyleBlockRegex = /<style\b[^>]*>[\s\S]*?<\/style>/gi;
+const vueBrTagRegex = /<\/?br>/gi;
 const vueCleaningRegex = /<\/*script.*>|<style[\s\S]*style>|<\/*br>/gi;
 const vueTemplateRegex = /(<template.*>)([\s\S]*)(<\/template>)/gi;
 const vueCommentRegex = /<!--[\s\S]*?-->/gi;
@@ -555,6 +559,100 @@ declare module "vue" {
 `;
 
 const maskNonNewlineChars = (value) => value.replace(/[^\r\n]/g, " ");
+
+const cleanVueCodeForParsing = (code, { includeScripts = true } = {}) => {
+  let cleanedCode = code
+    .replace(vueCommentRegex, (match) => maskNonNewlineChars(match))
+    .replace(vueStyleBlockRegex, (match) => maskNonNewlineChars(match));
+
+  if (includeScripts) {
+    cleanedCode = cleanedCode.replace(vueScriptTagOnlyRegex, (match) => {
+      const masked = maskNonNewlineChars(match);
+      return masked.length > 0 ? `${masked.slice(1)};` : masked;
+    });
+  } else {
+    cleanedCode = cleanedCode.replace(vueScriptBlockRegex, (match) =>
+      maskNonNewlineChars(match)
+    );
+  }
+
+  return cleanedCode
+    .replace(vueBrTagRegex, (match) => {
+      const masked = maskNonNewlineChars(match);
+      return masked.length > 0 ? `${masked.slice(1)};` : masked;
+    })
+    .replace(vueBindRegex, (match, grA, grB, grC) => {
+      return maskNonNewlineChars(grA) + grB + maskNonNewlineChars(grC);
+    })
+    .replace(vuePropRegex, (match, grA, grB) => {
+      return " " + grA.replace(/[.:@]/g, " ") + grB.replaceAll(".", "-");
+    })
+    .replace(vueOpenImgTag, (match, grA, grB, grC) => {
+      return grA + grB + grC.replace(" >", "/>");
+    })
+    .replace(vueTemplateRegex, (match, grA, grB, grC) => {
+      return grA + grB.replaceAll("{{", "{ ").replaceAll("}}", " }") + grC;
+    });
+};
+
+const extractVueScriptContent = (code) => {
+  const scriptChunks = [];
+  let scriptMatch;
+  vueScriptBlockRegex.lastIndex = 0;
+  while ((scriptMatch = vueScriptBlockRegex.exec(code)) !== null) {
+    const fullMatch = scriptMatch[0] || "";
+    const content = fullMatch
+      .replace(/^<script\b[^>]*>/i, "")
+      .replace(/<\/script>$/i, "");
+    if (content.trim().length > 0) {
+      scriptChunks.push(content);
+    }
+  }
+  return scriptChunks.join("\n");
+};
+
+const buildVueParseCandidates = (code) => {
+  const fullCandidate = cleanVueCodeForParsing(code, { includeScripts: true });
+  const templateOnlyCandidate = cleanVueCodeForParsing(code, {
+    includeScripts: false
+  });
+  const scriptOnlyCandidate = extractVueScriptContent(code);
+  const combinedCandidate = scriptOnlyCandidate
+    ? `${scriptOnlyCandidate}\n${templateOnlyCandidate}`
+    : templateOnlyCandidate;
+
+  const candidates = [
+    { name: "full", code: fullCandidate },
+    { name: "combined", code: combinedCandidate },
+    { name: "template-only", code: templateOnlyCandidate },
+    { name: "script-only", code: scriptOnlyCandidate }
+  ];
+
+  const seenCandidateCode = new Set();
+  return candidates.filter((candidate) => {
+    if (!candidate.code || !candidate.code.trim()) {
+      return false;
+    }
+    if (seenCandidateCode.has(candidate.code)) {
+      return false;
+    }
+    seenCandidateCode.add(candidate.code);
+    return true;
+  });
+};
+
+const parseVueAstWithFallback = (file, code) => {
+  const candidates = buildVueParseCandidates(code);
+  let lastError;
+  for (const candidate of candidates) {
+    try {
+      return codeToJsAst(file, candidate.code, "ts");
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error(`Unable to parse Vue file: ${file}`);
+};
 
 const createVueVirtualTypeSource = (code) => {
   const output = maskNonNewlineChars(code).split("");
@@ -598,41 +696,7 @@ const collectVueTypesWithVirtualProgram = (file, virtualSource) => {
   }
 };
 
-const TSC_FLAGS =
-  tsc.TypeFormatFlags.NoTruncation |
-  tsc.TypeFormatFlags.InTypeAlias |
-  tsc.TypeFormatFlags.WriteArrayAsGenericType |
-  tsc.TypeFormatFlags.GenerateNamesForShadowedTypeParams |
-  tsc.TypeFormatFlags.WriteTypeArgumentsOfSignature |
-  tsc.TypeFormatFlags.UseFullyQualifiedType |
-  tsc.TypeFormatFlags.NoTypeReduction;
-
-/**
- * Convert a single vue file to AST.
- * When `tsInstance` is present also collect type inference from TSC and return both AST & types.
- */
-const toVueAst = (file, tsInstance) => {
-  const code = readFileSync(file, "utf-8");
-  const cleanedCode = code
-    .replace(vueCommentRegex, function (match) {
-      return match.replaceAll(/\S/g, " ");
-    })
-    .replace(vueCleaningRegex, function (match) {
-      return match.replaceAll(/\S/g, " ").substring(1) + ";";
-    })
-    .replace(vueBindRegex, function (match, grA, grB, grC) {
-      return grA.replaceAll(/\S/g, " ") + grB + grC.replaceAll(/\S/g, " ");
-    })
-    .replace(vuePropRegex, function (match, grA, grB) {
-      return " " + grA.replace(/[.:@]/g, " ") + grB.replaceAll(".", "-");
-    })
-    .replace(vueOpenImgTag, function (match, grA, grB, grC) {
-      return grA + grB + grC.replace(" >", "/>");
-    })
-    .replace(vueTemplateRegex, function (match, grA, grB, grC) {
-      return grA + grB.replaceAll("{{", "{ ").replaceAll("}}", " }") + grC;
-    });
-  const ast = codeToJsAst(file, cleanedCode, "ts");
+const collectVueSeenTypes = (file, code, tsInstance) => {
   let seenTypes;
   if (tsInstance?.program) {
     try {
@@ -652,7 +716,56 @@ const toVueAst = (file, tsInstance) => {
     }
   }
 
-  return seenTypes && seenTypes.size > 0 ? { ast, seenTypes } : ast;
+  return seenTypes;
+};
+
+const TSC_FLAGS =
+  tsc.TypeFormatFlags.NoTruncation |
+  tsc.TypeFormatFlags.InTypeAlias |
+  tsc.TypeFormatFlags.WriteArrayAsGenericType |
+  tsc.TypeFormatFlags.GenerateNamesForShadowedTypeParams |
+  tsc.TypeFormatFlags.WriteTypeArgumentsOfSignature |
+  tsc.TypeFormatFlags.UseFullyQualifiedType |
+  tsc.TypeFormatFlags.NoTypeReduction;
+
+/**
+ * Convert a single vue file to AST.
+ * When `tsInstance` is present also collect type inference from TSC and return both AST & types.
+ */
+const toVueAst = (file, tsInstance) => {
+  const code = readFileSync(file, "utf-8");
+  return parseVueAstWithFallback(file, code);
+};
+
+const collectSeenTypesForFile = (file, ts, options) => {
+  if (!options?.tsTypes) {
+    return undefined;
+  }
+
+  if (file.endsWith(".vue")) {
+    return collectVueSeenTypes(file, readFileSync(file, "utf-8"), ts);
+  }
+
+  if (!ts?.program) {
+    return undefined;
+  }
+
+  try {
+    const tsAst = ts.program.getSourceFile(file);
+    if (!tsAst) {
+      return undefined;
+    }
+    return ts.collectTypes
+      ? ts.collectTypes(tsAst)
+      : (() => {
+          tsc.forEachChild(tsAst, ts.addType);
+          const collectedTypes = new Map(ts.seenTypes);
+          ts.seenTypes.clear();
+          return collectedTypes;
+        })();
+  } catch {
+    return undefined;
+  }
 };
 
 /**
@@ -810,7 +923,7 @@ const DEFAULT_TSC_OPTIONS = {
 
 const readJsonFileIfExists = (file) => {
   try {
-    if (!existsSync(file)) {
+    if (!file || !existsSync(file)) {
       return undefined;
     }
     return JSON.parse(readFileSync(file, "utf8"));
@@ -835,7 +948,10 @@ const findNearestPackageJson = (src) => {
 };
 
 const detectDefaultTscOptions = (srcFiles, src) => {
-  const packageJson = readJsonFileIfExists(findNearestPackageJson(src));
+  const nearPackageJson = findNearestPackageJson(src);
+  const packageJson = nearPackageJson
+    ? readJsonFileIfExists(nearPackageJson)
+    : undefined;
   const usesNodeNextModuleResolution =
     packageJson?.type === "module" ||
     Boolean(packageJson?.exports) ||
@@ -1090,7 +1206,6 @@ function createTsc(srcFiles, src) {
         return collectedTypes;
       }
       if (
-        node !== undefined &&
         !tsc.isFunctionDeclaration(node) &&
         !tsc.isFunctionExpression(node) &&
         !tsc.isArrowFunction(node) &&
@@ -1711,36 +1826,12 @@ const createJSAst = async (options) => {
 
 const processFile = (file, options, ts) => {
   try {
-    const astOrResult = fileToJsAst(file, options.type, ts);
-    let ast = astOrResult;
+    const ast = fileToJsAst(file, options.type, ts);
+    writeAstFile(file, ast, options);
 
-    // When toVueAst returns { ast, seenTypes } we write the typemap directly.
-    if (
-      astOrResult &&
-      typeof astOrResult === "object" &&
-      astOrResult.seenTypes
-    ) {
-      ast = astOrResult.ast;
-      writeAstFile(file, ast, options);
-      writeTypesFile(file, astOrResult.seenTypes, options);
-    } else {
-      writeAstFile(file, ast, options);
-      if (ts) {
-        try {
-          const tsAst = ts.program.getSourceFile(file);
-          if (tsAst) {
-            const seenTypes = ts.collectTypes
-              ? ts.collectTypes(tsAst)
-              : (() => {
-                  tsc.forEachChild(tsAst, ts.addType);
-                  const collectedTypes = new Map(ts.seenTypes);
-                  ts.seenTypes.clear();
-                  return collectedTypes;
-                })();
-            writeTypesFile(file, seenTypes, options);
-          }
-        } catch (err) {}
-      }
+    const seenTypes = collectSeenTypesForFile(file, ts, options);
+    if (seenTypes && seenTypes.size > 0) {
+      writeTypesFile(file, seenTypes, options);
     }
   } catch (err) {
     console.error("Failure:", file, err?.message);
