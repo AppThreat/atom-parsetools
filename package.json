@@ -1,13 +1,15 @@
 {
   "name": "@appthreat/atom-parsetools",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "description": "Parsing tools that complement the @appthreat/atom project.",
   "main": "./index.js",
   "type": "module",
   "scripts": {
     "pretty": "prettier --write *.js --trailing-comma=none",
-    "test": "node test-fixtures/astgen-type-regression.js && node test-fixtures/astgen-json-regression.js && node test-fixtures/astgen-vue-regression.js && node test-fixtures/evaluate-astgen.js",
+    "test": "node test-fixtures/astgen-type-regression.js && node test-fixtures/astgen-json-regression.js && node test-fixtures/astgen-vue-regression.js && node test-fixtures/astgen-shape-snapshot.js && node test-fixtures/evaluate-astgen.js",
     "test:evaluate": "node test-fixtures/evaluate-astgen.js",
+    "test:shape": "node test-fixtures/astgen-shape-snapshot.js",
+    "test:shape:update": "UPDATE_SHAPE_SNAPSHOT=1 node test-fixtures/astgen-shape-snapshot.js",
     "test:json": "node test-fixtures/astgen-json-regression.js",
     "test:fixtures": "node test-fixtures/test-suite.js",
     "test:vue": "node test-fixtures/astgen-vue-regression.js"
@@ -16,7 +18,7 @@
     "@appthreat/atom-common": "^1.1.0",
     "@babel/parser": "^7.29.3",
     "hermes-parser": "^0.36.1",
-    "typescript": "^6.0.3"
+    "@typescript/typescript6": "^6.0.2"
   },
   "bin": {
     "astgen": "astgen.js",
