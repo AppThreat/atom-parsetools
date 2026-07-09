@@ -1,0 +1,27 @@
+test-fixtures/baseline/shape-snapshot.json
+  s_0dde3ddb88c988::t_c510468bea4de8 1-10501
+astgen.js
+  s_0dde3ddb88c988::t_1de0b5929fe6a2 7-13
+package.json
+  s_0dde3ddb88c988::t_90ba5848ba646e 21
+  s_0dde3ddb88c988::t_582989052494b8 9,11-12
+  s_0dde3ddb88c988::t_c9102f94b9f99a 3
+test-fixtures/astgen-shape-snapshot.js
+  s_0dde3ddb88c988::t_d3d484aca32424 1-205
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8f471ffb8f6c79976f297f91849fa126f48bf240",
+  "prompts": {},
+  "sessions": {
+    "s_0dde3ddb88c988": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fef26d65-3f74-42f8-b44a-26dc3085766f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
