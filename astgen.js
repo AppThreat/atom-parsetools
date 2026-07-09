@@ -4,7 +4,13 @@ import { join, dirname, relative, resolve, basename } from "path";
 import { fileURLToPath } from "url";
 import { parse } from "@babel/parser";
 import { parse as parseHermes } from "hermes-parser";
-import tsc from "typescript";
+// TypeScript 7.0 (the native Go port) ships without a programmatic compiler
+// API, which astgen relies on heavily (createProgram, getTypeChecker,
+// forEachChild, SyntaxKind, TypeFormatFlags, ...). The officially supported
+// bridge until the API returns in TS 7.1 is the @typescript/typescript6
+// package, which is the same TS 6 engine and therefore keeps AST shapes and
+// type-inference accuracy identical.
+import tsc from "@typescript/typescript6";
 import { tmpdir } from "os";
 import {
   readFileSync,
