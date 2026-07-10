@@ -16,10 +16,10 @@ jobs:
       contents: read
       id-token: write
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       with:
         persist-credentials: false
-    - uses: ruby/setup-ruby@afeafc3d1ab54a631816aba4c914a0081c12ff2f  # v1.310.0
+    - uses: ruby/setup-ruby@d45b1a4e94b71acab930e56e79c6aa188764e7f9  # v1.316.0
       with:
         ruby-version: '4.0.1'
         bundler-cache: false
@@ -29,6 +29,8 @@ jobs:
         node-version: '25.x'
         package-manager-cache: false
         scope: '@appthreat'
+    - name: Setup bun
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
     - name: build
       run: |
         npm ci
@@ -39,6 +41,14 @@ jobs:
         phpastgen --help
         rbastgen --help
         npm publish --dry-run
+    - name: bun compatibility
+      run: |
+        bun --version
+        bun astgen.js --version
+        bun test-fixtures/astgen-shape-snapshot.js
+        bun test-fixtures/astgen-type-regression.js
+        bun test-fixtures/astgen-json-regression.js
+        bun test-fixtures/astgen-vue-regression.js
     - name: publish
       run: |
         npm publish --provenance --access=public

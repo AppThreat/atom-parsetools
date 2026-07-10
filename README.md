@@ -7,6 +7,10 @@ This package hosts a collection of parsing tools that complement the `@appthreat
 - rbastgen - Generates AST for Ruby projects using the AppThreat's `ruby_ast_gen` gem
 - scalasem - Generates a custom semantics slice for Scala Projects by utilising scalac command.
 
+## Runtime support
+
+These tools run on both [Node.js](https://nodejs.org) (>= 16) and [Bun](https://bun.sh). All commands and the accompanying regression test-suite are exercised under both runtimes in CI, so the commands below can be invoked with either `node` or `bun` interchangeably (for example `bun astgen.js -i .`).
+
 ## Command usages
 
 ### astgen
