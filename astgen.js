@@ -11,7 +11,8 @@ import { parse as parseHermes } from "hermes-parser";
 // package, which is the same TS 6 engine and therefore keeps AST shapes and
 // type-inference accuracy identical.
 import tsc from "@typescript/typescript6";
-import { tmpdir } from "os";
+import { tmpdir, cpus, availableParallelism } from "os";
+import { Worker, isMainThread, parentPort, workerData } from "worker_threads";
 import {
   readFileSync,
   mkdirSync,
@@ -24,7 +25,11 @@ import {
 } from "fs";
 import { getAllFiles } from "@appthreat/atom-common";
 
-const ASTGEN_VERSION = "4.0.0";
+// Printed by `astgen --version`. Downstream frontends (e.g. chen's jssrc2cpg)
+// fold this into their parse-cache fingerprint, so it MUST be bumped whenever
+// the emitted AST/type shape changes — otherwise stale cached parses from an
+// older astgen are silently reused. Bumped for the Babel 8 AST-shape change.
+const ASTGEN_VERSION = "4.1.0";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -387,6 +392,25 @@ const babelSafeFlowParserOptions = {
   ]
 };
 
+// Test files (e.g. *.poku.js, *.test.ts, *.spec.js, __tests__/*) are
+// test-runner artifacts that are typically the heaviest, lowest-value inputs
+// for type generation (each is often a full twin of a source module wrapped in
+// test scaffolding). They are excluded by default to keep the type-generation
+// phase scalable. Set ASTGEN_INCLUDE_TEST_FILES=true to restore them (e.g. when
+// a downstream consumer wants test files analysed).
+const shouldIncludeTestFiles =
+  process.env?.ASTGEN_INCLUDE_TEST_FILES === "true";
+
+const TEST_FILE_EXT = "(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)";
+const TEST_FILE_PATTERN = new RegExp(
+  `(?:\\.(?:poku|test|spec|e2e|integration|it)\\.${TEST_FILE_EXT}$` +
+    `|[\\\\/]__(?:tests|mocks)__[\\\\/])`,
+  "i"
+);
+
+const isExcludedTestFile = (file) =>
+  !shouldIncludeTestFiles && TEST_FILE_PATTERN.test(file);
+
 const shouldIncludeNodeModulesBundles =
   process.env?.ASTGEN_INCLUDE_NODE_MODULES_BUNDLES === "true" ||
   (process.env?.ASTGEN_IGNORE_DIRS &&
@@ -432,7 +456,9 @@ const getAllSrcJSAndTSFiles = (src) => {
   // Step 2: Combine both lists
   return Promise.all([allFilesPromise, bundledFilesPromise]).then(
     ([allFiles, bundledFiles]) =>
-      [...new Set([...allFiles, ...bundledFiles])].sort()
+      [...new Set([...allFiles, ...bundledFiles])]
+        .filter((file) => !isExcludedTestFile(file))
+        .sort()
   );
 };
 
@@ -1093,6 +1119,33 @@ function createTsc(srcFiles, src) {
     const typeChecker = program.getTypeChecker();
     const seenTypes = new Map();
 
+    // Return-type inference below can re-walk the body of the *same* function
+    // declaration once per referencing call site / initializer (e.g. a helper
+    // called 50 times triggers 50 identical body walks). Since the checker
+    // state is fixed for the lifetime of this program, the inferred string for
+    // a given node is deterministic, so we memoize by node to remove the
+    // redundant re-walks without changing any output. A sentinel distinguishes
+    // "computed and produced undefined" from "not yet computed".
+    const RETURN_TYPE_NOT_COMPUTED = Symbol("returnTypeNotComputed");
+    const memoizeByNode = (fn) => {
+      const cache = new WeakMap();
+      return (node, ...rest) => {
+        if (!node || typeof node !== "object" || rest.length > 0) {
+          return fn(node, ...rest);
+        }
+        const cached = cache.get(node);
+        if (cached !== undefined) {
+          return cached === RETURN_TYPE_NOT_COMPUTED ? undefined : cached;
+        }
+        const result = fn(node);
+        cache.set(
+          node,
+          result === undefined ? RETURN_TYPE_NOT_COMPUTED : result
+        );
+        return result;
+      };
+    };
+
     const safeTypeToString = (type, context) => {
       try {
         return normalizeTypeString(
@@ -1224,7 +1277,7 @@ function createTsc(srcFiles, src) {
       return collectedTypes;
     };
 
-    const inferAsyncReturnTypeFromBody = (node) => {
+    const inferAsyncReturnTypeFromBodyImpl = (node) => {
       if (!node.body) {
         return undefined;
       }
@@ -1246,6 +1299,9 @@ function createTsc(srcFiles, src) {
         ? unionType
         : `Promise<${unionType}>`;
     };
+    const inferAsyncReturnTypeFromBody = memoizeByNode(
+      inferAsyncReturnTypeFromBodyImpl
+    );
 
     const buildFunctionSignatureType = (node, returnTypeStr) => {
       if (!node.parameters) {
@@ -1301,7 +1357,7 @@ function createTsc(srcFiles, src) {
       return undefined;
     };
 
-    const inferFunctionDeclarationReturnType = (declaration) => {
+    const inferFunctionDeclarationReturnTypeImpl = (declaration) => {
       const signature = typeChecker.getSignatureFromDeclaration(declaration);
       if (!signature) {
         return undefined;
@@ -1323,8 +1379,11 @@ function createTsc(srcFiles, src) {
       }
       return inferredType;
     };
+    const inferFunctionDeclarationReturnType = memoizeByNode(
+      inferFunctionDeclarationReturnTypeImpl
+    );
 
-    const inferAsyncReturnTypeFromSyntaxBody = (node) => {
+    const inferAsyncReturnTypeFromSyntaxBodyImpl = (node) => {
       if (!node?.body) {
         return undefined;
       }
@@ -1367,6 +1426,9 @@ function createTsc(srcFiles, src) {
         ? unionType
         : `Promise<${unionType}>`;
     };
+    const inferAsyncReturnTypeFromSyntaxBody = memoizeByNode(
+      inferAsyncReturnTypeFromSyntaxBodyImpl
+    );
 
     const addType = (node, currentSeenTypes = seenTypes) => {
       // STRUCTURAL/CONTAINER NODES
@@ -1768,63 +1830,208 @@ function createTsc(srcFiles, src) {
 }
 
 /**
+ * Expand the set of output files to include the source files that tsconfig
+ * pulls in (that live under the source root), mirroring the program root names.
+ * Computed from the parsed tsconfig alone so no TypeScript program has to be
+ * built on the main thread.
+ */
+const expandSrcFilesWithRootNames = (srcFiles, rootNames, src) => {
+  if (!rootNames) {
+    return srcFiles;
+  }
+  const srcRoot = resolve(src);
+  const srcFileByResolvedPath = new Map(
+    srcFiles.map((file) => [resolve(file), file])
+  );
+  for (const file of rootNames) {
+    const resolvedFile = resolve(file);
+    if (
+      resolvedFile.startsWith(srcRoot) &&
+      /\.(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)$/.test(file) &&
+      !isExcludedTestFile(file) &&
+      !srcFileByResolvedPath.has(resolvedFile)
+    ) {
+      srcFileByResolvedPath.set(
+        resolvedFile,
+        join(src, relative(srcRoot, resolvedFile))
+      );
+    }
+  }
+  return [...srcFileByResolvedPath.values()].sort();
+};
+
+const runGc = () => {
+  if (typeof globalThis.gc === "function") {
+    try {
+      globalThis.gc();
+    } catch (e) {
+      // ignore
+    }
+  } else if (typeof Bun !== "undefined" && typeof Bun.gc === "function") {
+    try {
+      Bun.gc(true);
+    } catch (e) {
+      // ignore
+    }
+  }
+};
+
+/**
+ * Process a list of files (AST + optional type generation) on the current
+ * thread, in memory-bounded chunks. `ts` is the shared TypeScript program
+ * instance (or undefined when type generation is disabled).
+ */
+const processFilesInline = async (srcFiles, options, ts) => {
+  const CONCURRENCY_LIMIT = Math.max(
+    1,
+    Number.parseInt(process.env.ASTGEN_CONCURRENCY || "10", 10) || 10
+  );
+  for (let i = 0; i < srcFiles.length; i += CONCURRENCY_LIMIT) {
+    const chunk = srcFiles.slice(i, i + CONCURRENCY_LIMIT);
+    await Promise.all(chunk.map((file) => processFile(file, options, ts)));
+    runGc();
+  }
+};
+
+/**
+ * Decide how many worker threads to use for the type-generation phase.
+ * The TypeScript checker is single-threaded and CPU-bound, so real speedups
+ * only come from running independent programs on separate threads. Each worker
+ * builds its own full program (needed for cross-file type resolution).
+ *
+ * IMPORTANT: parallelism is OPT-IN. When files are sharded across workers,
+ * TypeScript's per-program type-id assignment order changes, which reorders the
+ * members of a small number of inferred union types (e.g. `A | B` -> `B | A`;
+ * semantically identical, textually different). To keep the default output
+ * byte-identical for downstream consumers, workers are only used when
+ * ASTGEN_TYPE_WORKERS is set explicitly. Set it to the desired worker count
+ * (e.g. number of cores) to trade that cosmetic reordering for speed; "auto"
+ * derives the count from the available CPUs. Unset or 1 => single-threaded.
+ */
+const resolveTypeWorkerCount = (fileCount) => {
+  const envValue = process.env.ASTGEN_TYPE_WORKERS;
+  if (envValue === undefined || envValue === "") {
+    return 1;
+  }
+  if (envValue.toLowerCase() === "auto") {
+    let cores = 1;
+    try {
+      cores =
+        typeof availableParallelism === "function"
+          ? availableParallelism()
+          : cpus().length;
+    } catch (e) {
+      cores = 1;
+    }
+    const autoCount = Math.max(cores - 1, 1);
+    return Math.min(autoCount, Math.max(1, fileCount));
+  }
+  const requested = Number.parseInt(envValue, 10);
+  if (!Number.isFinite(requested) || requested < 1) {
+    return 1;
+  }
+  return Math.min(requested, Math.max(1, fileCount));
+};
+
+/**
+ * Run the type-generation phase across worker threads. Files are sharded
+ * round-robin so heavy files spread across workers. Each worker builds its own
+ * program over `projectFiles`; the per-file AST and type set are identical to
+ * the single-threaded path, except that a small number of inferred union types
+ * may have their members printed in a different order (see resolveTypeWorkerCount).
+ * Returns true only if every worker completed cleanly; on any failure the
+ * caller falls back to inline processing (writes are idempotent, so
+ * re-processing is safe).
+ */
+const runTypeGenerationInWorkers = (
+  srcFiles,
+  projectFiles,
+  options,
+  workerCount
+) => {
+  const shards = Array.from({ length: workerCount }, () => []);
+  srcFiles.forEach((file, index) => shards[index % workerCount].push(file));
+  const workerEntry = fileURLToPath(import.meta.url);
+  return Promise.all(
+    shards.map((shard, index) => {
+      if (shard.length === 0) {
+        return Promise.resolve(true);
+      }
+      return new Promise((resolvePromise) => {
+        let settled = false;
+        const settle = (value) => {
+          if (!settled) {
+            settled = true;
+            resolvePromise(value);
+          }
+        };
+        try {
+          const worker = new Worker(workerEntry, {
+            workerData: {
+              kind: "astgen-typegen",
+              shard,
+              projectFiles,
+              options,
+              index
+            }
+          });
+          worker.on("error", (err) => {
+            console.error("astgen type worker failed:", err?.message || err);
+            settle(false);
+          });
+          worker.on("exit", (code) => settle(code === 0));
+        } catch (err) {
+          console.error("Unable to start astgen type worker:", err?.message);
+          settle(false);
+        }
+      });
+    })
+  ).then((results) => results.every(Boolean));
+};
+
+/**
  * Generate AST for JavaScript or TypeScript
  */
 const createJSAst = async (options) => {
   try {
-    const promiseMap = await getAllSrcJSAndTSFiles(options.src);
-    let srcFiles = promiseMap.flatMap((d) => d).sort();
-    let ts;
-    if (options.tsTypes) {
-      const projectFiles = !shouldIncludeNodeModulesBundles
-        ? srcFiles.filter((file) => !file.includes("node_modules"))
-        : srcFiles;
-      ts = createTsc(projectFiles, options.src);
-      if (ts?.rootNames) {
-        const srcRoot = resolve(options.src);
-        const srcFileByResolvedPath = new Map(
-          srcFiles.map((file) => [resolve(file), file])
-        );
-        for (const file of ts.rootNames) {
-          const resolvedFile = resolve(file);
-          if (
-            resolvedFile.startsWith(srcRoot) &&
-            /\.(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)$/.test(file) &&
-            !srcFileByResolvedPath.has(resolvedFile)
-          ) {
-            srcFileByResolvedPath.set(
-              resolvedFile,
-              join(options.src, relative(srcRoot, resolvedFile))
-            );
-          }
-        }
-        srcFiles = [...srcFileByResolvedPath.values()].sort();
-      }
+    const discovered = await getAllSrcJSAndTSFiles(options.src);
+    let srcFiles = [...discovered].sort();
+
+    if (!options.tsTypes) {
+      await processFilesInline(srcFiles, options, undefined);
+      return;
     }
-    const CONCURRENCY_LIMIT = Math.max(
-      1,
-      Number.parseInt(process.env.ASTGEN_CONCURRENCY || "10", 10) || 10
+
+    const projectFiles = !shouldIncludeNodeModulesBundles
+      ? srcFiles.filter((file) => !file.includes("node_modules"))
+      : srcFiles;
+    // Compute the program root names from the parsed tsconfig without building
+    // a program on the main thread, then expand the output file set to match.
+    const tscConfig = createTscProgramConfig(projectFiles, options.src);
+    srcFiles = expandSrcFilesWithRootNames(
+      srcFiles,
+      tscConfig?.rootNames,
+      options.src
     );
-    const chunks = [];
-    for (let i = 0; i < srcFiles.length; i += CONCURRENCY_LIMIT) {
-      chunks.push(srcFiles.slice(i, i + CONCURRENCY_LIMIT));
-    }
-    for (const chunk of chunks) {
-      await Promise.all(chunk.map((file) => processFile(file, options, ts)));
-      if (typeof globalThis.gc === "function") {
-        try {
-          globalThis.gc();
-        } catch (e) {
-          // ignore
-        }
-      } else if (typeof Bun !== "undefined" && typeof Bun.gc === "function") {
-        try {
-          Bun.gc(true);
-        } catch (e) {
-          // ignore
-        }
+
+    const workerCount = resolveTypeWorkerCount(srcFiles.length);
+    if (workerCount > 1) {
+      const ranInParallel = await runTypeGenerationInWorkers(
+        srcFiles,
+        projectFiles,
+        options,
+        workerCount
+      );
+      if (ranInParallel) {
+        return;
       }
+      console.error(
+        "Falling back to single-threaded type generation after worker failure."
+      );
     }
+
+    const ts = createTsc(projectFiles, options.src);
+    await processFilesInline(srcFiles, options, ts);
   } catch (err) {
     console.error(err);
   }
@@ -1867,6 +2074,12 @@ const createVueAst = async (options) => {
 const getCircularReplacer = () => {
   const seen = new WeakSet();
   return (key, value) => {
+    // Babel 8 emits BigIntLiteral/`extra.value` as a native bigint, which
+    // JSON.stringify cannot serialize. Emit it as a string, which also matches
+    // the Babel 7 shape (BigIntLiteral.value was already a string there).
+    if (typeof value === "bigint") {
+      return value.toString();
+    }
     if (typeof value === "object" && value !== null) {
       if (seen.has(value)) {
         return;
@@ -1975,4 +2188,25 @@ async function main(argvs) {
   }
 }
 
-main(process.argv);
+/**
+ * Type-generation worker entry point. Runs in a worker thread spawned by
+ * runTypeGenerationInWorkers: builds its own TypeScript program over the full
+ * project file set and processes only its assigned shard, so cross-file type
+ * resolution is identical to the single-threaded path.
+ */
+const runTypeGenWorker = async ({ shard, projectFiles, options }) => {
+  try {
+    const ts = createTsc(projectFiles, options.src);
+    await processFilesInline(shard, options, ts);
+    parentPort?.postMessage({ done: true });
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
+};
+
+if (isMainThread) {
+  main(process.argv);
+} else if (workerData?.kind === "astgen-typegen") {
+  runTypeGenWorker(workerData);
+}

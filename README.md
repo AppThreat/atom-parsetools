@@ -9,7 +9,7 @@ This package hosts a collection of parsing tools that complement the `@appthreat
 
 ## Runtime support
 
-These tools run on both [Node.js](https://nodejs.org) (>= 16) and [Bun](https://bun.sh). All commands and the accompanying regression test-suite are exercised under both runtimes in CI, so the commands below can be invoked with either `node` or `bun` interchangeably (for example `bun astgen.js -i .`).
+These tools run on both [Node.js](https://nodejs.org) (>= 22, required by `@babel/parser` 8) and [Bun](https://bun.sh). All commands and the accompanying regression test-suite are exercised under both runtimes in CI, so the commands below can be invoked with either `node` or `bun` interchangeably (for example `bun astgen.js -i .`).
 
 ## Command usages
 
@@ -28,6 +28,16 @@ Options:
       --version  Show version number                                   [boolean]
   -h             Show help                                             [boolean]
 ```
+
+#### Environment variables
+
+| Variable                    | Default   | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ASTGEN_TYPE_WORKERS`       | `1` (off) | Number of worker threads for the TypeScript type-generation phase, or `auto` to derive it from the available CPUs. The TypeScript checker is single-threaded, so parallelism comes from sharding files across workers, each building its own program. **Opt-in:** sharding changes TypeScript's internal type-id ordering, which reorders the members of a small number of inferred union types (e.g. `A \| B` → `B \| A`; semantically identical). Leave unset for byte-identical output; set it (e.g. `auto` or `8`) to trade that cosmetic reordering for a large speedup on big projects. |
+| `ASTGEN_INCLUDE_TEST_FILES` | `false`   | When `true`, do not exclude test files (`*.poku.js`, `*.test.*`, `*.spec.*`, `*.e2e.*`, `__tests__/`, `__mocks__/`) from AST and type generation. They are excluded by default because they are typically the heaviest, lowest-value inputs for type generation.                                                                                                                                                                                                                                                                                                                              |
+| `ASTGEN_CONCURRENCY`        | `10`      | Chunk size for the in-thread file loop (bounds peak memory between `gc()` passes).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES` | `false` | When `true`, also parse bundled entrypoints inside `node_modules` (files matching `*.(bundle\|dist\|index\|min\|app).(js\|cjs\|mjs)`). Off by default; `node_modules` is otherwise skipped entirely.                                                                                                                                                                                                                                                       |
+| `ASTGEN_IGNORE_DIRS`        | unset     | Comma/space-separated list of directories to ignore. As a side effect, when it is set and does **not** contain `node_modules`, the `node_modules` bundle entrypoints above are included (equivalent to `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES=true`).                                                                                                                                                                                                        |
 
 ### phpastgen
 

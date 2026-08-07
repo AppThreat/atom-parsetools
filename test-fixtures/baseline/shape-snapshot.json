@@ -8234,7 +8234,7 @@
   },
   "inference-edge-cases": {
     "generic-types.ts": {
-      "totalNodes": 291,
+      "totalNodes": 297,
       "nodeTypeCounts": {
         "ArrayExpression": 1,
         "BlockStatement": 4,
@@ -8250,7 +8250,7 @@
         "ExpressionStatement": 2,
         "File": 1,
         "FunctionDeclaration": 2,
-        "Identifier": 111,
+        "Identifier": 117,
         "MemberExpression": 12,
         "NewExpression": 2,
         "NumericLiteral": 2,
@@ -8787,7 +8787,7 @@
   },
   "typescript-parsing": {
     "src/advanced-types.ts": {
-      "totalNodes": 181,
+      "totalNodes": 182,
       "nodeTypeCounts": {
         "ArrayExpression": 2,
         "ArrayPattern": 1,
@@ -8811,6 +8811,7 @@
         "ReturnStatement": 2,
         "StringLiteral": 2,
         "TSDeclareFunction": 2,
+        "TSEnumBody": 1,
         "TSEnumDeclaration": 1,
         "TSEnumMember": 2,
         "TSInterfaceBody": 1,
@@ -8930,20 +8931,20 @@
       }
     },
     "src/alias-consumer.ts": {
-      "totalNodes": 104,
+      "totalNodes": 103,
       "nodeTypeCounts": {
         "ArrayExpression": 1,
         "AwaitExpression": 1,
         "BlockStatement": 1,
-        "CallExpression": 4,
+        "CallExpression": 3,
         "ExpressionStatement": 1,
         "File": 1,
         "FunctionDeclaration": 1,
         "Identifier": 43,
-        "Import": 1,
         "ImportAttribute": 1,
         "ImportDeclaration": 3,
         "ImportDefaultSpecifier": 1,
+        "ImportExpression": 1,
         "ImportSpecifier": 3,
         "MemberExpression": 6,
         "NewExpression": 1,
@@ -9231,14 +9232,14 @@
       }
     },
     "src/models.ts": {
-      "totalNodes": 192,
+      "totalNodes": 195,
       "nodeTypeCounts": {
         "ArrayExpression": 1,
         "BooleanLiteral": 2,
         "ExportNamedDeclaration": 8,
         "ExpressionStatement": 1,
         "File": 1,
-        "Identifier": 56,
+        "Identifier": 58,
         "MemberExpression": 2,
         "NewExpression": 1,
         "ObjectExpression": 2,
@@ -9246,11 +9247,12 @@
         "Program": 1,
         "StringLiteral": 8,
         "TSAsExpression": 1,
+        "TSEnumBody": 1,
         "TSEnumDeclaration": 1,
         "TSEnumMember": 2,
-        "TSExpressionWithTypeArguments": 1,
         "TSInterfaceBody": 2,
         "TSInterfaceDeclaration": 2,
+        "TSInterfaceHeritage": 1,
         "TSIntersectionType": 1,
         "TSLiteralType": 5,
         "TSNeverKeyword": 1,
@@ -9371,7 +9373,7 @@
       }
     },
     "src/services.ts": {
-      "totalNodes": 322,
+      "totalNodes": 325,
       "nodeTypeCounts": {
         "ArrayExpression": 2,
         "AssignmentExpression": 1,
@@ -9389,7 +9391,7 @@
         "ExpressionStatement": 5,
         "File": 1,
         "FunctionDeclaration": 3,
-        "Identifier": 117,
+        "Identifier": 120,
         "ImportDeclaration": 1,
         "ImportSpecifier": 5,
         "MemberExpression": 20,
@@ -9583,7 +9585,7 @@
       }
     },
     "src/view.tsx": {
-      "totalNodes": 209,
+      "totalNodes": 211,
       "nodeTypeCounts": {
         "ArrayExpression": 1,
         "ArrowFunctionExpression": 2,
@@ -9593,7 +9595,7 @@
         "ExpressionStatement": 1,
         "File": 1,
         "FunctionDeclaration": 1,
-        "Identifier": 58,
+        "Identifier": 61,
         "ImportDeclaration": 1,
         "ImportSpecifier": 2,
         "JSXAttribute": 3,
@@ -9615,12 +9617,12 @@
         "TSIndexSignature": 3,
         "TSInterfaceBody": 1,
         "TSInterfaceDeclaration": 1,
-        "TSLiteralType": 1,
         "TSModuleBlock": 2,
         "TSModuleDeclaration": 2,
         "TSPropertySignature": 5,
         "TSQualifiedName": 1,
         "TSStringKeyword": 6,
+        "TSTemplateLiteralType": 1,
         "TSTypeAliasDeclaration": 2,
         "TSTypeAnnotation": 17,
         "TSTypeLiteral": 4,
@@ -9634,7 +9636,6 @@
         "TSUnknownKeyword": 6,
         "TSVoidKeyword": 1,
         "TemplateElement": 2,
-        "TemplateLiteral": 1,
         "UnaryExpression": 1,
         "VariableDeclaration": 3,
         "VariableDeclarator": 3
@@ -10316,7 +10317,7 @@
       }
     },
     "typed-modal.vue": {
-      "totalNodes": 143,
+      "totalNodes": 144,
       "nodeTypeCounts": {
         "ArrowFunctionExpression": 1,
         "BlockStatement": 1,
@@ -10326,7 +10327,7 @@
         "ExpressionStatement": 2,
         "File": 1,
         "FunctionDeclaration": 1,
-        "Identifier": 32,
+        "Identifier": 33,
         "ImportDeclaration": 1,
         "ImportSpecifier": 1,
         "JSXAttribute": 2,
