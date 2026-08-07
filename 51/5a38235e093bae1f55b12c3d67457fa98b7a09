@@ -1,0 +1,22 @@
+astgen.js
+  s_dee06f8d806146::t_1ac4041c26eff2 33-37
+README.md
+  s_dee06f8d806146::t_e4a9d6cdac0e14 12
+  s_dee06f8d806146::t_2b3d8ef38a1657 39-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "515a38235e093bae1f55b12c3d67457fa98b7a09",
+  "prompts": {},
+  "sessions": {
+    "s_dee06f8d806146": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "810811d3-916f-455b-9e81-fa48bb54766d",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
