@@ -12,12 +12,7 @@ import { parse as parseHermes } from "hermes-parser";
 // type-inference accuracy identical.
 import tsc from "@typescript/typescript6";
 import { tmpdir, cpus, availableParallelism } from "os";
-import {
-  Worker,
-  isMainThread,
-  parentPort,
-  workerData
-} from "worker_threads";
+import { Worker, isMainThread, parentPort, workerData } from "worker_threads";
 import {
   readFileSync,
   mkdirSync,
@@ -1143,7 +1138,10 @@ function createTsc(srcFiles, src) {
           return cached === RETURN_TYPE_NOT_COMPUTED ? undefined : cached;
         }
         const result = fn(node);
-        cache.set(node, result === undefined ? RETURN_TYPE_NOT_COMPUTED : result);
+        cache.set(
+          node,
+          result === undefined ? RETURN_TYPE_NOT_COMPUTED : result
+        );
         return result;
       };
     };
@@ -1978,10 +1976,7 @@ const runTypeGenerationInWorkers = (
             }
           });
           worker.on("error", (err) => {
-            console.error(
-              "astgen type worker failed:",
-              err?.message || err
-            );
+            console.error("astgen type worker failed:", err?.message || err);
             settle(false);
           });
           worker.on("exit", (code) => settle(code === 0));
