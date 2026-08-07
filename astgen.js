@@ -30,7 +30,11 @@ import {
 } from "fs";
 import { getAllFiles } from "@appthreat/atom-common";
 
-const ASTGEN_VERSION = "4.0.0";
+// Printed by `astgen --version`. Downstream frontends (e.g. chen's jssrc2cpg)
+// fold this into their parse-cache fingerprint, so it MUST be bumped whenever
+// the emitted AST/type shape changes — otherwise stale cached parses from an
+// older astgen are silently reused. Bumped for the Babel 8 AST-shape change.
+const ASTGEN_VERSION = "4.1.0";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
