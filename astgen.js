@@ -2075,6 +2075,12 @@ const createVueAst = async (options) => {
 const getCircularReplacer = () => {
   const seen = new WeakSet();
   return (key, value) => {
+    // Babel 8 emits BigIntLiteral/`extra.value` as a native bigint, which
+    // JSON.stringify cannot serialize. Emit it as a string, which also matches
+    // the Babel 7 shape (BigIntLiteral.value was already a string there).
+    if (typeof value === "bigint") {
+      return value.toString();
+    }
     if (typeof value === "object" && value !== null) {
       if (seen.has(value)) {
         return;

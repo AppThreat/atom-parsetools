@@ -36,8 +36,10 @@ const expectedNodeCounts = {
     ImportDeclaration: 3,
     ImportAttribute: 1,
     AwaitExpression: 1,
-    Import: 1,
-    CallExpression: 4,
+    // Babel 8: dynamic import() is now an ImportExpression node instead of a
+    // CallExpression whose callee is an `Import` node (so CallExpression: 4 -> 3).
+    ImportExpression: 1,
+    CallExpression: 3,
     TSTypeLiteral: 1
   },
   "src/ambient.d.ts": {
