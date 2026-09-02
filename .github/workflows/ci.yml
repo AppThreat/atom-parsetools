@@ -36,11 +36,14 @@ jobs:
         npm ci
         npm test
         bash build.sh
+        npm run test:ruby
         sudo npm install -g .
         astgen --version
         phpastgen --help
         rbastgen --help
         npm publish --dry-run
+    - name: packed tarball runs the ruby workflow
+      run: bash ci/verify-packed-tarball.sh
     - name: bun compatibility
       run: |
         bun --version
@@ -53,3 +56,34 @@ jobs:
       run: |
         npm publish --provenance --access=public
       if: startsWith(github.ref, 'refs/tags/')
+
+  # The Ruby bundle is built once and has to run under every Ruby the wrapper advertises. Building
+  # and testing on one interpreter cannot show that, so build with the oldest supported Ruby and
+  # then run the suite against each of them in turn.
+  ruby-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby-version: ['3.4', '4.0']
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+      with:
+        node-version: '25.x'
+        package-manager-cache: false
+    - name: build the ruby plugin with the oldest supported ruby
+      uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b  # v1.321.0
+      with:
+        ruby-version: '3.4'
+        bundler-cache: false
+    - run: npm ci && bash build.sh --ruby-only
+    - name: switch to ruby ${{ matrix.ruby-version }}
+      uses: ruby/setup-ruby@95ef2b042f9d7a56d8268cba8559e2842e2ad01b  # v1.321.0
+      with:
+        ruby-version: ${{ matrix.ruby-version }}
+        bundler-cache: false
+    - name: run the ruby workflow tests against the 3.4 build
+      run: npm run test:ruby
