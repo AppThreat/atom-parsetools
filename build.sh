@@ -114,18 +114,39 @@ if [ "$BUILD_RUBY" -eq 1 ]; then
     (cd plugins/rubyastgen && bash setup.sh)
     # Binstubs bundler generates for gems we do not expose as commands.
     rm -f plugins/bin/racc plugins/bin/ruby-parse plugins/bin/ruby-rewrite
+    # The generated ruby_ast_gen binstub and bundler's standalone loader both hardcode the ABI
+    # directory of the Ruby that built them, so they only run under that one version. rbastgen
+    # invokes the gem's exe with GEM_PATH instead; shipping these would just be a broken command.
+    rm -f plugins/bin/ruby_ast_gen plugins/bin/bundle plugins/bin/bundler
+    rm -rf plugins/rubyastgen/bundle/bundler
 
     # Clean up Ruby bundle bloat - remove documentation, tests, and build artifacts
     RUBY_BUNDLE="plugins/rubyastgen/bundle/ruby"
     find "$RUBY_BUNDLE" -type d \( -name "test" -o -name "tests" -o -name "spec" -o -name "doc" -o -name "docs" \) -exec rm -rf {} + 2> /dev/null || true
-    find "$RUBY_BUNDLE" -type f \( -name "*.md" -o -name "*.txt" -o -name "*.yml" -o -name "*.yaml" -o -name "*.gemspec" -o -name "Rakefile" -o -name "Gemfile*" \) -delete
+    # Keep specifications/*.gemspec: rbastgen exposes this bundle through GEM_PATH, and RubyGems
+    # needs the specs to activate the gems (prism's parser translation asks for `gem "parser"`
+    # explicitly). Gemspecs inside gems/<gem>/ are build files and still go.
+    find "$RUBY_BUNDLE"/*/gems -type f \( -name "*.md" -o -name "*.txt" -o -name "*.yml" -o -name "*.yaml" -o -name "*.gemspec" -o -name "Rakefile" -o -name "Gemfile*" \) -delete
+    find "$RUBY_BUNDLE"/*/bundler -type f \( -name "*.md" -o -name "*.txt" -o -name "*.yml" -o -name "*.yaml" -o -name "Rakefile" \) -delete
     rm -rf "$RUBY_BUNDLE"/*/build_info
     rm -rf "$RUBY_BUNDLE"/*/cache
     rm -rf "$RUBY_BUNDLE"/.bundle 2> /dev/null || true
     find "$RUBY_BUNDLE" -type d -name ".git*" -exec rm -rf {} + 2> /dev/null || true
 
-    [ -f plugins/bin/ruby_ast_gen ] || die "plugins/bin/ruby_ast_gen is missing after the bundler build"
+    # Nothing native may remain: racc arrives as a dependency of parser and builds a C extension,
+    # but it is a default gem in every supported Ruby, so the runtime's copy serves instead. What
+    # ships is pure Ruby, which is what makes one build usable under both 3.4.x and 4.0.x.
+    rm -rf "$RUBY_BUNDLE"/*/gems/racc-* "$RUBY_BUNDLE"/*/specifications/racc-*.gemspec \
+      "$RUBY_BUNDLE"/*/extensions
+    if find "$RUBY_BUNDLE" -type f \( -name "*.so" -o -name "*.bundle" -o -name "*.dll" \) | grep -q .; then
+      die "native extensions remain in $RUBY_BUNDLE; the bundle would only load under ABI $RUBY_ABI"
+    fi
+
     [ -d "$RUBY_BUNDLE/$RUBY_ABI" ] || die "$RUBY_BUNDLE/$RUBY_ABI is missing after the bundler build"
+    [ -n "$(find "$RUBY_BUNDLE" -name "parser-*.gemspec" -print -quit)" ] ||
+      die "the parser gemspec is missing; RubyGems could not activate the vendored gems"
+    [ -n "$(find "$RUBY_BUNDLE" -path "*bundler/gems/ruby_ast_gen-*/exe/ruby_ast_gen" -print -quit)" ] ||
+      die "the vendored ruby_ast_gen executable is missing"
   else
     echo "Ruby plugins not built."
   fi
@@ -137,17 +158,20 @@ if [ "$RUN_SMOKE" -eq 1 ]; then
   SMOKE_DIR="$(mktemp -d)"
 
   if [ -f plugins/bin/php-parse ]; then
-    log "Smoke testing phpastgen"
+    log "Smoke testing the PHP parser plugin"
     # shellcheck disable=SC2016  # $name is PHP source, not shell
     printf '<?php\nfunction hello(string $name): string { return "hi $name"; }\n' > "$SMOKE_DIR/hello.php"
+    # Exercise the built plugin directly rather than through phpastgen.js: that wrapper replaces
+    # its first argument, so `phpastgen --json-dump file` never reaches php-parse as JSON mode.
+    # The wrapper's argument handling is being looked at separately with its chen caller.
     # php-parse puts its progress headers on stderr and the AST on stdout.
-    node phpastgen.js --json-dump "$SMOKE_DIR/hello.php" > "$SMOKE_DIR/php.json" 2> "$SMOKE_DIR/php.log" ||
-      die "phpastgen failed on a trivial file ($(cat "$SMOKE_DIR/php.log"))"
+    php plugins/bin/php-parse --json-dump "$SMOKE_DIR/hello.php" > "$SMOKE_DIR/php.json" 2> "$SMOKE_DIR/php.log" ||
+      die "php-parse failed on a trivial file ($(cat "$SMOKE_DIR/php.log"))"
     grep -q '"nodeType"' "$SMOKE_DIR/php.json" ||
-      die "phpastgen produced no AST nodes ($(cat "$SMOKE_DIR/php.log"))"
+      die "php-parse produced no AST nodes ($(cat "$SMOKE_DIR/php.log"))"
   fi
 
-  if [ -f plugins/bin/ruby_ast_gen ]; then
+  if [ -d plugins/rubyastgen/bundle/ruby ]; then
     log "Smoke testing rbastgen"
     mkdir -p "$SMOKE_DIR/rb"
     printf '# typed: true\nsig { returns(String) }\ndef hello = "hi"\n' > "$SMOKE_DIR/rb/hello.rb"

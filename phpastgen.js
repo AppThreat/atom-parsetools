@@ -29,31 +29,20 @@ if (
 ) {
   PHP_PARSER_BIN = join(PARENT_NODE_PLUGINS_HOME, "bin", "php-parse");
 }
-// `timeout` must be a number: spawnSync throws ERR_INVALID_ARG_TYPE on the raw string an
-// environment variable gives us. Unset or unparseable means no timeout.
-function spawnTimeout() {
-  const timeout = Number.parseInt(
-    process.env.ATOM_TIMEOUT || process.env.ASTGEN_TIMEOUT,
-    10
-  );
-  return Number.isNaN(timeout) ? undefined : timeout;
-}
 function main(argvs) {
   if (!detectPhp()) {
     console.warn("PHP is not installed!");
     return false;
   }
   const cwd = process.env.ATOM_CWD || process.cwd();
-  // Insert the parser path, do not replace argv[0]: splice(0, 1, ...) dropped the caller's first
-  // flag, which silently disabled `--with-recovery` for every file chen parses.
-  argvs.splice(0, 0, PHP_PARSER_BIN);
+  argvs.splice(0, 1, PHP_PARSER_BIN);
   spawnSync(process.env.PHP_CMD || "php", argvs, {
     encoding: "utf-8",
     cwd,
     stdio: "inherit",
     stderr: "inherit",
     env: process.env,
-    timeout: spawnTimeout()
+    timeout: process.env.ATOM_TIMEOUT || process.env.ASTGEN_TIMEOUT
   });
 }
 main(process.argv.slice(2));

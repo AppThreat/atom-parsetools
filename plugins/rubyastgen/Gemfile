@@ -2,10 +2,12 @@
 
 source "https://rubygems.org"
 
+# Only pure-Ruby gems are vendored: rbastgen puts these on the load path directly, so the bundle
+# works under every supported Ruby ABI. prism and racc are deliberately absent — both are default
+# gems in Ruby 3.4+ and 4.0+, and their C extensions are built per ABI, which is what locked the
+# published bundle to the single Ruby version it was built with.
 group :frontend do
-    gem "ruby_ast_gen", github: 'appthreat/ruby_ast_gen', ref: '6cd1d266cb02e9e0977bc902423d2933395caf47'
+    gem "ruby_ast_gen", github: 'appthreat/ruby_ast_gen', ref: '4ac84327b3af4a8003bb9ece2566df6471cdd851'
     gem "parser", "~> 3.3.12.0"
-    gem "prism", "~> 1.9"
     gem "ostruct", "~> 0.6.3"
-    gem "racc", "~> 1.8.1"
 end

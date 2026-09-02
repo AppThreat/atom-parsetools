@@ -4,7 +4,7 @@ This package hosts a collection of parsing tools that complement the `@appthreat
 
 - astgen - Generates AST for JavaScript and TypeScript projects in JSON format
 - phpastgen - Generates AST for PHP projects using `php-parse` command from `nikic/php-parser`
-- rbastgen - Generates AST for Ruby projects using AppThreat's [`ruby_ast_gen`](https://github.com/AppThreat/ruby_ast_gen) gem (2.0.0)
+- rbastgen - Generates AST for Ruby projects using AppThreat's [`ruby_ast_gen`](https://github.com/AppThreat/ruby_ast_gen) gem (2.0.1)
 - scalasem - Generates a custom semantics slice for Scala Projects by utilising scalac command.
 
 ## Runtime support
@@ -64,8 +64,17 @@ Operations is a list of the following options (--dump by default):
 
 ### rbastgen
 
-Requires Ruby 3.4.x or 4.0.x on the `PATH`, or `ATOM_RUBY_HOME` pointing at an install. The gem
-itself is bundled under `plugins/rubyastgen`, so nothing needs to be gem-installed.
+Requires Ruby 3.4.x or 4.0.x on the `PATH`, or `ATOM_RUBY_HOME` pointing at an install. The gem and
+its pure-Ruby dependencies are bundled under `plugins/rubyastgen`, so nothing needs to be
+gem-installed, and one build of this package runs under every supported Ruby: the bundle is exposed
+to the interpreter through `GEM_PATH` rather than through bundler's standalone loader, which
+resolved its paths from the ABI of the Ruby that built it.
+
+`prism` and `racc` are deliberately **not** bundled. Both carry C extensions, which are built per
+ABI and per platform, and both are default gems in every supported Ruby, so the runtime's own copies
+are used. One consequence is visible: the newest grammar available follows the interpreter's prism,
+so Ruby 3.4 tops out lower than Ruby 4.0 (grammar 3.5 versus 4.1 at the time of writing). Installing
+a newer `prism` gem on the machine raises it, since the caller's `GEM_PATH` is preserved.
 
 ```text
 node rbastgen.js --help
@@ -92,7 +101,7 @@ Problems with individual files are reported and skipped, never fatal; only usage
 log but the wrapper still exits 0 — call the gem directly if a CI job needs to fail on a parse
 error.
 
-#### What the bundled generator emits (ruby_ast_gen 2.0.0)
+#### What the bundled generator emits (ruby_ast_gen 2.0.1)
 
 - **Parsing is decoupled from the running Ruby.** When `prism` is available the newest grammar its
   translation layer supports is used, so a 3.4 runtime parses Ruby 4.0/4.1 syntax. `--parser-target
@@ -124,19 +133,20 @@ To check which backend a machine will use:
 rbastgen --parser-info
 ```
 
-The two gem-version lines in that output read `unavailable` here even though the gems are present:
-the bundle is standalone, so `Gem.loaded_specs` is empty. The `Parser backend` and
-`Grammar version` lines are the authoritative ones.
+`Parser gem` and `Prism gem` name the versions actually loaded — the vendored `parser` and the
+runtime's `prism` — so they are the quickest way to tell which copy of each library a machine is
+parsing with. They read `unavailable` only when a library genuinely is not loaded.
 
 #### Environment variables
 
-| Variable                          | Default                | Purpose                                                                                                                                                |
-| --------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `ATOM_RUBY_HOME`                  | unset                  | Ruby install directory to use when a suitable `ruby` is not on the `PATH`; its `bin` is prepended to `PATH` for the child process.                     |
-| `RUBY_CMD`                        | `ruby`                 | Ruby interpreter to invoke. Set this (or `ATOM_RUBY_HOME`) when the detected version is not 3.4.x/4.0.x.                                               |
-| `RUBY_ASTGEN_BIN`                 | bundled `ruby_ast_gen` | The generator script to run. Point it at a checkout's `exe/ruby_ast_gen` to test an unreleased `ruby_ast_gen` without touching this package.           |
-| `ATOM_CWD`                        | `process.cwd()`        | Working directory for the generator, which is what relative `-i`/`-o` paths resolve against.                                                           |
-| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout)     | Milliseconds before the generator process is killed. `ATOM_TIMEOUT` wins; a non-numeric value is ignored. Also honoured by `phpastgen` and `scalasem`. |
+| Variable                          | Default                | Purpose                                                                                                                                      |
+| --------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ATOM_RUBY_HOME`                  | unset                  | Ruby install directory to use when a suitable `ruby` is not on the `PATH`; its `bin` is prepended to `PATH` for the child process.           |
+| `RUBY_CMD`                        | `ruby`                 | Ruby interpreter to invoke. Set this (or `ATOM_RUBY_HOME`) when the detected version is not 3.4.x/4.0.x.                                     |
+| `RUBY_ASTGEN_BIN`                 | bundled `ruby_ast_gen` | The generator script to run. Point it at a checkout's `exe/ruby_ast_gen` to test an unreleased `ruby_ast_gen` without touching this package. |
+| `ATOM_CWD`                        | `process.cwd()`        | Working directory for the generator, which is what relative `-i`/`-o` paths resolve against.                                                 |
+| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout)     | Milliseconds before the generator process is killed. `ATOM_TIMEOUT` wins; a non-numeric value is ignored. Also honoured by `scalasem`.       |
+| `GEM_PATH`                        | unset                  | Preserved and appended to the vendored bundle, so gems installed on the machine (a newer `prism`, for instance) stay reachable.              |
 
 ### scalasem
 
@@ -149,6 +159,30 @@ Example:
 ```shell
 scalasem $(pwd) slices.json
 ```
+
+## Testing
+
+`npm test` covers the JavaScript/TypeScript side and needs nothing but Node. The Ruby workflow tests
+run the `rbastgen` command end to end against `test-fixtures/projects/ruby-parsing`, so they need a
+built plugin bundle and a supported Ruby, and they skip themselves cleanly when either is missing:
+
+```shell
+bash build.sh --ruby-only
+npm run test:ruby
+```
+
+`ci/verify-packed-tarball.sh` is the release check: it packs the tarball, installs it into a scratch
+project and parses the fixture with the installed copy, asserting along the way that the Ruby bundle
+is present and free of compiled extensions. CI runs it, and it runs the same way locally.
+
+They assert what a consumer depends on rather than that the command ran: which files are discovered
+(including `Gemfile` and `Rakefile`, matched by basename), that `has_sig`, `magic_comments`,
+`percent_array` and regexp `options` are emitted, that the manifest's counts reconcile, that a
+failed file lands in the diagnostics record while the run still exits 0, that a clean run leaves no
+stale record behind, and that the bundle contains no compiled extension. CI runs them under both
+Ruby 3.4 and Ruby 4.0 against a bundle built with 3.4, and separately installs the packed tarball
+and parses with that, which is the check that catches a bundle usable only on the Ruby that built
+it.
 
 ## License
 
