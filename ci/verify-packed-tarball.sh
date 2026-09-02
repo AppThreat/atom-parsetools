@@ -19,10 +19,12 @@ die() {
 }
 
 CONSUMER=""
+LISTING=""
 TARBALL="${1:-}"
 PACKED_HERE=0
 cleanup() {
   [ -n "$CONSUMER" ] && rm -rf "$CONSUMER"
+  [ -n "$LISTING" ] && rm -f "$LISTING"
   [ "$PACKED_HERE" -eq 1 ] && rm -f "$TARBALL"
   return 0
 }
@@ -37,9 +39,13 @@ fi
 
 # The Ruby bundle must be inside the tarball, and nothing in it may be a compiled extension: those
 # are built per ABI and per platform, which is what would pin the package to one Ruby version.
-tar tzf "$TARBALL" | grep -q "package/plugins/rubyastgen/bundle/ruby/" ||
+# The listing is written to a file rather than piped: `tar | grep -q` makes grep exit on the first
+# match, and the SIGPIPE that gives tar fails the pipeline under `set -o pipefail`.
+LISTING="$(mktemp)"
+tar tzf "$TARBALL" > "$LISTING"
+grep -q "package/plugins/rubyastgen/bundle/ruby/" "$LISTING" ||
   die "the packed tarball carries no Ruby bundle"
-if tar tzf "$TARBALL" | grep -E "plugins/rubyastgen/.*\.(so|bundle|dll)$"; then
+if grep -E "plugins/rubyastgen/.*\.(so|bundle|dll)$" "$LISTING"; then
   die "the packed Ruby bundle contains compiled extensions"
 fi
 

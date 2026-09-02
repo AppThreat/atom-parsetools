@@ -138,7 +138,9 @@ if [ "$BUILD_RUBY" -eq 1 ]; then
     # ships is pure Ruby, which is what makes one build usable under both 3.4.x and 4.0.x.
     rm -rf "$RUBY_BUNDLE"/*/gems/racc-* "$RUBY_BUNDLE"/*/specifications/racc-*.gemspec \
       "$RUBY_BUNDLE"/*/extensions
-    if find "$RUBY_BUNDLE" -type f \( -name "*.so" -o -name "*.bundle" -o -name "*.dll" \) | grep -q .; then
+    # `find | grep -q` would exit on the first hit and fail the pipeline through SIGPIPE under
+    # `set -o pipefail`, so let find answer on its own.
+    if [ -n "$(find "$RUBY_BUNDLE" -type f \( -name "*.so" -o -name "*.bundle" -o -name "*.dll" \) -print -quit)" ]; then
       die "native extensions remain in $RUBY_BUNDLE; the bundle would only load under ABI $RUBY_ABI"
     fi
 
