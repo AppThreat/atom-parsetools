@@ -14,6 +14,15 @@ import {
   writeFileSync
 } from "node:fs";
 
+// `timeout` must be a number: spawnSync throws ERR_INVALID_ARG_TYPE on the raw string an
+// environment variable gives us. Unset or unparseable means no timeout.
+function spawnTimeout() {
+  const timeout = Number.parseInt(
+    process.env.ATOM_TIMEOUT || process.env.ASTGEN_TIMEOUT,
+    10
+  );
+  return Number.isNaN(timeout) ? undefined : timeout;
+}
 function main(argvs) {
   if (!detectScala() && !detectScalac()) {
     console.warn("Scala is not installed!");
@@ -47,7 +56,7 @@ function main(argvs) {
       stdio: "ignore",
       stderr: "inherit",
       env: process.env,
-      timeout: process.env.ATOM_TIMEOUT || process.env.ASTGEN_TIMEOUT
+      timeout: spawnTimeout()
     });
     if (result.error || result.status !== 0) {
       if (result.stderr) {
@@ -106,7 +115,7 @@ function createSemanticSlices(tastyFiles, configFiles, slicesFile) {
         cwd,
         env: process.env,
         maxBuffer: MAX_BUFFER,
-        timeout: process.env.ATOM_TIMEOUT || process.env.ASTGEN_TIMEOUT
+        timeout: spawnTimeout()
       }
     );
     if (result.error || result.status !== 0) {

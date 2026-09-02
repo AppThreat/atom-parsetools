@@ -29,6 +29,15 @@ if (
 ) {
   PHP_PARSER_BIN = join(PARENT_NODE_PLUGINS_HOME, "bin", "php-parse");
 }
+// `timeout` must be a number: spawnSync throws ERR_INVALID_ARG_TYPE on the raw string an
+// environment variable gives us. Unset or unparseable means no timeout.
+function spawnTimeout() {
+  const timeout = Number.parseInt(
+    process.env.ATOM_TIMEOUT || process.env.ASTGEN_TIMEOUT,
+    10
+  );
+  return Number.isNaN(timeout) ? undefined : timeout;
+}
 function main(argvs) {
   if (!detectPhp()) {
     console.warn("PHP is not installed!");
@@ -42,7 +51,7 @@ function main(argvs) {
     stdio: "inherit",
     stderr: "inherit",
     env: process.env,
-    timeout: process.env.ATOM_TIMEOUT || process.env.ASTGEN_TIMEOUT
+    timeout: spawnTimeout()
   });
 }
 main(process.argv.slice(2));

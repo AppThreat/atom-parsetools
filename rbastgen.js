@@ -31,6 +31,15 @@ if (
 }
 // Ruby version needed
 const RUBY_VERSIONS_NEEDED = ["3.4.x", "4.0.x"];
+// `timeout` must be a number: spawnSync throws ERR_INVALID_ARG_TYPE on the raw string an
+// environment variable gives us. Unset or unparseable means no timeout.
+function spawnTimeout() {
+  const timeout = Number.parseInt(
+    process.env.ATOM_TIMEOUT || process.env.ASTGEN_TIMEOUT,
+    10
+  );
+  return Number.isNaN(timeout) ? undefined : timeout;
+}
 function main(argvs) {
   const cwd = process.env.ATOM_CWD || process.cwd();
   argvs.splice(0, 0, RUBY_ASTGEN_BIN);
@@ -69,7 +78,7 @@ function main(argvs) {
     stdio: "inherit",
     stderr: "inherit",
     env,
-    timeout: process.env.ATOM_TIMEOUT || process.env.ASTGEN_TIMEOUT
+    timeout: spawnTimeout()
   });
 }
 main(process.argv.slice(2));
