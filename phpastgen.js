@@ -44,7 +44,9 @@ function main(argvs) {
     return false;
   }
   const cwd = process.env.ATOM_CWD || process.cwd();
-  argvs.splice(0, 1, PHP_PARSER_BIN);
+  // Insert the parser path, do not replace argv[0]: splice(0, 1, ...) dropped the caller's first
+  // flag, which silently disabled `--with-recovery` for every file chen parses.
+  argvs.splice(0, 0, PHP_PARSER_BIN);
   spawnSync(process.env.PHP_CMD || "php", argvs, {
     encoding: "utf-8",
     cwd,
