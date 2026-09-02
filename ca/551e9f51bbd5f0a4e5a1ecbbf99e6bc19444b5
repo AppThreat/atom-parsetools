@@ -1,0 +1,23 @@
+package.json
+  s_cb49c6c44e4aa4::t_ce9bc209648ce0 12-14,58-61
+test-fixtures/phpastgen-framework-facts-pbt.js
+  s_cb49c6c44e4aa4::t_be04cc1badd9ab 1-198
+test-fixtures/phpastgen-framework-facts.js
+  s_cb49c6c44e4aa4::t_193dc083cdb95b 1-216
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ca551e9f51bbd5f0a4e5a1ecbbf99e6bc19444b5",
+  "prompts": {},
+  "sessions": {
+    "s_cb49c6c44e4aa4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "db835424-cfc4-44e6-9b8d-b62defdec203",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
