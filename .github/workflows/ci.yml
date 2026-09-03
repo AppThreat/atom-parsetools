@@ -31,12 +31,19 @@ jobs:
         scope: '@appthreat'
     - name: Setup bun
       uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
+    - name: Setup PHP
+      uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240  # 2.37.2
+      with:
+        coverage: "none"
+        php-version: '8.4'
+        tools: composer:v2
     - name: build
       run: |
         npm ci
         npm test
         bash build.sh
         npm run test:ruby
+        npm run test:php
         sudo npm install -g .
         astgen --version
         phpastgen --help
