@@ -9,7 +9,7 @@
 set -euo pipefail
 
 # Pins. PHP_PARSER_VERSION must stay in sync with build.ps1, which builds the Windows package.
-PHP_PARSER_VERSION="5.7.0"
+PHP_PARSER_VERSION="5.8.0"
 # Ruby ABIs the rbastgen wrapper claims to support (see RUBY_VERSIONS_NEEDED in rbastgen.js).
 # A standalone bundle is only loadable under the ABI it was built with, so this is a release-shaping
 # constraint rather than a cosmetic one.

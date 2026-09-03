@@ -1,0 +1,55 @@
+{
+  "astWrapper": {
+    "requiredKeys": [
+      "ast",
+      "generator_version",
+      "parser_backend",
+      "php_version",
+      "target_version"
+    ],
+    "optionalKeys": [
+      "rel_file_path"
+    ]
+  },
+  "frameworkFacts": {
+    "factKeySets": [
+      "attributes",
+      "request,superglobal"
+    ]
+  },
+  "manifest": {
+    "keys": [
+      "input",
+      "output",
+      "php_version",
+      "parser_backend",
+      "generator_version",
+      "generated_at",
+      "target_version",
+      "files_parsed",
+      "files_failed",
+      "files_skipped_nonphp",
+      "files_excluded",
+      "truncated_files",
+      "threads",
+      "max_depth"
+    ]
+  },
+  "diagnostics": {
+    "recordKeys": [
+      "file_path",
+      "parse_error",
+      "rel_file_path"
+    ],
+    "parseErrorKeys": [
+      "column",
+      "line",
+      "message",
+      "reason"
+    ]
+  },
+  "sideRecordFilenames": {
+    "manifest": "phpastgen_manifest.jsonl",
+    "diagnostics": "phpastgen_diagnostics.jsonl"
+  }
+}

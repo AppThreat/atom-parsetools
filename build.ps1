@@ -3,7 +3,7 @@ php -r "if (hash_file('sha384', 'composer-setup.php') === 'e21205b207c3ff0319065
 php --php-ini php.ini composer-setup.php
 php -r "unlink('composer-setup.php');"
 $env:COMPOSER_VENDOR_DIR="plugins"
-php --php-ini php.ini composer.phar require nikic/php-parser:4.18.0 --ignore-platform-reqs --optimize-autoloader
+php --php-ini php.ini composer.phar require nikic/php-parser:5.8.0 --ignore-platform-reqs --optimize-autoloader
 
 # Clean up unnecessary files from PHP parser
 Get-ChildItem -Path "plugins/nikic" -Recurse -Include "*.md","*.yml","*.yaml" -File | Remove-Item -Force -ErrorAction SilentlyContinue
