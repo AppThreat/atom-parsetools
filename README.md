@@ -1,4 +1,4 @@
-# Introduction
+# atom-parsetools
 
 This package hosts a collection of parsing tools that complement the `@appthreat/atom` project. These tools offer parsing and analysis-related functionalities such as generating AST and semantics information in JSON format. The full list of tools and bin commands exposed by this package is below:
 
@@ -6,6 +6,10 @@ This package hosts a collection of parsing tools that complement the `@appthreat
 - phpastgen - Generates AST for PHP projects using `php-parse` command from `nikic/php-parser`
 - rbastgen - Generates AST for Ruby projects using AppThreat's [`ruby_ast_gen`](https://github.com/AppThreat/ruby_ast_gen) gem (2.0.1)
 - scalasem - Generates a custom semantics slice for Scala Projects by utilising scalac command.
+
+## Documentation
+
+The full documentation lives at [https://appthreat.github.io/atom-parsetools/](https://appthreat.github.io/atom-parsetools/): per-tool guides, the output format specification, environment variable reference, packaging notes, and ten hands-on tutorials. The pages are rendered from the [`docs`](docs/) directory of this repository.
 
 ## Runtime support
 
@@ -29,52 +33,35 @@ Options:
   -h             Show help                                             [boolean]
 ```
 
-#### Environment variables
-
-| Variable                              | Default   | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| ------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ASTGEN_TYPE_WORKERS`                 | `1` (off) | Number of worker threads for the TypeScript type-generation phase, or `auto` to derive it from the available CPUs. The TypeScript checker is single-threaded, so parallelism comes from sharding files across workers, each building its own program. **Opt-in:** sharding changes TypeScript's internal type-id ordering, which reorders the members of a small number of inferred union types (e.g. `A \| B` → `B \| A`; semantically identical). Leave unset for byte-identical output; set it (e.g. `auto` or `8`) to trade that cosmetic reordering for a large speedup on big projects. |
-| `ASTGEN_INCLUDE_TEST_FILES`           | `false`   | When `true`, do not exclude test files (`*.poku.js`, `*.test.*`, `*.spec.*`, `*.e2e.*`, `__tests__/`, `__mocks__/`) from AST and type generation. They are excluded by default because they are typically the heaviest, lowest-value inputs for type generation.                                                                                                                                                                                                                                                                                                                              |
-| `ASTGEN_CONCURRENCY`                  | `10`      | Chunk size for the in-thread file loop (bounds peak memory between `gc()` passes).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES` | `false`   | When `true`, also parse bundled entrypoints inside `node_modules` (files matching `*.(bundle\|dist\|index\|min\|app).(js\|cjs\|mjs)`). Off by default; `node_modules` is otherwise skipped entirely.                                                                                                                                                                                                                                                                                                                                                                                          |
-| `ASTGEN_IGNORE_DIRS`                  | unset     | Comma/space-separated list of directories to ignore. As a side effect, when it is set and does **not** contain `node_modules`, the `node_modules` bundle entrypoints above are included (equivalent to `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES=true`).                                                                                                                                                                                                                                                                                                                                           |
+Each source file becomes an AST JSON document plus a `.typemap` of inferred types keyed by node offsets. Test files and `node_modules` are excluded by default; the [astgen guide](docs/ASTGEN.md) covers every option and env variable (`ASTGEN_TYPE_WORKERS`, `ASTGEN_INCLUDE_TEST_FILES`, and friends).
 
 ### phpastgen
 
 ```text
 node phpastgen.js --help
 
-Usage: phpastgen [operations] file1.php [file2.php ...]
-   or: phpastgen [operations] "<?php code"
-Turn PHP source code into an abstract syntax tree.
+Usage: phpastgen [options] [-- <legacy php-parse args>]
 
-Operations is a list of the following options (--dump by default):
-
-    -d, --dump              Dump nodes using NodeDumper
-    -p, --pretty-print      Pretty print file using PrettyPrinter\Standard
-    -j, --json-dump         Print json_encode() result
-        --var-dump          var_dump() nodes (for exact structure)
-    -N, --resolve-names     Resolve names using NodeVisitor\NameResolver
-    -c, --with-column-info  Show column numbers for errors (if available)
-    -P, --with-positions    Show positions in node dumps
-    -r, --with-recovery     Use parsing with error recovery
-    -h, --help              Display this page
-
+Options:
+  -i, --input <path>          input file or directory (batch mode)
+  -o, --output <dir>          output directory (default: '.ast')
+  -e, --exclude <regex>       exclusion regex (default: '^(tests?|vendor|Tests?)')
+  -l, --log <level>           debug | info | warn | error (default: info)
+  -d, --debug                 same as --log debug
+      --target-version <x.y>  pin PHP grammar (alias: --parser-target)
+      --max-depth <n>         depth cap before truncation (default: 250)
+      --threads <n>           worker processes for directory runs (default: 10)
+      --fail-on-error         exit non-zero if any file failed
+      --parser-info           print parser/runtime capability report and exit 0
+      --version               print generator version and exit 0
+      --help                  print usage
 ```
+
+The PHP parser (nikic/php-parser 5.8.0, grammars 8.0 to 8.5) is vendored under `plugins/`, so only a PHP runtime on the machine is required. Batch runs write one JSON per file plus `phpastgen_manifest.jsonl` and, on failure, `phpastgen_diagnostics.jsonl`. Details in the [phpastgen guide](docs/PHPASTGEN.md).
 
 ### rbastgen
 
-Requires Ruby 3.4.x or 4.0.x on the `PATH`, or `ATOM_RUBY_HOME` pointing at an install. The gem and
-its pure-Ruby dependencies are bundled under `plugins/rubyastgen`, so nothing needs to be
-gem-installed, and one build of this package runs under every supported Ruby: the bundle is exposed
-to the interpreter through `GEM_PATH` rather than through bundler's standalone loader, which
-resolved its paths from the ABI of the Ruby that built it.
-
-`prism` and `racc` are deliberately **not** bundled. Both carry C extensions, which are built per
-ABI and per platform, and both are default gems in every supported Ruby, so the runtime's own copies
-are used. One consequence is visible: the newest grammar available follows the interpreter's prism,
-so Ruby 3.4 tops out lower than Ruby 4.0 (grammar 3.5 versus 4.1 at the time of writing). Installing
-a newer `prism` gem on the machine raises it, since the caller's `GEM_PATH` is preserved.
+Requires Ruby 3.4.x or 4.0.x on the `PATH`, or `ATOM_RUBY_HOME` pointing at an install. The gem and its pure-Ruby dependencies are bundled under `plugins/rubyastgen`, so nothing needs to be gem-installed, and one build of this package runs under every supported Ruby: the bundle is exposed to the interpreter through `GEM_PATH` rather than through bundler's standalone loader, which resolved its paths from the ABI of the Ruby that built it.
 
 ```text
 node rbastgen.js --help
@@ -95,58 +82,7 @@ Usage:
       --help               Print usage
 ```
 
-Problems with individual files are reported and skipped, never fatal; only usage errors (a missing
-`-i`, an unusable `--exclude` regex, an invalid `--parser-target`) exit non-zero. Note that
-`rbastgen` does not propagate the generator's exit status, so `--fail-on-error` is reported in the
-log but the wrapper still exits 0 — call the gem directly if a CI job needs to fail on a parse
-error.
-
-#### What the bundled generator emits (ruby_ast_gen 2.0.1)
-
-- **Parsing is decoupled from the running Ruby.** When `prism` is available the newest grammar its
-  translation layer supports is used, so a 3.4 runtime parses Ruby 4.0/4.1 syntax. `--parser-target
-x.y` pins a grammar instead (down to 1.8 through the `parser` gem), and a file that fails under
-  the selected grammar is retried once with the newest one. Every JSON file records the backend
-  that produced it in `parser_backend`, alongside `generator_version` and `ruby_version`.
-- **Ruby DSL files are discovered, not just `.rb`.** `Rakefile`, `Gemfile`, `Capfile`,
-  `Vagrantfile`, `Fastfile` and friends are matched by basename, plus the `.gemspec`, `.rake`,
-  `.ru`, `.rbi`, `.thor`, `.jbuilder`, `.axlsx` and `.rabl` extensions. Vendor and tool
-  directories (`.git`, `.bundle`, `.venv`, …) are skipped.
-- **Non-UTF-8 sources survive.** `# coding:` magic comments are honoured and undecodable bytes are
-  scrubbed rather than dropping the file, marked with `encoding_scrubbed: true`.
-- **Deeply nested source is truncated, not dropped**, with `truncated: true` on the boundary node
-  and a `truncated_nodes` count at the top level (`--max-depth`).
-- **Semantic metadata for consumers**: a `magic_comments` array (Sorbet `typed:` levels,
-  `frozen_string_literal`, …), `call_operator`/`has_parentheses` on calls, `percent_array` and
-  regexp `options`, heredoc body offsets, and `has_sig: true` on a `def` preceded by a Sorbet `sig`
-  block.
-- **Two side-records per run, written inside the output directory**, both ending in `.jsonl` so a
-  consumer globbing `*.json` for ASTs never mistakes them for one:
-  `ruby_ast_gen_manifest.jsonl` (one object: input/output, backend, counts of parsed, failed,
-  skipped, excluded and truncated files, threads, max depth) and
-  `ruby_ast_gen_diagnostics.jsonl` (one object per failed file with message, line, column), the
-  latter written only when something failed and removed when a later run is clean.
-
-To check which backend a machine will use:
-
-```shell
-rbastgen --parser-info
-```
-
-`Parser gem` and `Prism gem` name the versions actually loaded — the vendored `parser` and the
-runtime's `prism` — so they are the quickest way to tell which copy of each library a machine is
-parsing with. They read `unavailable` only when a library genuinely is not loaded.
-
-#### Environment variables
-
-| Variable                          | Default                | Purpose                                                                                                                                      |
-| --------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ATOM_RUBY_HOME`                  | unset                  | Ruby install directory to use when a suitable `ruby` is not on the `PATH`; its `bin` is prepended to `PATH` for the child process.           |
-| `RUBY_CMD`                        | `ruby`                 | Ruby interpreter to invoke. Set this (or `ATOM_RUBY_HOME`) when the detected version is not 3.4.x/4.0.x.                                     |
-| `RUBY_ASTGEN_BIN`                 | bundled `ruby_ast_gen` | The generator script to run. Point it at a checkout's `exe/ruby_ast_gen` to test an unreleased `ruby_ast_gen` without touching this package. |
-| `ATOM_CWD`                        | `process.cwd()`        | Working directory for the generator, which is what relative `-i`/`-o` paths resolve against.                                                 |
-| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout)     | Milliseconds before the generator process is killed. `ATOM_TIMEOUT` wins; a non-numeric value is ignored. Also honoured by `scalasem`.       |
-| `GEM_PATH`                        | unset                  | Preserved and appended to the vendored bundle, so gems installed on the machine (a newer `prism`, for instance) stay reachable.              |
+Problems with individual files are reported and skipped, never fatal; only usage errors (a missing `-i`, an unusable `--exclude` regex, an invalid `--parser-target`) exit non-zero. Note that `rbastgen` does not propagate the generator's exit status, so `--fail-on-error` is reported in the log but the wrapper still exits 0; call the gem directly if a CI job needs to fail on a parse error. Discovery covers Ruby DSL files (`Gemfile`, `Rakefile`, `.gemspec`, `.rake`, and more), and each run writes `ruby_ast_gen_manifest.jsonl` and, on failure, `ruby_ast_gen_diagnostics.jsonl`. Details in the [rbastgen guide](docs/RBASTGEN.md).
 
 ### scalasem
 
@@ -160,29 +96,20 @@ Example:
 scalasem $(pwd) slices.json
 ```
 
+Compiles the project with sbt or mill if no `.tasty` files exist, then extracts literals, used types, and Play framework tags into a semantic slice. The [scalasem guide](docs/SCALASEM.md) covers the pipeline.
+
 ## Testing
 
-`npm test` covers the JavaScript/TypeScript side and needs nothing but Node. The Ruby workflow tests
-run the `rbastgen` command end to end against `test-fixtures/projects/ruby-parsing`, so they need a
-built plugin bundle and a supported Ruby, and they skip themselves cleanly when either is missing:
+`npm test` covers the JavaScript/TypeScript side and needs nothing but Node. The Ruby and PHP workflows need their runtimes and a built plugin bundle, and they skip themselves cleanly when either is missing:
 
 ```shell
 bash build.sh --ruby-only
 npm run test:ruby
 ```
 
-`ci/verify-packed-tarball.sh` is the release check: it packs the tarball, installs it into a scratch
-project and parses the fixture with the installed copy, asserting along the way that the Ruby bundle
-is present and free of compiled extensions. CI runs it, and it runs the same way locally.
+`ci/verify-packed-tarball.sh` is the release check: it packs the tarball, installs it into a scratch project and parses the fixture with the installed copy, asserting along the way that the Ruby bundle is present and free of compiled extensions. CI runs it, and it runs the same way locally.
 
-They assert what a consumer depends on rather than that the command ran: which files are discovered
-(including `Gemfile` and `Rakefile`, matched by basename), that `has_sig`, `magic_comments`,
-`percent_array` and regexp `options` are emitted, that the manifest's counts reconcile, that a
-failed file lands in the diagnostics record while the run still exits 0, that a clean run leaves no
-stale record behind, and that the bundle contains no compiled extension. CI runs them under both
-Ruby 3.4 and Ruby 4.0 against a bundle built with 3.4, and separately installs the packed tarball
-and parses with that, which is the check that catches a bundle usable only on the Ruby that built
-it.
+They assert what a consumer depends on rather than that the command ran: which files are discovered (including `Gemfile` and `Rakefile`, matched by basename), that `has_sig`, `magic_comments`, `percent_array` and regexp `options` are emitted, that the manifest's counts reconcile, that a failed file lands in the diagnostics record while the run still exits 0, that a clean run leaves no stale record behind, and that the bundle contains no compiled extension. CI runs them under both Ruby 3.4 and Ruby 4.0 against a bundle built with 3.4, and separately installs the packed tarball and parses with that, which is the check that catches a bundle usable only on the Ruby that built it. The [testing guide](docs/TESTING.md) maps the suites.
 
 ## License
 
