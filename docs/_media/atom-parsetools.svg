@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <g fill="none" stroke="#0d9488" stroke-width="6" stroke-linecap="round">
+    <ellipse cx="64" cy="64" rx="54" ry="22"/>
+    <ellipse cx="64" cy="64" rx="54" ry="22" transform="rotate(60 64 64)"/>
+    <ellipse cx="64" cy="64" rx="54" ry="22" transform="rotate(120 64 64)"/>
+  </g>
+  <circle cx="64" cy="64" r="10" fill="#0d9488"/>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="15" font-weight="700">
+    <text x="14" y="118" fill="#0d9488">AST</text>
+  </g>
+</svg>
