@@ -12,13 +12,13 @@ Note that `phpastgen --version` and `--parser-info` answer without a PHP runtime
 
 Count first, then explain. Both batch tools write a manifest with `files_parsed`, `files_failed`, `files_skipped_nonphp`, `files_excluded`, and `truncated_files`; reconcile those against what you expected. The usual explanations, by tool:
 
-| Symptom | Usual cause |
-| ------- | ----------- |
-| astgen: no test files parsed | test files are excluded by default; `ASTGEN_INCLUDE_TEST_FILES=true` |
-| astgen: `node_modules` bundles missing | bundles are opt-in; `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES=true` |
-| phpastgen: `vendor/` or `tests/` absent | the default `--exclude` regex; pass `-e NOMATCH` to disable |
-| rbastgen: `Gemfile`, `Rakefile` missing from a *different* tool's output | basename-discovered DSL files are a rbastgen feature; check you ran rbastgen and that the manifest did not exclude them |
-| scalasem: entries missing | `scalac -print-tasty` failed for that file; check `ATOM_MAX_BUFFER` against very large class files, and stderr in the log |
+| Symptom                                                                  | Usual cause                                                                                                               |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| astgen: no test files parsed                                             | test files are excluded by default; `ASTGEN_INCLUDE_TEST_FILES=true`                                                      |
+| astgen: `node_modules` bundles missing                                   | bundles are opt-in; `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES=true`                                                            |
+| phpastgen: `vendor/` or `tests/` absent                                  | the default `--exclude` regex; pass `-e NOMATCH` to disable                                                               |
+| rbastgen: `Gemfile`, `Rakefile` missing from a _different_ tool's output | basename-discovered DSL files are a rbastgen feature; check you ran rbastgen and that the manifest did not exclude them   |
+| scalasem: entries missing                                                | `scalac -print-tasty` failed for that file; check `ATOM_MAX_BUFFER` against very large class files, and stderr in the log |
 
 ## A specific file produces no AST
 

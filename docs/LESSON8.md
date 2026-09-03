@@ -62,14 +62,14 @@ for key in list(s)[1:4]:
 
 Each entry holds four fields. `sourceFile` is where the entry's types came from. `usedTypes` lists the non-trivial signatures the code uses, with `scala.`, `java.`, and `javax.inject.` noise dropped, so `play.api.mvc.Request` survives while `java.lang.String` does not. `literals` collects the names in the Names section, which is why string constants that made it into the compiled program appear. `tags` is the framework knowledge, derived from those types:
 
-| Tag | Triggered by |
-| --- | ------------- |
-| `framework` | any `play.api.` usage |
-| `framework-input` | `play.api.data.Form`, `play.api.mvc.Request`, `play.twirl.api` |
+| Tag                | Triggered by                                                        |
+| ------------------ | ------------------------------------------------------------------- |
+| `framework`        | any `play.api.` usage                                               |
+| `framework-input`  | `play.api.data.Form`, `play.api.mvc.Request`, `play.twirl.api`      |
 | `framework-output` | `play.twirl.api.Html`, `play.api.mvc.Result`, `play.api.mvc.Action` |
-| `framework-route` | `play.api.routing.`, `play.core.routing`, `router.RoutesPrefix` |
-| `database` | `slick.sql.`, `slick.jdbc.`, `play.db.` |
-| `generated` | file lives under `target/` |
+| `framework-route`  | `play.api.routing.`, `play.core.routing`, `router.RoutesPrefix`     |
+| `database`         | `slick.sql.`, `slick.jdbc.`, `play.db.`                             |
+| `generated`        | file lives under `target/`                                          |
 
 A consumer grading attack surface reads these tags directly: `framework-input` marks where request data enters, `database` marks where it lands, and the routes table says which URLs reach which controller methods.
 

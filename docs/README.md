@@ -4,12 +4,12 @@ atom-parsetools is a collection of parsing commands that complement the [atom](h
 
 The package exposes four bin commands.
 
-| Command | Languages | Parser backend |
-| ------- | --------- | -------------- |
-| `astgen` | JavaScript, TypeScript, Vue, Svelte, EJS | Babel 8, hermes-parser, TypeScript 6 checker |
-| `phpastgen` | PHP 8.0 to 8.5 | vendored nikic/php-parser 5.8.0 |
-| `rbastgen` | Ruby 1.8 to 4.x syntax | vendored ruby_ast_gen 2.0.1, prism and parser gems |
-| `scalasem` | Scala 3 | scalac TASTy printer |
+| Command     | Languages                                | Parser backend                                     |
+| ----------- | ---------------------------------------- | -------------------------------------------------- |
+| `astgen`    | JavaScript, TypeScript, Vue, Svelte, EJS | Babel 8, hermes-parser, TypeScript 6 checker       |
+| `phpastgen` | PHP 8.0 to 8.5                           | vendored nikic/php-parser 5.8.0                    |
+| `rbastgen`  | Ruby 1.8 to 4.x syntax                   | vendored ruby_ast_gen 2.0.1, prism and parser gems |
+| `scalasem`  | Scala 3                                  | scalac TASTy printer                               |
 
 All commands run on both [Node.js](https://nodejs.org) (>= 22, required by `@babel/parser` 8) and [Bun](https://bun.sh). The full regression suite runs under both runtimes in CI, so `node astgen.js -i .` and `bun astgen.js -i .` are interchangeable.
 

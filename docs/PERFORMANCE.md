@@ -8,10 +8,10 @@ Three phases dominate astgen's runtime: file discovery, parsing (Babel, in-proce
 
 The one big lever is `ASTGEN_TYPE_WORKERS`. The checker is single-threaded, so astgen parallelizes by dealing files round-robin to worker threads, each of which builds its own program over the full project set and processes only its shard. Cross-file resolution stays identical to the single-threaded path. The trade-off is byte-stability: sharding changes TypeScript's internal type-id ordering, which reorders the members of a small number of inferred union types (`A | B` prints as `B | A`; semantically identical). The guidance follows from that:
 
-| Situation | Setting |
-| --------- | ------- |
-| Output is diffed, cached, or checksummed across machines | leave `ASTGEN_TYPE_WORKERS` unset |
-| One-off analysis of a large project, output consumed immediately | `ASTGEN_TYPE_WORKERS=auto` |
+| Situation                                                        | Setting                           |
+| ---------------------------------------------------------------- | --------------------------------- |
+| Output is diffed, cached, or checksummed across machines         | leave `ASTGEN_TYPE_WORKERS` unset |
+| One-off analysis of a large project, output consumed immediately | `ASTGEN_TYPE_WORKERS=auto`        |
 
 `ASTGEN_CONCURRENCY` (default 10) bounds how many files the in-thread loop holds between `gc()` passes. Peak memory, not speed, is what it tunes: a lower value trades a little throughput for a flatter heap. If a container OOMs mid-run, this is the first knob to lower.
 

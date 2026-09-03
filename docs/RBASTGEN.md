@@ -65,11 +65,11 @@ Problems with individual files are reported and skipped, never fatal. Only usage
 
 ## Environment variables
 
-| Variable | Default | Purpose |
-| -------- | ------- | ------- |
-| `ATOM_RUBY_HOME` | unset | Ruby install directory; its `bin` is prepended to `PATH` for the child. |
-| `RUBY_CMD` | `ruby` | Interpreter to invoke; set when the detected version is not 3.4.x or 4.0.x. |
-| `RUBY_ASTGEN_BIN` | vendored `ruby_ast_gen` | Generator script to run; point at a checkout's `exe/ruby_ast_gen` to test unreleased code. |
-| `ATOM_CWD` | `process.cwd()` | Working directory; relative `-i` and `-o` paths resolve against it. |
-| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout) | Milliseconds before the generator is killed. `ATOM_TIMEOUT` wins. |
-| `GEM_PATH` | unset | Preserved and appended to the vendored bundle, so machine gems stay reachable. |
+| Variable                          | Default                 | Purpose                                                                                    |
+| --------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------ |
+| `ATOM_RUBY_HOME`                  | unset                   | Ruby install directory; its `bin` is prepended to `PATH` for the child.                    |
+| `RUBY_CMD`                        | `ruby`                  | Interpreter to invoke; set when the detected version is not 3.4.x or 4.0.x.                |
+| `RUBY_ASTGEN_BIN`                 | vendored `ruby_ast_gen` | Generator script to run; point at a checkout's `exe/ruby_ast_gen` to test unreleased code. |
+| `ATOM_CWD`                        | `process.cwd()`         | Working directory; relative `-i` and `-o` paths resolve against it.                        |
+| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout)      | Milliseconds before the generator is killed. `ATOM_TIMEOUT` wins.                          |
+| `GEM_PATH`                        | unset                   | Preserved and appended to the vendored bundle, so machine gems stay reachable.             |

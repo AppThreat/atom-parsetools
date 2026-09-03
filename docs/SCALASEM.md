@@ -42,11 +42,18 @@ The output is a JSON object keyed by source file, with a special `config` entry:
 
 ```json
 {
-  "config": { "routes": [ { "method": "GET", "pattern": "/", "controllerMethod": "Home.index" } ] },
+  "config": {
+    "routes": [
+      { "method": "GET", "pattern": "/", "controllerMethod": "Home.index" }
+    ]
+  },
   "app/controllers/HomeController.scala": {
     "sourceFile": "app/controllers/HomeController.scala",
     "tags": ["framework", "framework-input"],
-    "usedTypes": ["play.api.mvc.MessagesAbstractController", "play.api.mvc.Request"],
+    "usedTypes": [
+      "play.api.mvc.MessagesAbstractController",
+      "play.api.mvc.Request"
+    ],
     "literals": ["/", "index"]
   }
 }
@@ -62,11 +69,11 @@ Files named `routes` are parsed into the `config` entry. Each HTTP verb line bec
 
 ## Environment variables
 
-| Variable | Default | Purpose |
-| -------- | ------- | ------- |
-| `SCALA_VERSION` | unset | Scala version to compile with under sbt (`++<version>`); otherwise detected from `build.sbt`. |
-| `SBT_COMPILE_COMMAND` / `MILL_COMPILE_COMMAND` | `compile` | Compile command for the detected build tool. |
-| `SCALAC_CMD` | `scalac` | Compiler command used for `-print-tasty`. |
-| `ATOM_MAX_BUFFER` | `104857600` | Max stdout size in bytes for a single `scalac` invocation; large class files need room. |
-| `ATOM_CWD` | `process.cwd()` | Working directory for the compile and print steps. |
-| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout) | Milliseconds before a subprocess is killed. `ATOM_TIMEOUT` wins. |
+| Variable                                       | Default            | Purpose                                                                                       |
+| ---------------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------- |
+| `SCALA_VERSION`                                | unset              | Scala version to compile with under sbt (`++<version>`); otherwise detected from `build.sbt`. |
+| `SBT_COMPILE_COMMAND` / `MILL_COMPILE_COMMAND` | `compile`          | Compile command for the detected build tool.                                                  |
+| `SCALAC_CMD`                                   | `scalac`           | Compiler command used for `-print-tasty`.                                                     |
+| `ATOM_MAX_BUFFER`                              | `104857600`        | Max stdout size in bytes for a single `scalac` invocation; large class files need room.       |
+| `ATOM_CWD`                                     | `process.cwd()`    | Working directory for the compile and print steps.                                            |
+| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT`              | unset (no timeout) | Milliseconds before a subprocess is killed. `ATOM_TIMEOUT` wins.                              |

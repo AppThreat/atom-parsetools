@@ -14,7 +14,14 @@ One file per source file, at `<output>/<relative-path>.json`:
 {
   "fullName": "/abs/path/project/src/index.js",
   "relativeName": "src/index.js",
-  "ast": { "type": "File", "start": 0, "end": 6668, "loc": {}, "errors": [], "program": {} }
+  "ast": {
+    "type": "File",
+    "start": 0,
+    "end": 6668,
+    "loc": {},
+    "errors": [],
+    "program": {}
+  }
 }
 ```
 
@@ -23,7 +30,7 @@ The `ast` value is the standard Babel AST shape (`type`, `start`, `end`, `loc`, 
 With type generation on (the default), each file also gets `<relative-path>.typemap`, a flat JSON object mapping node start offsets to the checker's type string:
 
 ```json
-{"61": "(a: any, b: any) => any", "92": "number", "259": "3.14159"}
+{ "61": "(a: any, b: any) => any", "92": "number", "259": "3.14159" }
 ```
 
 The key is the same `start` offset the AST node carries, so joining a node to its type is a lookup, not a search.
@@ -34,7 +41,14 @@ Batch mode writes one file per parsed PHP file at `<output>/<relative-path>.json
 
 ```json
 {
-  "ast": [ { "nodeType": "Stmt_Namespace", "attributes": { "startLine": 3, "startFilePos": 7 }, "name": {}, "stmts": [] } ],
+  "ast": [
+    {
+      "nodeType": "Stmt_Namespace",
+      "attributes": { "startLine": 3, "startFilePos": 7 },
+      "name": {},
+      "stmts": []
+    }
+  ],
   "rel_file_path": "src/app.php",
   "encoding_scrubbed": true,
   "truncated_nodes": 0
@@ -62,7 +76,7 @@ One file per Ruby source (or DSL file matched by basename), at `<output>/<relati
 
 ```json
 {
-  "ast": { },
+  "ast": {},
   "parser_backend": "prism",
   "generator_version": "2.0.1",
   "ruby_version": "3.4.2",

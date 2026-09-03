@@ -90,9 +90,9 @@ The passthrough prepends the vendored binary and runs it with `php`, with `ATOM_
 
 ## Environment variables
 
-| Variable | Default | Purpose |
-| -------- | ------- | ------- |
-| `PHP_PARSER_BIN` | vendored `php-parse` | Path to the php-parse binary to invoke. |
-| `PHP_CMD` | `php` | PHP interpreter to invoke. |
-| `ATOM_CWD` | `process.cwd()` | Working directory for the parser process. |
-| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout) | Milliseconds before a parser subprocess is killed. `ATOM_TIMEOUT` wins; non-numeric values are ignored. |
+| Variable                          | Default              | Purpose                                                                                                 |
+| --------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------- |
+| `PHP_PARSER_BIN`                  | vendored `php-parse` | Path to the php-parse binary to invoke.                                                                 |
+| `PHP_CMD`                         | `php`                | PHP interpreter to invoke.                                                                              |
+| `ATOM_CWD`                        | `process.cwd()`      | Working directory for the parser process.                                                               |
+| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout)   | Milliseconds before a parser subprocess is killed. `ATOM_TIMEOUT` wins; non-numeric values are ignored. |

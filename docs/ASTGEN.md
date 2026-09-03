@@ -20,11 +20,11 @@ Options:
 
 Three parsers sit behind one entry point, each covering what the others miss.
 
-| Parser | Role |
-| ------ | ---- |
-| `@babel/parser` 8 | Primary. Parses modern ECMAScript, TypeScript, and JSX with error recovery. |
-| `hermes-parser` | Flow. Used first when the project type is `flow`, and as the last resort for everything else. |
-| `@typescript/typescript6` | Not a parser but the checker. Produces the type map when `--tsTypes` is on. |
+| Parser                    | Role                                                                                          |
+| ------------------------- | --------------------------------------------------------------------------------------------- |
+| `@babel/parser` 8         | Primary. Parses modern ECMAScript, TypeScript, and JSX with error recovery.                   |
+| `hermes-parser`           | Flow. Used first when the project type is `flow`, and as the last resort for everything else. |
+| `@typescript/typescript6` | Not a parser but the checker. Produces the type map when `--tsTypes` is on.                   |
 
 The TypeScript dependency is the TS 6 engine, not TS 7. TypeScript 7 is the native Go port and currently ships without the programmatic compiler API that type maps need (`createProgram`, `getTypeChecker`, `forEachChild`, and friends), so `@typescript/typescript6` is the supported bridge until the API returns. AST shapes and type inference stay identical to TS 6 as a result.
 
@@ -34,11 +34,11 @@ Every parse runs with error recovery enabled, so a file with syntax problems sti
 
 Without `-t`, astgen looks for a `package.json` or `rush.json` in the source directory to recognize a JavaScript or TypeScript project. With `-t` you can be explicit, which also changes parsing strategy:
 
-| `-t` value | Behavior |
-| ---------- | -------- |
-| `nodejs`, `js`, `javascript`, `typescript`, `ts` | Standard path: Babel with TypeScript and JSX syntax first. |
-| `flow` | Flow path: hermes-parser first, then Babel with the Flow plugin. |
-| `vue` | `.vue` files only. |
+| `-t` value                                       | Behavior                                                         |
+| ------------------------------------------------ | ---------------------------------------------------------------- |
+| `nodejs`, `js`, `javascript`, `typescript`, `ts` | Standard path: Babel with TypeScript and JSX syntax first.       |
+| `flow`                                           | Flow path: hermes-parser first, then Babel with the Flow plugin. |
+| `vue`                                            | `.vue` files only.                                               |
 
 When the type cannot be detected and no `package.json` or `rush.json` exists, the run reports `unknown project type` and exits.
 
@@ -98,7 +98,11 @@ Type generation over Vue files uses a virtual source: the component code is mask
 With `--tsTypes` on (the default), astgen builds a TypeScript program over the project, resolves a checker, and for each file records the inferred type string of interesting nodes, keyed by node start offset:
 
 ```json
-{"61": "(a: any, b: any) => any", "92": "number", "108": "(a: number, b: number) => number"}
+{
+  "61": "(a: any, b: any) => any",
+  "92": "number",
+  "108": "(a: number, b: number) => number"
+}
 ```
 
 A `tsconfig.json` or `jsconfig.json` found at or above the source root shapes the program, and its root file names expand the parse set beyond what filename discovery found, so files referenced only through the config are still parsed.
@@ -107,13 +111,13 @@ The checker is single-threaded, so parallelism comes from sharding: files are de
 
 ## Environment variables
 
-| Variable | Default | Purpose |
-| -------- | ------- | ------- |
-| `ASTGEN_TYPE_WORKERS` | `1` (off) | Worker threads for the type-generation phase, or `auto` to derive from available CPUs. |
-| `ASTGEN_INCLUDE_TEST_FILES` | `false` | When `true`, include test files in AST and type generation. |
-| `ASTGEN_CONCURRENCY` | `10` | Chunk size for the in-thread file loop; bounds peak memory between `gc()` passes. |
-| `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES` | `false` | When `true`, parse bundled entrypoints inside `node_modules`. |
-| `ASTGEN_IGNORE_DIRS` | unset | Directories to ignore; setting it without `node_modules` also enables bundle parsing. |
+| Variable                              | Default   | Purpose                                                                                |
+| ------------------------------------- | --------- | -------------------------------------------------------------------------------------- |
+| `ASTGEN_TYPE_WORKERS`                 | `1` (off) | Worker threads for the type-generation phase, or `auto` to derive from available CPUs. |
+| `ASTGEN_INCLUDE_TEST_FILES`           | `false`   | When `true`, include test files in AST and type generation.                            |
+| `ASTGEN_CONCURRENCY`                  | `10`      | Chunk size for the in-thread file loop; bounds peak memory between `gc()` passes.      |
+| `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES` | `false`   | When `true`, parse bundled entrypoints inside `node_modules`.                          |
+| `ASTGEN_IGNORE_DIRS`                  | unset     | Directories to ignore; setting it without `node_modules` also enables bundle parsing.  |
 
 ## Output and the version contract
 

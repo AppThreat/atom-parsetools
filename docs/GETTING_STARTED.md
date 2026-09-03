@@ -6,12 +6,12 @@ This page takes you from a clean machine to generated AST files for a real proje
 
 Node.js 22 or newer is required, because `@babel/parser` 8 requires it. Bun works as an alternative runtime. Everything else depends on which languages you parse.
 
-| You want to parse | You need on the machine | You do not need |
-| ----------------- | ----------------------- | --------------- |
-| JavaScript, TypeScript, Vue, Svelte | Node.js >= 22 or Bun | nothing else |
-| PHP | PHP on the PATH | Composer, nikic/php-parser |
-| Ruby | Ruby 3.4.x or 4.0.x, or `ATOM_RUBY_HOME` | gem installs, bundler |
-| Scala | scala and scalac, plus sbt or mill for compilation | nothing else |
+| You want to parse                   | You need on the machine                            | You do not need            |
+| ----------------------------------- | -------------------------------------------------- | -------------------------- |
+| JavaScript, TypeScript, Vue, Svelte | Node.js >= 22 or Bun                               | nothing else               |
+| PHP                                 | PHP on the PATH                                    | Composer, nikic/php-parser |
+| Ruby                                | Ruby 3.4.x or 4.0.x, or `ATOM_RUBY_HOME`           | gem installs, bundler      |
+| Scala                               | scala and scalac, plus sbt or mill for compilation | nothing else               |
 
 The PHP parser and the Ruby gem bundle are vendored into the npm package under `plugins/`, so `npm install` is the only setup step.
 

@@ -52,7 +52,6 @@ diff pinned-80/v81.php.json newest/v81.php.json > /dev/null && echo "same tree" 
 
 The trees differ. The grammar target changes how the parser's lexer and printer represent version-dependent constructs, even when the parse succeeds under both, which is precisely why the target belongs in the manifest. A consumer that caches or diffs trees should either pin the grammar or record it.
 
-
 ```shell
 phpastgen -i . --target-version 7.4; echo "exit: $?"
 ```
