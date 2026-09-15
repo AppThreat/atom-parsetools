@@ -1,0 +1,20 @@
+docs/ASTGEN.md
+  h_6a4cc5cdf68def 88,90,96-126,157
+docs/OUTPUT_FORMATS.md
+  h_6a4cc5cdf68def 30-31
+docs/PERFORMANCE.md
+  h_6a4cc5cdf68def 22-33
+docs/TESTING.md
+  h_6a4cc5cdf68def 8-10,30,34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "b712db9f4b82bb0f8f0114eb70e19a87921afc97",
+  "prompts": {},
+  "humans": {
+    "h_6a4cc5cdf68def": {
+      "author": "Team AppThreat <cloud@appthreat.com>"
+    }
+  }
+}

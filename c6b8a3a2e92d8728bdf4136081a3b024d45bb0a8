@@ -1,0 +1,64 @@
+astgen.js
+  h_6a4cc5cdf68def 27,32-35,472,475-477,484-508,624-670,767-774,796-806,808,811,839,841-875,909-912
+package-lock.json
+  h_6a4cc5cdf68def 15-16,80-139,166-233,248-303
+package.json
+  h_6a4cc5cdf68def 3,9,22-23,29-30
+svelteAst.js
+  h_6a4cc5cdf68def 1-1230
+test-fixtures/ast-regression-helpers.js
+  h_6a4cc5cdf68def 1-93
+test-fixtures/astgen-shape-snapshot.js
+  h_6a4cc5cdf68def 49-50,59
+test-fixtures/astgen-svelte-regression.js
+  h_6a4cc5cdf68def 1-715
+test-fixtures/baseline/shape-snapshot.json
+  h_6a4cc5cdf68def 10501-11408
+test-fixtures/evaluate-astgen.js
+  h_6a4cc5cdf68def 22-23,59
+test-fixtures/projects/svelte-precision/README.md
+  h_6a4cc5cdf68def 1-27
+test-fixtures/projects/svelte-precision/api-client.ts
+  h_6a4cc5cdf68def 1-32
+test-fixtures/projects/svelte-precision/async-await.svelte
+  h_6a4cc5cdf68def 1-24
+test-fixtures/projects/svelte-precision/broken-template.svelte
+  h_6a4cc5cdf68def 1-14
+test-fixtures/projects/svelte-precision/counter-runes.svelte
+  h_6a4cc5cdf68def 1-40
+test-fixtures/projects/svelte-precision/directives.svelte
+  h_6a4cc5cdf68def 1-43
+test-fixtures/projects/svelte-precision/legacy-props.svelte
+  h_6a4cc5cdf68def 1-31
+test-fixtures/projects/svelte-precision/list-each.svelte
+  h_6a4cc5cdf68def 1-24
+test-fixtures/projects/svelte-precision/module-script.svelte
+  h_6a4cc5cdf68def 1-19
+test-fixtures/projects/svelte-precision/package.json
+  h_6a4cc5cdf68def 1-10
+test-fixtures/projects/svelte-precision/snippet-render.svelte
+  h_6a4cc5cdf68def 1-25
+test-fixtures/projects/svelte-precision/special-elements.svelte
+  h_6a4cc5cdf68def 1-27
+test-fixtures/projects/svelte-precision/store.svelte.ts
+  h_6a4cc5cdf68def 1-32
+test-fixtures/projects/svelte-precision/ts-template.svelte
+  h_6a4cc5cdf68def 1-14
+test-fixtures/projects/svelte-precision/types.ts
+  h_6a4cc5cdf68def 1-35
+test-fixtures/projects/svelte-precision/void-and-quirks.svelte
+  h_6a4cc5cdf68def 1-13
+test-fixtures/vue-regression-helpers.js
+  h_6a4cc5cdf68def 1-3,12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "c6b8a3a2e92d8728bdf4136081a3b024d45bb0a8",
+  "prompts": {},
+  "humans": {
+    "h_6a4cc5cdf68def": {
+      "author": "Team AppThreat <cloud@appthreat.com>"
+    }
+  }
+}

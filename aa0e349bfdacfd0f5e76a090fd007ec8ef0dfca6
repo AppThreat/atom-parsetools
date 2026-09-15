@@ -1,0 +1,18 @@
+README.md
+  h_6a4cc5cdf68def 5,38-39
+docs/LESSON1.md
+  h_6a4cc5cdf68def 77-78,81
+docs/LESSON9.md
+  h_6a4cc5cdf68def 30-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "aa0e349bfdacfd0f5e76a090fd007ec8ef0dfca6",
+  "prompts": {},
+  "humans": {
+    "h_6a4cc5cdf68def": {
+      "author": "Team AppThreat <cloud@appthreat.com>"
+    }
+  }
+}

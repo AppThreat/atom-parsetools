@@ -1,0 +1,24 @@
+astgen.js
+  h_6a4cc5cdf68def 27,476,486-491,493,495,497,503-504
+docs/ASTGEN.md
+  h_6a4cc5cdf68def 101,106
+svelteAst.js
+  h_6a4cc5cdf68def 347-358,362-364,366-368,375-380,426-430,435,1182-1200,1245-1280
+test-fixtures/astgen-svelte-regression.js
+  h_6a4cc5cdf68def 207-209,444-464,477-493,495,500,516-517,520-532,664-667,669-670,672-688,758
+test-fixtures/baseline/shape-snapshot.json
+  h_6a4cc5cdf68def 11375,11380-11381,11385,11387,11395-11396
+test-fixtures/projects/svelte-precision/void-and-quirks.svelte
+  h_6a4cc5cdf68def 7-13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "0c89342f2c10863a7e91b79462a64cc903568bdb",
+  "prompts": {},
+  "humans": {
+    "h_6a4cc5cdf68def": {
+      "author": "Team AppThreat <cloud@appthreat.com>"
+    }
+  }
+}
