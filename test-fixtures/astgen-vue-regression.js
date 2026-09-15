@@ -153,9 +153,112 @@ function evaluatePrecisionAssertions() {
   expectType(fixtures["table-utils.ts"], "ids", "Set<string>");
 }
 
+function evaluateDirectiveExpressionCandidates() {
+  const directiveOutputRoot = join(outputRoot, "directives");
+  runAstgen(precisionFixtureRoot, directiveOutputRoot);
+  const fixtureName = "directive-bindings.vue";
+  const fixture = loadFixtureSet(
+    precisionFixtureRoot,
+    directiveOutputRoot,
+    [fixtureName],
+    1
+  )[fixtureName];
+  const { code, ast } = fixture;
+
+  const attributes = [];
+  const walk = (node) => {
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+    if (!node || typeof node !== "object") {
+      return;
+    }
+    if (node.type === "JSXAttribute") {
+      attributes.push(node);
+    }
+    Object.values(node).forEach(walk);
+  };
+  walk(ast);
+
+  const attributeValueShape = (attr) => {
+    const value = attr.value;
+    if (!value) {
+      return { name: attr.name?.name, kind: "none", inner: null };
+    }
+    if (value.type === "JSXExpressionContainer") {
+      return {
+        name: attr.name?.name,
+        kind: "expression",
+        inner: value.expression?.type
+      };
+    }
+    return { name: attr.name?.name, kind: value.type, inner: null };
+  };
+
+  // Directive values become expression containers whose contents are real
+  // expression ASTs - the property that lets a `v-html` sink keep its
+  // reference to the script binding.
+  const firstVHtml = attributes.find((attr) => attr.name?.name === "v-html");
+  const vHtml = attributeValueShape(firstVHtml);
+  assert.equal(vHtml.kind, "expression");
+  assert.equal(vHtml.inner, "Identifier");
+  const vHtmlIdentifier = firstVHtml.value.expression;
+  assert.equal(
+    code.slice(vHtmlIdentifier.start, vHtmlIdentifier.end),
+    "rawHtml",
+    "v-html expression offsets must address the original source"
+  );
+
+  const hrefAttr = attributes.find(
+    (attr) => attr.name?.name === "href"
+  );
+  const href = attributeValueShape(hrefAttr);
+  assert.equal(href.kind, "expression");
+  assert.equal(href.inner, "MemberExpression");
+
+  // A quoted string expression converts too: `:title="'static title'"`.
+  const boundTitle = attributes.find(
+    (attr) =>
+      attr.name?.name === "title" &&
+      attr.value?.type === "JSXExpressionContainer"
+  );
+  assert.ok(
+    boundTitle?.value?.expression?.type === "StringLiteral",
+    "quoted-string binding converts to a StringLiteral expression"
+  );
+
+  const model = attributeValueShape(
+    attributes.find((attr) => attr.name?.name === "v-model")
+  );
+  assert.equal(model.kind, "expression");
+  assert.equal(model.inner, "Identifier");
+
+  // `v-for` is skipped by name even though `item in items` parses as a
+  // relational expression: converting it would synthesise a read of the
+  // never-declared loop variable, so the value stays a string.
+  const vFor = attributeValueShape(
+    attributes.find((attr) => attr.name?.name === "v-for")
+  );
+  assert.equal(vFor.kind, "StringLiteral");
+
+  // A plain attribute keeps its string value.
+  const plain = attributes.find(
+    (attr) =>
+      attr.name?.name === "title" &&
+      attr.value?.type === "StringLiteral"
+  );
+  assert.ok(plain, "plain title attribute keeps its string literal value");
+
+  // Two v-html sites: the loop-body `item.name` must survive as an expression.
+  const htmlAttrs = attributes.filter((attr) => attr.name?.name === "v-html");
+  assert.equal(htmlAttrs.length, 2);
+}
+
 try {
   evaluateBroadCorpus();
   evaluatePrecisionAssertions();
+  evaluateDirectiveExpressionCandidates();
 
   console.log("astgen Vue inference regression tests passed");
 } finally {
