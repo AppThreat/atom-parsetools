@@ -5,7 +5,9 @@ The test suite is organized so that every behavioral claim the docs make has a s
 ## Running the suites
 
 ```shell
-npm test                # astgen: type, JSON, Vue, shape-snapshot, evaluation
+npm test                # astgen: type, JSON, Vue, Svelte, shape-snapshot,
+                        # evaluation
+npm run test:svelte     # astgen: Svelte offset/template/typemap regression
 npm run test:php        # phpastgen: CLI, parser-info, discovery, provenance,
                         # framework facts, legacy, concurrency, regression,
                         # contract snapshot, property-based tests
@@ -25,11 +27,11 @@ The Ruby regression asserts which files are discovered (including `Gemfile` and 
 
 The phpastgen suite layers a contract snapshot (pinning the required key set of the output wrapper) over property-based tests: encoding scrubbing, depth truncation, failure isolation, manifest contents, side-record naming (`.jsonl`, never `.json`), stale-diagnostics removal, and framework facts each get a generator-driven test rather than a single fixture.
 
-The astgen suite holds the line on output stability: a shape snapshot (`UPDATE_SHAPE_SNAPSHOT=1 npm run test:shape` to regenerate), JSON regression over fixtures, a Vue precision suite, and a type-inference regression set over inference edge cases.
+The astgen suite holds the line on output stability: a shape snapshot (`UPDATE_SHAPE_SNAPSHOT=1 npm run test:shape` to regenerate), JSON regression over fixtures, a Vue precision suite, a Svelte suite asserting that every emitted range slices back to the exact `.svelte` source text and that only stock Babel node types appear, and a type-inference regression set over inference edge cases.
 
 ## Fixtures
 
-`test-fixtures/projects/` holds the language fixtures: `simple-js`, `typescript-parsing`, `vue-precision`, `inference-edge-cases`, `type-inference-regression`, `advanced-patterns`, `complex-patterns`, `php-parsing`, `php-contract`, and `ruby-parsing`. They are chosen to be adversarial in the ways real code is: mixed syntax, deep nesting, broken encodings, deliberate parse failures. When a bug report includes a file that parses wrong, the fix usually starts by adding that file (reduced) to the matching fixture project.
+`test-fixtures/projects/` holds the language fixtures: `simple-js`, `typescript-parsing`, `vue-precision`, `svelte-precision`, `inference-edge-cases`, `type-inference-regression`, `advanced-patterns`, `complex-patterns`, `php-parsing`, `php-contract`, and `ruby-parsing`. They are chosen to be adversarial in the ways real code is: mixed syntax, deep nesting, broken encodings, deliberate parse failures. When a bug report includes a file that parses wrong, the fix usually starts by adding that file (reduced) to the matching fixture project.
 
 ## CI shape
 

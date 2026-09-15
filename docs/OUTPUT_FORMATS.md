@@ -27,6 +27,8 @@ One file per source file, at `<output>/<relative-path>.json`:
 
 The `ast` value is the standard Babel AST shape (`type`, `start`, `end`, `loc`, and typed children), including an `errors` array when the file parsed with recovered errors. BigInt literals serialize as strings, matching the Babel 7 shape.
 
+For `.svelte` files the output stays within this shape: the template is expressed with stock Babel JSX nodes and synthesized nodes carry two additive keys - `svelteKind` (the Svelte construct a node was built from, e.g. `EachBlock`) and, where applicable, `svelteName` (the tag or snippet name). Consumers that do not know these keys ignore them; they exist so tooling can tell a mapped `{#each}` from a literal `.map()` call. Whole-file Svelte parse failures surface as `{ "svelteParse": true, "message": ... }` entries in `errors`.
+
 With type generation on (the default), each file also gets `<relative-path>.typemap`, a flat JSON object mapping node start offsets to the checker's type string:
 
 ```json

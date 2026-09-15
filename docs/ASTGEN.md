@@ -85,13 +85,44 @@ Test files are skipped because they are typically the heaviest, lowest-value inp
 
 `node_modules` is skipped entirely. Set `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES=true` to also parse bundled entrypoints inside it, meaning files matching `*.(bundle|dist|index|min|app).(js|cjs|mjs)`. Note the side effect of `ASTGEN_IGNORE_DIRS`: when it is set to a non-empty list that does not contain `node_modules`, those bundle entrypoints are included as well, on the reasoning that a custom ignore list implies you thought about the question.
 
-## Vue and Svelte
+## Vue
 
-`.vue` and `.svelte` files are single-file components where script, template, and style share one document. astgen parses them with a masking strategy that preserves positions: everything that is not script or template (comments, style blocks, stray tags) is replaced with spaces and newlines, so a token on line 40 of the component is still on line 40 of the parse input. Template expressions like `{{ item.name }}` are rewritten to `{ item.name }` and bindings are normalized before parsing.
+`.vue` files are single-file components where script, template, and style share one document. astgen parses them with a masking strategy that preserves positions: everything that is not script or template (comments, style blocks, stray tags) is replaced with spaces and newlines, so a token on line 40 of the component is still on line 40 of the parse input. Template expressions like `{{ item.name }}` are rewritten to `{ item.name }` and bindings are normalized before parsing.
 
 If the whole-document candidate does not parse, astgen builds progressively simpler candidates, in order: script content concatenated with the masked template, then the masked template alone, then the script content alone. The first candidate that yields a tree wins.
 
 Type generation over Vue files uses a virtual source: the component code is masked position-preserving, the script content is left intact, and a shim declaring the compiler macros (`defineProps`, `defineEmits`, `defineModel`, `withDefaults`, and a minimal `vue` module) is prepended so the checker sees declarations instead of errors.
+
+## Svelte
+
+`.svelte` files get first-class support built on `svelte/compiler` (the `svelte` npm dependency, pinned to an exact version so the AST shape cannot drift under us). The Svelte compiler is used purely as a *segmenter* - its modern-mode parse returns a tree whose every node carries an absolute byte range into the original file - and the emitted output is 100% stock Babel AST:
+
+1. **Scripts.** A buffer the same length as the file, with everything outside the `<script>` bodies blanked to spaces (newlines preserved), is handed to Babel in one parse. Nothing moves, so the resulting statement offsets are already absolute. The instance and `module` scripts flatten into one `Program`.
+2. **Template.** The template tree is re-emitted as standard Babel JSX nodes: elements (including `svelte:*` specials and components) become `JSXElement`, text becomes `JSXText`, and every `{...}` tag becomes a `JSXExpressionContainer`. `{#if}`/`{:else if}`/`{:else}` becomes a `ConditionalExpression` chain, `{#each xs as x, i (k)}` becomes `xs.map((x, i) => ...)`, `{#await p}` becomes `p.then(onFulfilled, onRejected)`, and `{#snippet name(params)}` becomes `name = (params) => ...`. Directives map onto Babel's native namespaced attribute form (`on:click={h}` is a `JSXAttribute` whose name is the `JSXNamespacedName` `on:click`), so a directive's `[start, end)` range slices to its exact source text. Mixed text/interpolation attribute values (`class="a {b} c"`) become a `JSXExpressionContainer` over the whole quoted value wrapping a `TemplateLiteral`, with empty zero-width quasis inserted where two interpolations are adjacent.
+3. **Expressions.** Every template expression, binding pattern and `{@const}` initializer is re-parsed by Babel from its own source substring and shifted back into file coordinates. A failed sub-parse costs that one expression - it is replaced by the identifier `__astgen_unparsed` and recorded on `File.errors` - never the file.
+
+Every synthesized node additionally carries `svelteKind` (the Svelte construct it came from, e.g. `EachBlock`) and, where applicable, `svelteName` (the tag or snippet name). These are additive keys; consumers ignore them.
+
+If `svelte/compiler` rejects the whole file (a genuinely broken template), astgen falls back to parsing just the script blocks over a position-preserving masked buffer - every byte outside the `<script>` contents blanked to a space, newlines kept. Nothing moves, so the emitted statement offsets are still absolute byte positions into the original file and line numbers stay correct; the template is unrecoverable. The whole-file failure is recorded as `{ svelteParse: true, message }` on `File.errors`.
+
+Type generation uses the same virtual-source strategy as Vue, with Svelte-specific shims: ambient declarations for the runes (`$state`, `$derived`, `$effect`, `$props`, `$bindable`, `$inspect`, `$host`) plus minimal `svelte` and `svelte/store` modules, so rune calls type-check instead of erroring. `.svelte.ts` rune modules are parsed as ordinary TypeScript.
+
+Svelte 4 (legacy, non-runes) components are fully covered - the Svelte 5 parser handles `export let`, `$:` reactive statements, `on:` handlers and `let:` directives unchanged.
+
+### Known, accepted losses
+
+The mapping is deliberately lossy in places; these are documented trade-offs, not bugs:
+
+| Loss | Consequence |
+| --- | --- |
+| `{@const}` becomes an assignment, not a declaration | the binding looks like an implicit global downstream |
+| `{#each}` `{:else}` is a sibling fragment, not a conditional branch | fallback DOM is unconditionally reachable in the CPG |
+| `{#await}` pending children are emitted as siblings | same |
+| a `{#snippet}` name binding is an assignment whose source text starts with `{#snippet` | closure-naming passes that match on `const ` will not rename it |
+| HTML comments are dropped | no comment nodes for them |
+| `<style>` blocks are dropped | no CSS analysis |
+| template expressions have no typemap entries | type recovery falls back to inference (same gap as Vue) |
+| the two `<script>` blocks flatten into one `Program` | module-vs-instance scope distinction is lost |
 
 ## Type maps and worker sharding
 
@@ -123,4 +154,4 @@ The checker is single-threaded, so parallelism comes from sharding: files are de
 
 Each source file becomes `<output>/<relative-path>.json` with the shape `{"fullName", "relativeName", "ast"}`, and each type-mapped file also gets `<relative-path>.typemap`. See [Output Formats](OUTPUT_FORMATS.md).
 
-`astgen --version` prints the AST format version (currently 4.1.0). It is not decorative: downstream frontends such as chen's `jssrc2cpg` fold it into their parse-cache fingerprint, so it must be bumped whenever the emitted AST or type shape changes. A stale version number means stale cached parses get silently reused, which is the one bug this contract exists to prevent.
+`astgen --version` prints the AST format version (currently 4.2.0). It is not decorative: downstream frontends such as chen's `jssrc2cpg` fold it into their parse-cache fingerprint, so it must be bumped whenever the emitted AST or type shape changes. A stale version number means stale cached parses get silently reused, which is the one bug this contract exists to prevent.

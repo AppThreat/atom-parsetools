@@ -19,6 +19,18 @@ Input volume is the other lever. Test files are excluded from type generation by
 
 A worker that fails does not abort the run; astgen falls back to inline processing and says so on stderr. Writes are idempotent, so the fallback is safe, just slower: if you see the fallback message, the fix is usually memory, not retries.
 
+### Svelte files
+
+`.svelte` parsing adds a `svelte/compiler` segmentation pass plus one Babel sub-parse per template expression, on top of the normal parse. Measured over real corpora (parse-only, type generation off):
+
+| Corpus | `.svelte` files | wall time |
+| --- | --- | --- |
+| sveltejs/realworld (SvelteKit, runes) | 24 | ~0.2 s |
+| immich `web/` (large SvelteKit + TypeScript) | 417 | ~1.0 s |
+| pocketbase `ui/src` @ v0.22.21 (Svelte 4) | 128 | ~0.5 s |
+
+Across these corpora roughly 12,000 template expressions are sub-parsed with zero failures; the sub-parse pass is a rounding error next to the TypeScript checker, which remains the dominant phase for Svelte projects exactly as for plain TypeScript. One caveat inherited from file discovery, not from Svelte support: directories named `docs` are skipped by default (see `ASTGEN_IGNORE_DIRS` in [Environment variables](ENV.md)), so Svelte files under a `docs/` directory are not parsed unless that default is overridden.
+
 ## phpastgen
 
 Directory runs spawn up to `--threads` concurrent `php-parse` subprocesses (default 10, range 1 to 64; out-of-range values warn and fall back to the default). Because each worker is a separate PHP process, memory scales with the thread count, and the practical ceiling on a CI runner is memory, not CPU.

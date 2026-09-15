@@ -19,7 +19,8 @@ const fixtureProjects = [
   { name: "type-inference-regression", minTypemapEntries: 100 },
   { name: "inference-edge-cases", minTypemapEntries: 250 },
   { name: "typescript-parsing", minTypemapEntries: 450 },
-  { name: "vue-precision", minTypemapEntries: 380 }
+  { name: "vue-precision", minTypemapEntries: 380 },
+  { name: "svelte-precision", minTypemapEntries: 250 }
 ];
 
 function classifyType(typeName) {
@@ -55,7 +56,7 @@ function listSourceFiles(dir) {
     const stat = statSync(fullPath);
     if (stat.isDirectory()) {
       files.push(...listSourceFiles(fullPath));
-    } else if (/\.(?:js|jsx|cjs|mjs|ts|tsx|vue)$/.test(entry)) {
+    } else if (/\.(?:js|jsx|cjs|mjs|ts|tsx|vue|svelte)$/.test(entry)) {
       files.push(fullPath);
     }
   }

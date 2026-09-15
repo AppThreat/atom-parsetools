@@ -24,12 +24,15 @@ import {
   rmSync
 } from "fs";
 import { getAllFiles } from "@appthreat/atom-common";
+import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
 
 // Printed by `astgen --version`. Downstream frontends (e.g. chen's jssrc2cpg)
 // fold this into their parse-cache fingerprint, so it MUST be bumped whenever
 // the emitted AST/type shape changes — otherwise stale cached parses from an
-// older astgen are silently reused. Bumped for the Babel 8 AST-shape change.
-const ASTGEN_VERSION = "4.1.0";
+// older astgen are silently reused. Bumped to 4.2.0 for first-class Svelte
+// support: `.svelte` files now emit absolute-offset Babel JSX ASTs instead of
+// the offset-shifted script-only output of the legacy masking path.
+const ASTGEN_VERSION = "4.2.0";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -466,13 +469,40 @@ const getAllSrcJSAndTSFiles = (src) => {
  * Convert a single JS/TS file to AST
  */
 const fileToJsAst = (file, projectType, tsInstance) => {
-  if (file.endsWith(".vue") || file.endsWith(".svelte")) {
+  if (file.endsWith(".vue")) {
     return toVueAst(file, tsInstance);
+  }
+  if (file.endsWith(".svelte")) {
+    return toSvelteAst(file);
   }
   if (file.endsWith(".ejs")) {
     return toEjsAst(file);
   }
   return codeToJsAst(file, readFileSync(file, "utf-8"), projectType);
+};
+
+/**
+ * Convert a single Svelte file to AST. Svelte's own compiler segments the
+ * single-file component; the Babel options are built here and passed in, so
+ * every Svelte sub-parse shares the exact configuration used for regular
+ * JS/TS files. If `svelte/compiler` rejects the whole file (a genuinely
+ * broken template), the script blocks are still parsed over a
+ * position-preserving masked buffer - absolute offsets, so line numbers stay
+ * correct - and the failure is recorded on the emitted AST's `errors` array.
+ */
+const toSvelteAst = (file) => {
+  const code = readFileSync(file, "utf-8");
+  const options = makeBabelOptions(babelParserOptions, file);
+  try {
+    return parseSvelteFile(file, code, options);
+  } catch (err) {
+    console.error(
+      `Svelte parse failed for ${file}, falling back to script-only parsing:`,
+      err?.message
+    );
+    const { source: maskedSource } = createVirtualTypeSource(code);
+    return parseSvelteScriptBuffer(file, code, maskedSource, options, err?.message);
+  }
 };
 
 /**
@@ -590,6 +620,53 @@ declare module "vue" {
 }
 `;
 
+// Ambient declarations for the Svelte 5 runes and the most common `svelte` /
+// `svelte/store` imports, so the TypeScript checker sees real declarations
+// when it type-checks a virtual `.svelte.ts` source. This is a pragmatic
+// starting set rather than a mirror of svelte's own types; grow it when a
+// fixture needs more.
+const SVELTE_RUNE_SHIMS = `
+declare function $state<T>(initial?: T): T;
+declare namespace $state { function raw<T>(initial?: T): T; function snapshot<T>(v: T): T; }
+declare function $derived<T>(expression: T): T;
+declare namespace $derived { function by<T>(fn: () => T): T; }
+declare function $effect(fn: () => void | (() => void)): void;
+declare namespace $effect {
+  function pre(fn: () => void | (() => void)): void;
+  function tracking(): boolean;
+  function root(fn: () => void | (() => void)): () => void;
+  function pending(): number;
+}
+declare function $props<T = any>(): T;
+declare namespace $props { function id(): string; }
+declare function $bindable<T>(fallback?: T): T;
+declare function $inspect<T extends any[]>(...values: T): { with: (fn: (...args: any[]) => void) => void };
+declare function $host<T = HTMLElement>(): T;
+
+declare module "svelte" {
+  export function onMount(fn: () => void | (() => void)): void;
+  export function onDestroy(fn: () => void): void;
+  export function tick(): Promise<void>;
+  export function untrack<T>(fn: () => T): T;
+  export function getContext<T>(key: any): T;
+  export function setContext<T>(key: any, value: T): T;
+  export function hasContext(key: any): boolean;
+  export function createEventDispatcher<T = any>(): (type: string, detail?: any) => void;
+  export function mount(component: any, options: any): any;
+  export function unmount(component: any): Promise<void>;
+  export type Component<P = any> = (...args: any[]) => any;
+  export type Snippet<P extends any[] = any[]> = (...args: P) => any;
+}
+declare module "svelte/store" {
+  export type Readable<T> = { subscribe(run: (value: T) => void): () => void };
+  export type Writable<T> = Readable<T> & { set(value: T): void; update(fn: (value: T) => T): void };
+  export function writable<T>(value?: T): Writable<T>;
+  export function readable<T>(value?: T): Readable<T>;
+  export function derived<T>(stores: any, fn: any, initial?: T): Readable<T>;
+  export function get<T>(store: Readable<T>): T;
+}
+`;
+
 const maskNonNewlineChars = (value) => value.replace(/[^\r\n]/g, " ");
 
 const cleanVueCodeForParsing = (code, { includeScripts = true } = {}) => {
@@ -686,7 +763,14 @@ const parseVueAstWithFallback = (file, code) => {
   throw lastError || new Error(`Unable to parse Vue file: ${file}`);
 };
 
-const createVueVirtualTypeSource = (code) => {
+/**
+ * Build the virtual type source for a single-file component (`.vue` or
+ * `.svelte`): the file masked to spaces/newlines with only the `<script>`
+ * contents left verbatim. Positions are preserved exactly, so type offsets
+ * map back onto the original file. Works for both frameworks because it is
+ * driven purely by the `<script>...</script>` regex.
+ */
+const createVirtualTypeSource = (code) => {
   const output = maskNonNewlineChars(code).split("");
   let hasScriptContent = false;
   let scriptMatch;
@@ -708,13 +792,22 @@ const createVueVirtualTypeSource = (code) => {
   };
 };
 
-const collectVueTypesWithVirtualProgram = (file, virtualSource) => {
-  const tempDir = mkdtempSync(join(tmpdir(), "atom-parsetools-vue-"));
+/**
+ * Type-check the virtual source with a throwaway program: the virtual file
+ * plus the framework's shim declarations, both under a temp directory.
+ */
+const collectTypesWithVirtualProgram = (
+  file,
+  virtualSource,
+  shimFileName,
+  shimSource
+) => {
+  const tempDir = mkdtempSync(join(tmpdir(), "atom-parsetools-sfc-"));
   const virtualFile = join(tempDir, `${basename(file)}.ts`);
-  const shimFile = join(tempDir, "vue-shims.d.ts");
+  const shimFile = join(tempDir, shimFileName);
   try {
     writeFileSync(virtualFile, virtualSource, "utf8");
-    writeFileSync(shimFile, VUE_COMPILER_MACRO_SHIMS, "utf8");
+    writeFileSync(shimFile, shimSource, "utf8");
     const virtualTs = createTsc([virtualFile, shimFile], tempDir);
     const sourceFile = virtualTs?.program?.getSourceFile(virtualFile);
     if (!virtualTs || !sourceFile) {
@@ -728,7 +821,24 @@ const collectVueTypesWithVirtualProgram = (file, virtualSource) => {
   }
 };
 
-const collectVueSeenTypes = (file, code, tsInstance) => {
+/**
+ * Collect types for a single-file component. The project program is tried
+ * first: a `.vue`/`.svelte` path is normally absent from it, but a tsconfig
+ * that maps the extension can make it resolvable, and that mapping is more
+ * accurate than the virtual source. Otherwise fall back to type-checking the
+ * position-preserving virtual source against the framework's shims.
+ *
+ * `.vue` and `.svelte` differ only in which shim declarations the checker
+ * needs, so both go through here rather than through near-identical copies
+ * that would drift apart.
+ */
+const collectSfcSeenTypes = (
+  file,
+  code,
+  tsInstance,
+  shimFileName,
+  shimSource
+) => {
   let seenTypes;
   if (tsInstance?.program) {
     try {
@@ -742,14 +852,37 @@ const collectVueSeenTypes = (file, code, tsInstance) => {
   }
 
   if (!seenTypes || seenTypes.size === 0) {
-    const virtualSource = createVueVirtualTypeSource(code);
+    const virtualSource = createVirtualTypeSource(code);
     if (virtualSource.hasScriptContent) {
-      seenTypes = collectVueTypesWithVirtualProgram(file, virtualSource.source);
+      seenTypes = collectTypesWithVirtualProgram(
+        file,
+        virtualSource.source,
+        shimFileName,
+        shimSource
+      );
     }
   }
 
   return seenTypes;
 };
+
+const collectVueSeenTypes = (file, code, tsInstance) =>
+  collectSfcSeenTypes(
+    file,
+    code,
+    tsInstance,
+    "vue-shims.d.ts",
+    VUE_COMPILER_MACRO_SHIMS
+  );
+
+const collectSvelteSeenTypes = (file, code, tsInstance) =>
+  collectSfcSeenTypes(
+    file,
+    code,
+    tsInstance,
+    "svelte-shims.d.ts",
+    SVELTE_RUNE_SHIMS
+  );
 
 const TSC_FLAGS =
   tsc.TypeFormatFlags.NoTruncation |
@@ -776,6 +909,10 @@ const collectSeenTypesForFile = (file, ts, options) => {
 
   if (file.endsWith(".vue")) {
     return collectVueSeenTypes(file, readFileSync(file, "utf-8"), ts);
+  }
+
+  if (file.endsWith(".svelte")) {
+    return collectSvelteSeenTypes(file, readFileSync(file, "utf-8"), ts);
   }
 
   if (!ts?.program) {

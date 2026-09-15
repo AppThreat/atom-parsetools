@@ -74,6 +74,8 @@ You will see a `BABEL_PARSER_SYNTAX_ERROR` with reason code `VarRedeclaration` a
 
 You ran no parser selection and no project type. astgen auto-detected the JavaScript project from `package.json`, chose the Babel-with-TypeScript-and-JSX configuration first, and only would have fallen back had the parse failed. When a repository is Flow-typed, `-t flow` flips the order so hermes-parser and Babel Flow run first.
 
+The same command covers a Vue or SvelteKit project. Drop a `.svelte` component into the directory and re-run: you get the same `.json` plus `.typemap` pair, with the script statements and the template in one Babel `Program`. Nothing about the invocation changes, which is deliberate — a single-file component is a source file like any other as far as the CLI is concerned.
+
 ## Where to go next
 
-[Lesson 2](LESSON2.md) explains the `.typemap` files sitting next to your ASTs, and [Output Formats](OUTPUT_FORMATS.md) specifies every key you just saw.
+[Lesson 2](LESSON2.md) explains the `.typemap` files sitting next to your ASTs, and [Output Formats](OUTPUT_FORMATS.md) specifies every key you just saw. For how a component's template becomes JSX, see the [astgen guide](ASTGEN.md).
