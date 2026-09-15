@@ -680,17 +680,28 @@ const maskNonNewlineChars = (value) => value.replace(/[^\r\n]/g, " ");
 // a real expression AST. The swap is length-preserving (`"x"` -> `{x}`), so
 // every offset in the emitted AST still maps onto the original file.
 //
-// Only values that parse as an expression are converted. Vue's `v-for`
-// (`"item in items"`) and `v-slot` forms are not expressions; Babel rejects
-// them, and the attribute keeps its string value.
+// Only values that parse as an expression are converted, and `v-for`/`v-slot`
+// directives are skipped by name before the parse is even attempted:
+// `v-for="item in items"` DOES parse (`in` is a relational operator), but the
+// resulting expression is meaningless for analysis and would synthesise a read
+// of the loop variable `item` that the script never declares - a spurious
+// reference. Those directives keep their string value.
 //
-// Scoped to the root `<template>` block: a script string could legitimately
-// contain directive-looking text, and rewriting inside `<script>` would change
-// script semantics while still parsing - a silent corruption. Outside a
-// template block nothing is converted.
+// Scoped between the root `<template>` block's opening tag and the last
+// `</template>` that lies OUTSIDE any `<script>` block: a script string could
+// legitimately contain the literal text `</template>`, and rewriting inside
+// `<script>` would change script semantics while still parsing - a silent
+// corruption. That still narrows, not eliminates, the risk - a `</template>`
+// inside a template-side attribute value could in principle swallow markup up
+// to a later close - which is why the whole-file candidates remain as
+// fallbacks for any file the converted candidate fails to parse.
 const VUE_DIRECTIVE_ATTR_REGEX =
   /(\sv-[\w.:-]+|\s[:@.][\w.:-]*)=("(?:[^"\\\r\n]|\\.)*"|'(?:[^'\\\r\n]|\\.)*')/g;
 const VUE_TEMPLATE_OPEN_REGEX = /<template\b[^>]*>/i;
+const VUE_TEMPLATE_CLOSE = "</template>";
+
+// `v-for` and `v-slot` (incl. `v-slot:name`) values are not plain expressions.
+const VUE_NON_EXPRESSION_DIRECTIVES = /^v-(for|slot)\b/i;
 
 const DIRECTIVE_VALUE_PARSE_OPTIONS = {
   sourceType: "unambiguous",
@@ -703,13 +714,40 @@ const DIRECTIVE_VALUE_PARSE_OPTIONS = {
   plugins: babelSyntaxPlugins
 };
 
+// Ranges of the file covered by `<script ...>...</script>` blocks, so the
+// template-region search can ignore `</template>` text that only appears
+// inside a script string.
+const vueScriptRanges = (code) => {
+  const ranges = [];
+  let scriptMatch;
+  vueScriptTagRegex.lastIndex = 0;
+  while ((scriptMatch = vueScriptTagRegex.exec(code)) !== null) {
+    ranges.push([scriptMatch.index, scriptMatch.index + scriptMatch[0].length]);
+  }
+  return ranges;
+};
+
 const vueDirectiveValueToExpression = (code) => {
   const templateOpen = code.match(VUE_TEMPLATE_OPEN_REGEX);
   if (!templateOpen) {
     return { code, changed: false };
   }
   const templateStart = templateOpen.index + templateOpen[0].length;
-  const templateEnd = code.toLowerCase().lastIndexOf("</template>");
+  const scriptRanges = vueScriptRanges(code);
+  const inScript = (index) =>
+    scriptRanges.some(([start, end]) => index >= start && index < end);
+  let templateEnd = -1;
+  let searchFrom = templateStart;
+  let closeIndex;
+  while (
+    (closeIndex = code.toLowerCase().indexOf(VUE_TEMPLATE_CLOSE, searchFrom)) !==
+    -1
+  ) {
+    if (!inScript(closeIndex)) {
+      templateEnd = closeIndex;
+    }
+    searchFrom = closeIndex + 1;
+  }
   if (templateEnd < templateStart) {
     return { code, changed: false };
   }
@@ -719,6 +757,9 @@ const vueDirectiveValueToExpression = (code) => {
     templateSlice.replace(
       VUE_DIRECTIVE_ATTR_REGEX,
       (match, namePart, quoted) => {
+        if (VUE_NON_EXPRESSION_DIRECTIVES.test(namePart.trim())) {
+          return match;
+        }
         const inner = quoted.slice(1, -1);
         // An empty value, or a `{{` opening (Vue ignores interpolations in
         // attribute values), is left alone.

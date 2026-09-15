@@ -234,13 +234,13 @@ function evaluateDirectiveExpressionCandidates() {
   assert.equal(model.kind, "expression");
   assert.equal(model.inner, "Identifier");
 
-  // `v-for="item in items"` is not an expression, but `item in items` still
-  // parses as a relational expression; either way the file must parse and the
-  // attribute must not be a dead string.
+  // `v-for` is skipped by name even though `item in items` parses as a
+  // relational expression: converting it would synthesise a read of the
+  // never-declared loop variable, so the value stays a string.
   const vFor = attributeValueShape(
     attributes.find((attr) => attr.name?.name === "v-for")
   );
-  assert.notEqual(vFor.kind, "StringLiteral");
+  assert.equal(vFor.kind, "StringLiteral");
 
   // A plain attribute keeps its string value.
   const plain = attributes.find(
