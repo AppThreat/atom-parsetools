@@ -1,0 +1,10 @@
+{
+  "name": "svelte-precision",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Svelte fixture project exercising the template and script constructs astgen must map onto Babel AST nodes with absolute offsets.",
+  "devDependencies": {
+    "svelte": "^5.57.0"
+  }
+}

@@ -46,7 +46,8 @@ const fixtureProjects = [
   "type-inference-regression",
   "inference-edge-cases",
   "typescript-parsing",
-  "vue-precision"
+  "vue-precision",
+  "svelte-precision"
 ];
 
 function listSourceFiles(dir) {
@@ -55,7 +56,7 @@ function listSourceFiles(dir) {
     const fullPath = join(dir, entry);
     if (statSync(fullPath).isDirectory()) {
       files.push(...listSourceFiles(fullPath));
-    } else if (/\.(?:js|jsx|cjs|mjs|ts|tsx|vue)$/.test(entry)) {
+    } else if (/\.(?:js|jsx|cjs|mjs|ts|tsx|vue|svelte)$/.test(entry)) {
       files.push(fullPath);
     }
   }

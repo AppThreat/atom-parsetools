@@ -1,12 +1,12 @@
 {
   "name": "@appthreat/atom-parsetools",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Parsing tools that complement the @appthreat/atom project.",
   "main": "./index.js",
   "type": "module",
   "scripts": {
     "pretty": "prettier --write *.js --trailing-comma=none",
-    "test": "node test-fixtures/astgen-type-regression.js && node test-fixtures/astgen-json-regression.js && node test-fixtures/astgen-vue-regression.js && node test-fixtures/astgen-shape-snapshot.js && node test-fixtures/evaluate-astgen.js",
+    "test": "node test-fixtures/astgen-type-regression.js && node test-fixtures/astgen-json-regression.js && node test-fixtures/astgen-vue-regression.js && node test-fixtures/astgen-svelte-regression.js && node test-fixtures/astgen-shape-snapshot.js && node test-fixtures/evaluate-astgen.js",
     "test:evaluate": "node test-fixtures/evaluate-astgen.js",
     "test:ruby": "node test-fixtures/rbastgen-regression.js",
     "test:php": "node test-fixtures/phpastgen-cli.js && node test-fixtures/phpastgen-parser-info.js && node test-fixtures/phpastgen-discovery.js && node test-fixtures/phpastgen-provenance.js && node test-fixtures/phpastgen-framework-facts.js && node test-fixtures/phpastgen-legacy-regression.js && node test-fixtures/phpastgen-concurrency.js && node test-fixtures/phpastgen-regression.js && node test-fixtures/phpastgen-contract-snapshot.js && npm run test:php:pbt",
@@ -19,13 +19,15 @@
     "test:shape:update": "UPDATE_SHAPE_SNAPSHOT=1 node test-fixtures/astgen-shape-snapshot.js",
     "test:json": "node test-fixtures/astgen-json-regression.js",
     "test:fixtures": "node test-fixtures/test-suite.js",
-    "test:vue": "node test-fixtures/astgen-vue-regression.js"
+    "test:vue": "node test-fixtures/astgen-vue-regression.js",
+    "test:svelte": "node test-fixtures/astgen-svelte-regression.js"
   },
   "dependencies": {
     "@appthreat/atom-common": "^1.1.0",
     "@babel/parser": "^8.0.4",
     "@typescript/typescript6": "^6.0.2",
-    "hermes-parser": "^0.37.0"
+    "hermes-parser": "^0.37.0",
+    "svelte": "5.57.0"
   },
   "bin": {
     "astgen": "astgen.js",

@@ -27,6 +27,37 @@ def load_asts(out_dir):
 
 `rglob("*.json")` cannot pick up `phpastgen_manifest.jsonl` or a diagnostics file no matter how many runs wrote them, which is the point of the naming rule.
 
+## Offsets index the original file
+
+Every `start`/`end` is a byte offset into the source file as it exists on disk — not into whatever
+intermediate text a parser happened to see. This is what lets a consumer recover code without
+re-parsing:
+
+```python
+def code_of(node, source_text):
+    return source_text[node["start"]:node["end"]]
+```
+
+The rule is load-bearing for single-file components. A `.vue` or `.svelte` file is one document
+holding script, template, and style, and astgen flattens it into an ordinary Babel AST: script
+statements at the top level of the `Program`, the template as standard JSX nodes. A naive
+implementation would extract the `<script>` body, parse that, and emit offsets relative to the
+extract — every `code_of` result would then be shifted by the length of the script prologue. astgen
+instead parses the scripts over a buffer that is the same length as the file with everything
+non-script masked to spaces, and re-parses each template expression from its own substring before
+shifting the offsets back. So `code_of` returns `on:click={increment}` for a Svelte directive, and
+`{#each items as item}` for an each-block, exactly as written.
+
+Two consequences worth designing around:
+
+- Svelte control flow arrives as its JSX equivalent, not as Svelte node types. `{#if}` is a
+  `ConditionalExpression`, `{#each}` is a `.map()` call with an arrow closure, `{#await}` is
+  `.then()`. Code that walks Babel node types needs no framework-specific branches.
+- Synthesized nodes carry additive `svelteKind` / `svelteName` keys naming the original construct,
+  and some invented identifiers (the `.map` and `.then` property names) are zero-width, so
+  `code_of` returns `""` for them. Read `name` rather than the source slice when you need an
+  identifier's text.
+
 ## Joining ASTs to type maps
 
 For astgen output, the join is an offset lookup. Here is a consumer that lists every function-like declaration and its type, then flags the ones taking parameters:

@@ -2,7 +2,7 @@
 
 This package hosts a collection of parsing tools that complement the `@appthreat/atom` project. These tools offer parsing and analysis-related functionalities such as generating AST and semantics information in JSON format. The full list of tools and bin commands exposed by this package is below:
 
-- astgen - Generates AST for JavaScript and TypeScript projects in JSON format
+- astgen - Generates AST for JavaScript, TypeScript, Vue and Svelte projects in JSON format
 - phpastgen - Generates AST for PHP projects using `php-parse` command from `nikic/php-parser`
 - rbastgen - Generates AST for Ruby projects using AppThreat's [`ruby_ast_gen`](https://github.com/AppThreat/ruby_ast_gen) gem (2.0.1)
 - scalasem - Generates a custom semantics slice for Scala Projects by utilising scalac command.
@@ -34,6 +34,8 @@ Options:
 ```
 
 Each source file becomes an AST JSON document plus a `.typemap` of inferred types keyed by node offsets. Test files and `node_modules` are excluded by default; the [astgen guide](docs/ASTGEN.md) covers every option and env variable (`ASTGEN_TYPE_WORKERS`, `ASTGEN_INCLUDE_TEST_FILES`, and friends).
+
+`.vue` and `.svelte` single-file components are flattened into the same Babel shape as any other file: script statements at the top level of the `Program`, and the template as standard JSX nodes. Svelte components are segmented with `svelte/compiler` and every offset is an absolute byte position into the component source, so consumers that slice the original file for `code` fields get the real text back. Control flow maps onto its JSX equivalent — `{#if}` to a `ConditionalExpression`, `{#each}` to `.map()` with an arrow closure, `{#await}` to `.then()` — which means no framework-specific node types are emitted. See the [astgen guide](docs/ASTGEN.md) for the full mapping and the list of accepted losses.
 
 ### phpastgen
 
