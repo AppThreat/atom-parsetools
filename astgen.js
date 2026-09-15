@@ -29,10 +29,11 @@ import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
 // Printed by `astgen --version`. Downstream frontends (e.g. chen's jssrc2cpg)
 // fold this into their parse-cache fingerprint, so it MUST be bumped whenever
 // the emitted AST/type shape changes — otherwise stale cached parses from an
-// older astgen are silently reused. Bumped to 4.2.0 for first-class Svelte
-// support: `.svelte` files now emit absolute-offset Babel JSX ASTs instead of
-// the offset-shifted script-only output of the legacy masking path.
-const ASTGEN_VERSION = "4.2.0";
+// older astgen are silently reused. Bumped to 4.3.0 for Vue directive
+// expression values: `v-html="x"` / `:prop="x"` / `@event="x"` attribute
+// values in `.vue` templates now emit JSX expression containers (real
+// expression ASTs) instead of string literals.
+const ASTGEN_VERSION = "4.3.0";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -669,6 +670,78 @@ declare module "svelte/store" {
 
 const maskNonNewlineChars = (value) => value.replace(/[^\r\n]/g, " ");
 
+// Vue directive attributes - `v-html="expr"`, `:prop="expr"`, `@event="expr"`
+// - carry a JavaScript expression in a quoted string. Babel parses that value
+// as a StringLiteral, which severs the data flow from the script binding into
+// the template: `v-html="rawContent"` has no reference to the `rawContent`
+// binding, so no source-to-sink path can ever be found for the most
+// security-relevant Vue shape. Replacing the value's quotes with braces turns
+// it into a JSX expression container - `v-html={rawContent}` - which parses to
+// a real expression AST. The swap is length-preserving (`"x"` -> `{x}`), so
+// every offset in the emitted AST still maps onto the original file.
+//
+// Only values that parse as an expression are converted. Vue's `v-for`
+// (`"item in items"`) and `v-slot` forms are not expressions; Babel rejects
+// them, and the attribute keeps its string value.
+//
+// Scoped to the root `<template>` block: a script string could legitimately
+// contain directive-looking text, and rewriting inside `<script>` would change
+// script semantics while still parsing - a silent corruption. Outside a
+// template block nothing is converted.
+const VUE_DIRECTIVE_ATTR_REGEX =
+  /(\sv-[\w.:-]+|\s[:@.][\w.:-]*)=("(?:[^"\\\r\n]|\\.)*"|'(?:[^'\\\r\n]|\\.)*')/g;
+const VUE_TEMPLATE_OPEN_REGEX = /<template\b[^>]*>/i;
+
+const DIRECTIVE_VALUE_PARSE_OPTIONS = {
+  sourceType: "unambiguous",
+  allowImportExportEverywhere: true,
+  allowAwaitOutsideFunction: true,
+  allowReturnOutsideFunction: true,
+  allowSuperOutsideMethod: true,
+  allowUndeclaredExports: true,
+  errorRecovery: false,
+  plugins: babelSyntaxPlugins
+};
+
+const vueDirectiveValueToExpression = (code) => {
+  const templateOpen = code.match(VUE_TEMPLATE_OPEN_REGEX);
+  if (!templateOpen) {
+    return { code, changed: false };
+  }
+  const templateStart = templateOpen.index + templateOpen[0].length;
+  const templateEnd = code.toLowerCase().lastIndexOf("</template>");
+  if (templateEnd < templateStart) {
+    return { code, changed: false };
+  }
+
+  let changed = false;
+  const convert = (templateSlice) =>
+    templateSlice.replace(
+      VUE_DIRECTIVE_ATTR_REGEX,
+      (match, namePart, quoted) => {
+        const inner = quoted.slice(1, -1);
+        // An empty value, or a `{{` opening (Vue ignores interpolations in
+        // attribute values), is left alone.
+        if (!inner.trim() || inner.includes("{{")) {
+          return match;
+        }
+        try {
+          parse(`(${inner})`, DIRECTIVE_VALUE_PARSE_OPTIONS);
+        } catch {
+          return match;
+        }
+        changed = true;
+        return `${namePart}={${inner}}`;
+      }
+    );
+
+  const converted =
+    code.slice(0, templateStart) +
+    convert(code.slice(templateStart, templateEnd)) +
+    code.slice(templateEnd);
+  return { code: converted, changed };
+};
+
 const cleanVueCodeForParsing = (code, { includeScripts = true } = {}) => {
   let cleanedCode = code
     .replace(vueCommentRegex, (match) => maskNonNewlineChars(match))
@@ -730,7 +803,32 @@ const buildVueParseCandidates = (code) => {
     ? `${scriptOnlyCandidate}\n${templateOnlyCandidate}`
     : templateOnlyCandidate;
 
+  // Directive-expression candidates first: same masking, but `v-html="x"`
+  // style values are expression containers, so template expressions keep
+  // their references. The plain candidates below remain as fallbacks for the
+  // (checked-per-attribute, but defensive) case of a converted file not
+  // parsing as a whole.
+  const directiveCandidates = (() => {
+    const { code: directiveCode, changed } = vueDirectiveValueToExpression(
+      code
+    );
+    if (!changed) {
+      return [];
+    }
+    const directiveFull = cleanVueCodeForParsing(directiveCode, {
+      includeScripts: true
+    });
+    const directiveTemplateOnly = cleanVueCodeForParsing(directiveCode, {
+      includeScripts: false
+    });
+    return [
+      { name: "directive-full", code: directiveFull },
+      { name: "directive-template-only", code: directiveTemplateOnly }
+    ];
+  })();
+
   const candidates = [
+    ...directiveCandidates,
     { name: "full", code: fullCandidate },
     { name: "combined", code: combinedCandidate },
     { name: "template-only", code: templateOnlyCandidate },
