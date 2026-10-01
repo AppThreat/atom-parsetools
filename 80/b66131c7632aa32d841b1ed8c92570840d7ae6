@@ -1,0 +1,33 @@
+supervise.js
+  s_d0def3984b5153::t_8aaf2f60d00d70 1-107
+phpastgen.js
+  s_d0def3984b5153::t_088d33939febe5 24,1783
+package.json
+  s_d0def3984b5153::t_f41538dbda7972 9,23-24
+rbastgen.js
+  s_d0def3984b5153::t_088d33939febe5 8,165
+scalasem.js
+  s_d0def3984b5153::t_088d33939febe5 16,75
+test-fixtures/supervise-regression.js
+  s_d0def3984b5153::t_44a0d28c6ad415 1-98
+astgen.js
+  s_d0def3984b5153::t_088d33939febe5 27,2486
+docs/ENV.md
+  s_d0def3984b5153::t_719aef89e00707 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "80b66131c7632aa32d841b1ed8c92570840d7ae6",
+  "prompts": {},
+  "sessions": {
+    "s_d0def3984b5153": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2152c1a9-0695-4073-ad88-dd4f54925ca3",
+        "model": "unknown"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
