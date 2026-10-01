@@ -21,6 +21,7 @@ import { tmpdir } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { detectPhp } from "@appthreat/atom-common";
+import { exitWithSupervisor } from "./supervise.js";
 
 let url = import.meta.url;
 if (!url.startsWith("file://")) {
@@ -1779,6 +1780,7 @@ export function isMainModule() {
 }
 
 if (isMainModule()) {
+  exitWithSupervisor();
   Promise.resolve(main(process.argv.slice(2)))
     .then((rc) => {
       if (typeof rc === "number") {

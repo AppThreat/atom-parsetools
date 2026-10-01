@@ -24,6 +24,7 @@ import {
   rmSync
 } from "fs";
 import { getAllFiles } from "@appthreat/atom-common";
+import { exitWithSupervisor } from "./supervise.js";
 import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
 
 // Printed by `astgen --version`. Downstream frontends (e.g. chen's jssrc2cpg)
@@ -2482,6 +2483,7 @@ const runTypeGenWorker = async ({ shard, projectFiles, options }) => {
 };
 
 if (isMainThread) {
+  exitWithSupervisor();
   main(process.argv);
 } else if (workerData?.kind === "astgen-typegen") {
   runTypeGenWorker(workerData);

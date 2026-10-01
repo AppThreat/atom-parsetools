@@ -1,6 +1,6 @@
 # Environment Variables
 
-Every knob these tools expose beyond the command line, in one table per tool. Two conventions hold across all of them: `ATOM_TIMEOUT` beats `ASTGEN_TIMEOUT` when both are set (a non-numeric value is ignored, meaning no timeout), and `ATOM_CWD` overrides the working directory used for spawned processes, which is what relative paths resolve against.
+Every knob these tools expose beyond the command line, in one table per tool. Three conventions hold across all of them: `ATOM_TIMEOUT` beats `ASTGEN_TIMEOUT` when both are set (a non-numeric value is ignored, meaning no timeout), `ATOM_CWD` overrides the working directory used for spawned processes, which is what relative paths resolve against, and `ATOM_PARENT_PID` (set for you by atom's npm wrapper and by cdxgen) names a supervising process: a tool stops, together with the processes it started, once that process or the tool's own parent has exited.
 
 ## astgen
 

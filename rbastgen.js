@@ -5,6 +5,7 @@ import { dirname, join, delimiter } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { detectRuby } from "@appthreat/atom-common";
+import { exitWithSupervisor } from "./supervise.js";
 
 let url = import.meta.url;
 if (!url.startsWith("file://")) {
@@ -161,4 +162,5 @@ function main(argvs) {
     timeout: spawnTimeout()
   });
 }
+exitWithSupervisor();
 main(process.argv.slice(2));
