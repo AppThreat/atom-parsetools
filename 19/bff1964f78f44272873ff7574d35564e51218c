@@ -1,0 +1,23 @@
+supervise.js
+  s_d0def3984b5153::t_4bb2a3c06d0371 3-60,62-63,66,69-71,88-89,91-92,94-95,97-110,112-114,126-127,139-143,145-147,149-151
+test-fixtures/supervise-regression.js
+  s_d0def3984b5153::t_77155371f895a6 16-21,25,38-55
+  s_d0def3984b5153::t_67a29d6e564967 26-37
+  s_d0def3984b5153::t_91582050185286 56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "19bff1964f78f44272873ff7574d35564e51218c",
+  "prompts": {},
+  "sessions": {
+    "s_d0def3984b5153": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2152c1a9-0695-4073-ad88-dd4f54925ca3",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
