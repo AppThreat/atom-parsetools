@@ -2,7 +2,13 @@
 // processes it started down with it, even while its main thread is blocked in spawnSync.
 import assert from "node:assert";
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,7 +18,9 @@ import { exitWithSupervisor } from "../supervise.js";
 const SUPERVISE = fileURLToPath(new URL("../supervise.js", import.meta.url));
 
 if (process.platform === "win32") {
-  console.log("supervise-regression: skipped on Windows (signal semantics differ)");
+  console.log(
+    "supervise-regression: skipped on Windows (signal semantics differ)"
+  );
   process.exit(0);
 }
 
@@ -35,7 +43,11 @@ async function waitFor(predicate, ms = 8000) {
   return predicate();
 }
 
-assert.strictEqual(exitWithSupervisor({}), undefined, "no supervisor named, no watchdog");
+assert.strictEqual(
+  exitWithSupervisor({}),
+  undefined,
+  "no supervisor named, no watchdog"
+);
 assert.strictEqual(exitWithSupervisor({ ATOM_PARENT_PID: "x" }), undefined);
 
 const dir = mkdtempSync(join(tmpdir(), "parsetools-supervise-"));
@@ -61,35 +73,69 @@ async function startTool(env, viaIntermediate) {
     // An intermediate parent (atom, in real use) that is killed outright.
     launcher = spawn(
       process.execPath,
-      ["-e", `require("node:child_process").spawn(process.execPath, [${JSON.stringify(tool)}], { stdio: "ignore" }); setInterval(() => {}, 1000);`],
+      [
+        "-e",
+        `require("node:child_process").spawn(process.execPath, [${JSON.stringify(tool)}], { stdio: "ignore" }); setInterval(() => {}, 1000);`
+      ],
       { env: { ...process.env, ...env }, stdio: "ignore" }
     );
   } else {
-    launcher = spawn(process.execPath, [tool], { env: { ...process.env, ...env }, stdio: "ignore" });
+    launcher = spawn(process.execPath, [tool], {
+      env: { ...process.env, ...env },
+      stdio: "ignore"
+    });
   }
-  assert.ok(await waitFor(() => existsSync(pidsFile)), "the tool never started its child");
+  assert.ok(
+    await waitFor(() => existsSync(pidsFile)),
+    "the tool never started its child"
+  );
   return { launcher, pids: JSON.parse(readFileSync(pidsFile, "utf-8")) };
 }
 
 try {
   // 1. The supervisor named by ATOM_PARENT_PID dies.
-  const supervisor = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });
-  const first = await startTool({ ATOM_PARENT_PID: String(supervisor.pid) }, false);
+  const supervisor = spawn(
+    process.execPath,
+    ["-e", "setInterval(() => {}, 1000)"],
+    { stdio: "ignore" }
+  );
+  const first = await startTool(
+    { ATOM_PARENT_PID: String(supervisor.pid) },
+    false
+  );
   supervisor.kill("SIGKILL");
-  assert.ok(await waitFor(() => !isAlive(first.pids.child)), "the tool's child outlived the supervisor");
-  assert.ok(await waitFor(() => !isAlive(first.pids.tool)), "the tool outlived the supervisor");
+  assert.ok(
+    await waitFor(() => !isAlive(first.pids.child)),
+    "the tool's child outlived the supervisor"
+  );
+  assert.ok(
+    await waitFor(() => !isAlive(first.pids.tool)),
+    "the tool outlived the supervisor"
+  );
 
   // 2. The tool's own parent is killed (the supervisor itself is still alive).
-  const second = await startTool({ ATOM_PARENT_PID: String(process.pid) }, true);
+  const second = await startTool(
+    { ATOM_PARENT_PID: String(process.pid) },
+    true
+  );
   second.launcher.kill("SIGKILL");
-  assert.ok(await waitFor(() => !isAlive(second.pids.child)), "the tool's child outlived its parent");
-  assert.ok(await waitFor(() => !isAlive(second.pids.tool)), "the tool outlived its parent");
+  assert.ok(
+    await waitFor(() => !isAlive(second.pids.child)),
+    "the tool's child outlived its parent"
+  );
+  assert.ok(
+    await waitFor(() => !isAlive(second.pids.tool)),
+    "the tool outlived its parent"
+  );
 
   // 3. Without ATOM_PARENT_PID nothing watches: the tool keeps running after its parent dies.
   const third = await startTool({ ATOM_PARENT_PID: "" }, true);
   third.launcher.kill("SIGKILL");
   await sleep(2500);
-  assert.ok(isAlive(third.pids.tool), "an unsupervised tool must not stop on its own");
+  assert.ok(
+    isAlive(third.pids.tool),
+    "an unsupervised tool must not stop on its own"
+  );
   process.kill(third.pids.child, "SIGKILL");
   await waitFor(() => !isAlive(third.pids.tool));
   console.log("supervise-regression: ok");

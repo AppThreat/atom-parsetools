@@ -503,7 +503,13 @@ const toSvelteAst = (file) => {
       err?.message
     );
     const { source: maskedSource } = createVirtualTypeSource(code);
-    return parseSvelteScriptBuffer(file, code, maskedSource, options, err?.message);
+    return parseSvelteScriptBuffer(
+      file,
+      code,
+      maskedSource,
+      options,
+      err?.message
+    );
   }
 };
 
@@ -741,8 +747,9 @@ const vueDirectiveValueToExpression = (code) => {
   let searchFrom = templateStart;
   let closeIndex;
   while (
-    (closeIndex = code.toLowerCase().indexOf(VUE_TEMPLATE_CLOSE, searchFrom)) !==
-    -1
+    (closeIndex = code
+      .toLowerCase()
+      .indexOf(VUE_TEMPLATE_CLOSE, searchFrom)) !== -1
   ) {
     if (!inScript(closeIndex)) {
       templateEnd = closeIndex;
@@ -851,9 +858,8 @@ const buildVueParseCandidates = (code) => {
   // (checked-per-attribute, but defensive) case of a converted file not
   // parsing as a whole.
   const directiveCandidates = (() => {
-    const { code: directiveCode, changed } = vueDirectiveValueToExpression(
-      code
-    );
+    const { code: directiveCode, changed } =
+      vueDirectiveValueToExpression(code);
     if (!changed) {
       return [];
     }
