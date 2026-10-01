@@ -21,6 +21,7 @@ import { tmpdir } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { detectPhp } from "@appthreat/atom-common";
+import { exitWithSupervisor } from "./supervise.js";
 
 let url = import.meta.url;
 if (!url.startsWith("file://")) {
@@ -125,7 +126,8 @@ export const SUPPORTED_TARGET_VERSIONS = [
  * @returns {string} path to the php-parse binary
  */
 export function resolvePhpParseBin() {
-  let bin = process.env.PHP_PARSER_BIN || join(PLUGINS_HOME, "bin", "php-parse");
+  let bin =
+    process.env.PHP_PARSER_BIN || join(PLUGINS_HOME, "bin", "php-parse");
   if (
     !existsSync(bin) &&
     existsSync(join(PARENT_NODE_PLUGINS_HOME, "bin", "php-parse"))
@@ -152,9 +154,7 @@ export function vendoredParserVersion() {
         const idx = text.indexOf("nikic/php-parser");
         if (idx !== -1) {
           const slice = text.slice(idx);
-          const match = slice.match(
-            /'pretty_version'\s*=>\s*'v?([^']+)'/
-          );
+          const match = slice.match(/'pretty_version'\s*=>\s*'v?([^']+)'/);
           if (match) {
             return match[1];
           }
@@ -293,11 +293,7 @@ export function parseArgs(argv) {
       case "--threads": {
         const value = Number.parseInt(next(i), 10);
         i++;
-        if (
-          Number.isNaN(value) ||
-          value < MIN_THREADS ||
-          value > MAX_THREADS
-        ) {
+        if (Number.isNaN(value) || value < MIN_THREADS || value > MAX_THREADS) {
           console.warn(
             `Ignoring out-of-range --threads value; falling back to ${DEFAULT_THREADS} (allowed ${MIN_THREADS}-${MAX_THREADS}).`
           );
@@ -600,7 +596,10 @@ const ENCODING_SNIFF_BYTES = 4096;
  * @returns {BufferEncoding | undefined}
  */
 function normalizeEncoding(label) {
-  const normalized = label.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalized = label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
   switch (normalized) {
     case "utf8":
       return "utf-8";
@@ -635,14 +634,23 @@ export function readMagicEncodingComment(bytes) {
     return undefined;
   }
   // Byte-order marks take precedence over any textual declaration.
-  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+  if (
+    bytes.length >= 3 &&
+    bytes[0] === 0xef &&
+    bytes[1] === 0xbb &&
+    bytes[2] === 0xbf
+  ) {
     return "utf-8";
   }
   if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
     return "utf-16le";
   }
   // Sniff a leading window for a declare(encoding=...) statement.
-  const head = bytes.toString("latin1", 0, Math.min(bytes.length, ENCODING_SNIFF_BYTES));
+  const head = bytes.toString(
+    "latin1",
+    0,
+    Math.min(bytes.length, ENCODING_SNIFF_BYTES)
+  );
   const match = head.match(
     /declare\s*\(\s*encoding\s*=\s*['"]([^'"]+)['"]\s*\)/i
   );
@@ -809,7 +817,13 @@ export const SUPERGLOBAL_NAMES = new Set([
  * distinguish a request superglobal (`$_GET`) from an ambient one (`$_SERVER`) without a second
  * lookup table.
  */
-const REQUEST_SUPERGLOBALS = new Set(["_GET", "_POST", "_REQUEST", "_COOKIE", "_FILES"]);
+const REQUEST_SUPERGLOBALS = new Set([
+  "_GET",
+  "_POST",
+  "_REQUEST",
+  "_COOKIE",
+  "_FILES"
+]);
 
 /**
  * Extract the attribute names declared on a node's nikic `attrGroups` array (design §2.7).
@@ -883,7 +897,11 @@ export function frameworkFactFor(node) {
     fact.attributes = attrs;
   }
 
-  if (node.nodeType === "Expr_Variable" && typeof node.name === "string" && SUPERGLOBAL_NAMES.has(node.name)) {
+  if (
+    node.nodeType === "Expr_Variable" &&
+    typeof node.name === "string" &&
+    SUPERGLOBAL_NAMES.has(node.name)
+  ) {
     fact = fact ?? {};
     fact.superglobal = node.name;
     fact.request = REQUEST_SUPERGLOBALS.has(node.name);
@@ -938,7 +956,11 @@ export function enrichFrameworkFacts(node) {
       }
     } else {
       for (const key of Object.keys(current)) {
-        if (key === "nodeType" || key === FRAMEWORK_FACTS_KEY || key === TRUNCATION_MARKER) {
+        if (
+          key === "nodeType" ||
+          key === FRAMEWORK_FACTS_KEY ||
+          key === TRUNCATION_MARKER
+        ) {
           continue;
         }
         const value = current[key];
@@ -1370,7 +1392,11 @@ export async function parseOneFile(file, opts = {}) {
   } catch (err) {
     return {
       ok: false,
-      diagnostic: buildDiagnostic(file, `Unable to read file: ${err.message}`, relFilePath)
+      diagnostic: buildDiagnostic(
+        file,
+        `Unable to read file: ${err.message}`,
+        relFilePath
+      )
     };
   }
 
@@ -1394,7 +1420,11 @@ export async function parseOneFile(file, opts = {}) {
     }
     return {
       ok: false,
-      diagnostic: buildDiagnostic(file, `Unable to stage file: ${err.message}`, relFilePath)
+      diagnostic: buildDiagnostic(
+        file,
+        `Unable to stage file: ${err.message}`,
+        relFilePath
+      )
     };
   }
 
@@ -1622,7 +1652,11 @@ export async function runBatch(opts) {
       // isolated to this file so it never aborts the batch.
       const relFilePath = relative(inputRoot, file) || basename(file);
       diagnostics.push(
-        buildDiagnostic(file, `Unexpected parse failure: ${err.message}`, relFilePath)
+        buildDiagnostic(
+          file,
+          `Unexpected parse failure: ${err.message}`,
+          relFilePath
+        )
       );
       counters.failed += 1;
       return;
@@ -1641,7 +1675,11 @@ export async function runBatch(opts) {
         // A write failure is treated as a per-file failure so the run continues.
         const relFilePath = relative(inputRoot, file) || basename(file);
         diagnostics.push(
-          buildDiagnostic(file, `Unable to write AST: ${err.message}`, relFilePath)
+          buildDiagnostic(
+            file,
+            `Unable to write AST: ${err.message}`,
+            relFilePath
+          )
         );
         counters.failed += 1;
       }
@@ -1779,6 +1817,7 @@ export function isMainModule() {
 }
 
 if (isMainModule()) {
+  exitWithSupervisor();
   Promise.resolve(main(process.argv.slice(2)))
     .then((rc) => {
       if (typeof rc === "number") {

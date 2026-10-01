@@ -13,6 +13,7 @@ import {
   rmSync,
   writeFileSync
 } from "node:fs";
+import { exitWithSupervisor } from "./supervise.js";
 
 // `timeout` must be a number: spawnSync throws ERR_INVALID_ARG_TYPE on the raw string an
 // environment variable gives us. Unset or unparseable means no timeout.
@@ -71,6 +72,7 @@ function main(argvs) {
     argvs.length > 1 ? argvs[1] : join(argvs[0], "slices.json");
   createSemanticSlices(tastyFiles, configFiles, slicesFile);
 }
+exitWithSupervisor();
 main(process.argv.slice(2));
 
 function findScalaVersion(cwd) {
