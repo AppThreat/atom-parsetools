@@ -13,9 +13,46 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { exitWithSupervisor } from "../supervise.js";
+import {
+  descendantsOf,
+  exitWithSupervisor,
+  parentPidFromProcStat,
+  processPairsFromPs
+} from "../supervise.js";
 
 const SUPERVISE = fileURLToPath(new URL("../supervise.js", import.meta.url));
+
+// The process-table parsers run on every platform; the watchdog embeds the same functions.
+// pid 1's parent 0 is not a process, so that line is skipped.
+assert.deepStrictEqual(
+  processPairsFromPs("    1     0\n  420     1\n  421   420\n\n"),
+  [
+    [420, 1],
+    [421, 420]
+  ]
+);
+assert.strictEqual(
+  parentPidFromProcStat("421 (ruby) S 420 421 420 0 -1 4194560"),
+  420
+);
+assert.strictEqual(
+  parentPidFromProcStat("422 (my (odd) name) R 421 422 420 0 -1 4194560"),
+  421,
+  "a command name with spaces and parentheses must not shift the fields"
+);
+assert.strictEqual(parentPidFromProcStat("garbage"), undefined);
+assert.deepStrictEqual(
+  descendantsOf(
+    [
+      [420, 1],
+      [421, 420],
+      [422, 421],
+      [500, 1]
+    ],
+    420
+  ),
+  [421, 422]
+);
 
 if (process.platform === "win32") {
   console.log(
