@@ -1,0 +1,23 @@
+astgen.js
+  s_d0def3984b5153::t_f4d818fac39ba8 506-512,750-752,861-862
+phpastgen.js
+  s_d0def3984b5153::t_f09114cf8e07de 129-130,157,296,599-602,637-642,649-653,820-826,900-904,959-963,1395-1399,1423-1427,1655-1659,1678-1682
+test-fixtures/supervise-regression.js
+  s_d0def3984b5153::t_2123dd347d4f58 5-11,21-23,46-50,76-79,83-86,88-91,97-105,107-114,117-120,122-129,135-138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a33daf1841ba2350f54dee3499740ea646531bb5",
+  "prompts": {},
+  "sessions": {
+    "s_d0def3984b5153": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2152c1a9-0695-4073-ad88-dd4f54925ca3",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
