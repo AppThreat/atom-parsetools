@@ -33,7 +33,7 @@ Across these corpora roughly 12,000 template expressions are sub-parsed with zer
 
 ## phpastgen
 
-Directory runs spawn up to `--threads` concurrent `php-parse` subprocesses (default 10, range 1 to 64; out-of-range values warn and fall back to the default). Because each worker is a separate PHP process, memory scales with the thread count, and the practical ceiling on a CI runner is memory, not CPU.
+Directory runs keep up to `--threads` PHP interpreters busy at once (default 10, range 1 to 64; out-of-range values warn and fall back to the default), each parsing a chunk of up to 100 files, so interpreter start-up is paid per chunk rather than per file. That matters most where process creation is slow, as on Windows, and for vendored trees of thousands of files. Because each worker is a separate PHP process, memory scales with the thread count, and the practical ceiling on a CI runner is memory, not CPU.
 
 Two other knobs interact with speed and fidelity. `--max-depth` (default 250) caps tree depth; pathological nested arrays in legacy code are the usual reason to lower it. Grammar choice matters little for speed but matters for stability: pin `--target-version` only when you want reproducible output across runtimes.
 

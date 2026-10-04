@@ -20,7 +20,7 @@ phpastgen --parser-info
 ```text
 Parser backend: nikic/php-parser@5.8.0
 PHP version: 8.5.8
-Generator version: 2.0.0
+Generator version: 2.1.0
 Supported target versions: 8.0, 8.1, 8.2, 8.3, 8.4, 8.5 (default)
 Token emulation: enabled (parse target grammars up to 8.5 without a matching PHP runtime)
 ```
@@ -50,7 +50,7 @@ cat php-ast/phpastgen_manifest.jsonl | python3 -m json.tool
   "output": "php-ast",
   "php_version": "8.5.8",
   "parser_backend": "nikic/php-parser@5.8.0",
-  "generator_version": "2.0.0",
+  "generator_version": "2.1.0",
   "target_version": null,
   "files_parsed": 148,
   "files_failed": 0,
