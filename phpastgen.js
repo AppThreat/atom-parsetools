@@ -44,7 +44,7 @@ export const PARENT_NODE_PLUGINS_HOME = join(
  * version. `--version` prints exactly this string, and `--parser-info` reports the same string
  * on its "Generator version:" line (design §2.1, Requirement 1.6).
  */
-export const GENERATOR_VERSION = "2.0.0";
+export const GENERATOR_VERSION = "2.1.0";
 
 /**
  * Default output directory for batch mode (mirrors ruby_ast_gen's `.ast`).
@@ -55,6 +55,11 @@ export const DEFAULT_OUTPUT = ".ast";
  * Default exclusion regex applied to the path relative to the input.
  */
 export const DEFAULT_EXCLUDE = "^(tests?|vendor|Tests?)";
+
+/**
+ * The default exclusion regex under `--include-vendor`: {@link DEFAULT_EXCLUDE} without `vendor`.
+ */
+export const DEFAULT_EXCLUDE_WITH_VENDOR = "^(tests?|Tests?)";
 
 /**
  * Default worker-pool size for batch runs (bounded concurrent `php-parse` subprocesses).
@@ -91,6 +96,20 @@ export const VENDOR_DIRS = new Set([
   ".idea",
   ".vscode"
 ]);
+
+/**
+ * The entries of {@link VENDOR_DIRS} that hold third-party dependencies rather than tooling state.
+ * `--include-vendor` parses them, since analysis that follows calls and data into dependency code
+ * needs their ASTs; version-control and editor directories stay skipped either way.
+ */
+export const DEPENDENCY_DIRS = new Set(["vendor", "node_modules"]);
+
+/**
+ * Most files a single PHP interpreter run parses in batch mode (see {@link parseChunk}). Large
+ * enough that interpreter start-up stops mattering, small enough that the pool stays balanced
+ * when file sizes vary and that a crash costs at most this many per-file retries.
+ */
+export const MAX_FILES_PER_PROCESS = 100;
 
 /**
  * File extensions recognized as PHP by name alone (design §2.2). Compared lower-cased and
@@ -195,6 +214,8 @@ export function spawnTimeout() {
  *   input: (string|undefined),
  *   output: string,
  *   exclude: string,
+ *   includeVendor: boolean,
+ *   filesPerProcess: (number|undefined),
  *   log: string,
  *   debug: boolean,
  *   targetVersion: (string|undefined),
@@ -213,6 +234,8 @@ export function parseArgs(argv) {
     input: undefined,
     output: DEFAULT_OUTPUT,
     exclude: DEFAULT_EXCLUDE,
+    includeVendor: false,
+    filesPerProcess: undefined,
     log: "info",
     debug: false,
     targetVersion: undefined,
@@ -251,6 +274,21 @@ export function parseArgs(argv) {
         opts.exclude = next(i) ?? DEFAULT_EXCLUDE;
         i++;
         break;
+      case "--include-vendor":
+        opts.includeVendor = true;
+        break;
+      case "--files-per-process": {
+        const value = Number.parseInt(next(i), 10);
+        i++;
+        if (Number.isNaN(value) || value < 1) {
+          console.warn(
+            "Ignoring an invalid --files-per-process value; sizing the chunks automatically."
+          );
+        } else {
+          opts.filesPerProcess = Math.min(value, MAX_FILES_PER_PROCESS);
+        }
+        break;
+      }
       case "-l":
       case "--log":
         opts.log = next(i) ?? "info";
@@ -358,6 +396,8 @@ export function printUsage() {
       "      --target-version <x.y>  pin PHP grammar (alias: --parser-target)",
       `      --max-depth <n>         depth cap before truncation (default: ${DEFAULT_MAX_DEPTH})`,
       `      --threads <n>           worker processes for directory runs (default: ${DEFAULT_THREADS})`,
+      `      --files-per-process <n> files one PHP interpreter parses in a directory run (max ${MAX_FILES_PER_PROCESS}; default: sized to the tree, 1 = one php-parse per file)`,
+      "      --include-vendor        also parse vendor/ and node_modules/ (skipped by default)",
       "      --fail-on-error         exit non-zero if any file failed",
       "      --parser-info           print parser/runtime capability report and exit 0",
       "      --version               print generator version and exit 0",
@@ -486,9 +526,14 @@ export function isRecognizedPhp(filePath) {
  *
  * @param {string} inputPath file or directory to scan
  * @param {RegExp} excludeRegex regex matched against the path relative to the input
+ * @param {Set<string>} [skippedDirs] directory names whose subtrees are skipped wholesale
  * @returns {{ included: string[], excludedCount: number, skippedNonPhpCount: number }}
  */
-export function discoverFiles(inputPath, excludeRegex) {
+export function discoverFiles(
+  inputPath,
+  excludeRegex,
+  skippedDirs = VENDOR_DIRS
+) {
   // Use lstat so a symlinked file/dir is classified by the link itself, not its target.
   let rootStat;
   try {
@@ -551,7 +596,7 @@ export function discoverFiles(inputPath, excludeRegex) {
       }
 
       if (entry.isDirectory()) {
-        if (VENDOR_DIRS.has(entry.name)) {
+        if (skippedDirs.has(entry.name)) {
           // Skip the whole vendor subtree.
           continue;
         }
@@ -1382,64 +1427,33 @@ export function spawnCapture(command, args, options = {}) {
  * @returns {Promise<{ ok: boolean, ast?: object, truncated?: boolean, scrubbed?: boolean, diagnostic?: object }>}
  */
 export async function parseOneFile(file, opts = {}) {
-  const inputRoot = opts.input ?? dirname(file);
-  const relFilePath = relative(inputRoot, file) || basename(file);
-  const maxDepth = opts.maxDepth ?? DEFAULT_MAX_DEPTH;
-
-  let bytes;
-  try {
-    bytes = readFileSync(file);
-  } catch (err) {
-    return {
-      ok: false,
-      diagnostic: buildDiagnostic(
-        file,
-        `Unable to read file: ${err.message}`,
-        relFilePath
-      )
-    };
-  }
-
-  const { text, scrubbed } = decodeAndScrub(bytes);
-
-  // The parser reads from a file path, so write the (possibly scrubbed) text to a temp file. Using
-  // a temp file keeps the on-disk source intact and lets scrubbing take effect for the parser.
   let tempDir;
-  let tempFile;
   try {
     tempDir = mkdtempSync(join(tmpdir(), "phpastgen-"));
-    tempFile = join(tempDir, basename(file) || "source.php");
-    writeFileSync(tempFile, text, "utf-8");
   } catch (err) {
-    if (tempDir) {
-      try {
-        rmSync(tempDir, { recursive: true, force: true });
-      } catch {
-        // ignore cleanup failure
-      }
-    }
     return {
       ok: false,
       diagnostic: buildDiagnostic(
         file,
         `Unable to stage file: ${err.message}`,
-        relFilePath
+        relativeFilePath(file, opts)
       )
     };
   }
-
-  const args = ["--with-recovery", "--resolve-names", "-P", "--json-dump"];
-  if (opts.targetVersion) {
-    // The vendored php-parse binary pins the target grammar via `--version=VERSION` (design §2.3
-    // names this `--target-php-version`; the binary's actual flag is `--version`). Token emulation
-    // then parses the requested grammar regardless of the installed runtime (Requirement 1.2).
-    args.push(`--version=${opts.targetVersion}`);
-  }
-  args.push(tempFile);
-
-  let out;
   try {
-    out = await spawnCapture(
+    const staged = stageFile(file, opts, tempDir);
+    if (staged.diagnostic) {
+      return { ok: false, diagnostic: staged.diagnostic };
+    }
+    const args = ["--with-recovery", "--resolve-names", "-P", "--json-dump"];
+    if (opts.targetVersion) {
+      // The vendored php-parse binary pins the target grammar via `--version=VERSION` (design §2.3
+      // names this `--target-php-version`; the binary's actual flag is `--version`). Token emulation
+      // then parses the requested grammar regardless of the installed runtime (Requirement 1.2).
+      args.push(`--version=${opts.targetVersion}`);
+    }
+    args.push(staged.tempFile);
+    const out = await spawnCapture(
       process.env.PHP_CMD || "php",
       [resolvePhpParseBin(), ...args],
       {
@@ -1447,6 +1461,7 @@ export async function parseOneFile(file, opts = {}) {
         maxBuffer: MAX_PARSER_OUTPUT_BYTES
       }
     );
+    return finishParse(file, staged, out, opts);
   } finally {
     try {
       rmSync(tempDir, { recursive: true, force: true });
@@ -1454,7 +1469,76 @@ export async function parseOneFile(file, opts = {}) {
       // ignore cleanup failure
     }
   }
+}
 
+/**
+ * A file's path relative to the run input, as it is reported in diagnostics and provenance.
+ *
+ * @param {string} file absolute path of the PHP file
+ * @param {object} opts parsed CLI options
+ * @returns {string}
+ */
+function relativeFilePath(file, opts) {
+  const inputRoot = opts.input ?? dirname(file);
+  return relative(inputRoot, file) || basename(file);
+}
+
+/**
+ * Write the decoded, scrubbed text of `file` into `tempDir` for the parser to read. The parser
+ * reads from a file path, so staging keeps the on-disk source intact while scrubbing still takes
+ * effect.
+ *
+ * @param {string} file absolute path of the PHP file
+ * @param {object} opts parsed CLI options
+ * @param {string} tempDir existing directory owned by the caller
+ * @returns {{ relFilePath: string, tempFile?: string, scrubbed?: boolean, diagnostic?: object }}
+ */
+function stageFile(file, opts, tempDir) {
+  const relFilePath = relativeFilePath(file, opts);
+  let bytes;
+  try {
+    bytes = readFileSync(file);
+  } catch (err) {
+    return {
+      relFilePath,
+      diagnostic: buildDiagnostic(
+        file,
+        `Unable to read file: ${err.message}`,
+        relFilePath
+      )
+    };
+  }
+  const { text, scrubbed } = decodeAndScrub(bytes);
+  const tempFile = join(tempDir, basename(file) || "source.php");
+  try {
+    writeFileSync(tempFile, text, "utf-8");
+  } catch (err) {
+    return {
+      relFilePath,
+      diagnostic: buildDiagnostic(
+        file,
+        `Unable to stage file: ${err.message}`,
+        relFilePath
+      )
+    };
+  }
+  return { relFilePath, tempFile, scrubbed };
+}
+
+/**
+ * Turn the parser's output for one staged file into the parse result: the JSON payload is
+ * decoded, truncated below the depth cap, enriched with framework facts and wrapped in provenance;
+ * a missing or undecodable payload becomes a diagnostic built from the parser's stderr.
+ *
+ * @param {string} file absolute path of the PHP file
+ * @param {{ relFilePath: string, scrubbed?: boolean }} staged the staged file
+ * @param {{ stdout?: string, stderr?: string, error?: Error }} out the parser's output for the file
+ * @param {object} opts parsed CLI options
+ * @returns {{ ok: boolean, ast?: object, truncated?: boolean, scrubbed?: boolean, diagnostic?: object }}
+ */
+function finishParse(file, staged, out, opts) {
+  const { relFilePath, scrubbed } = staged;
+  const maxDepth = opts.maxDepth ?? DEFAULT_MAX_DEPTH;
   if (out.error) {
     return {
       ok: false,
@@ -1520,6 +1604,163 @@ export async function parseOneFile(file, opts = {}) {
     truncated: truncatedCount > 0,
     scrubbed
   };
+}
+
+/**
+ * The PHP script that parses a chunk of files in one interpreter run (see {@link parseChunk}).
+ */
+export const PHP_BATCH_DRIVER = join(dirName, "phpbatch.php");
+
+/**
+ * The composer autoloader that makes the parser behind {@link resolvePhpParseBin} loadable from
+ * {@link PHP_BATCH_DRIVER}, or `undefined` when there is none, in which case every file is parsed
+ * by its own `php-parse` run. Both layouts php-parse itself loads from are recognized: composer's
+ * bin proxy (`<plugins>/bin/php-parse`, autoloader at `<plugins>/autoload.php`) and the package's
+ * own script (`<vendor>/nikic/php-parser/bin/php-parse`, autoloader at `<vendor>/autoload.php`).
+ *
+ * @returns {string | undefined}
+ */
+export function batchDriverAutoload() {
+  if (!existsSync(PHP_BATCH_DRIVER)) {
+    return undefined;
+  }
+  const binDir = dirname(resolvePhpParseBin());
+  return [
+    join(binDir, "..", "autoload.php"),
+    join(binDir, "..", "..", "..", "autoload.php")
+  ].find((candidate) => existsSync(candidate));
+}
+
+/**
+ * Parse `files` in one PHP interpreter run, with the same per-file results {@link parseOneFile}
+ * returns, in order.
+ *
+ * Starting an interpreter per file dominates a large tree wherever process creation is slow: a
+ * vendored PHP project on Windows ran for hours. Each file is staged exactly as for
+ * {@link parseOneFile}, {@link PHP_BATCH_DRIVER} parses the staged files with the parser setup
+ * `php-parse --with-recovery --resolve-names -P --json-dump` uses, and every AST it writes goes
+ * through the same decoding, truncation, enrichment and provenance. Failure isolation is kept per
+ * file: the driver reports a file it cannot parse and moves on, and the files it never reports
+ * (the interpreter died, or the run hit its time limit) are parsed again one by one.
+ *
+ * @param {string[]} files absolute paths of the PHP files to parse
+ * @param {object} opts parsed CLI options, as for {@link parseOneFile}
+ * @returns {Promise<Array<{ ok: boolean, ast?: object, truncated?: boolean, scrubbed?: boolean, diagnostic?: object }>>}
+ */
+export async function parseChunk(files, opts = {}) {
+  const parseEach = async () => {
+    const results = [];
+    for (const file of files) {
+      results.push(await parseOneFile(file, opts));
+    }
+    return results;
+  };
+  const autoload = batchDriverAutoload();
+  if (!autoload || files.length < 2) {
+    return parseEach();
+  }
+  let chunkDir;
+  try {
+    chunkDir = mkdtempSync(join(tmpdir(), "phpastgen-chunk-"));
+  } catch {
+    return parseEach();
+  }
+  try {
+    const staged = files.map((file, i) => {
+      const fileDir = join(chunkDir, String(i));
+      try {
+        mkdirSync(fileDir);
+      } catch (err) {
+        return {
+          relFilePath: relativeFilePath(file, opts),
+          diagnostic: buildDiagnostic(
+            file,
+            `Unable to stage file: ${err.message}`,
+            relativeFilePath(file, opts)
+          )
+        };
+      }
+      return stageFile(file, opts, fileDir);
+    });
+    // Manifest index -> file index, for the files that staged.
+    const pending = [];
+    const pairs = [];
+    staged.forEach((entry, i) => {
+      if (!entry.diagnostic) {
+        pending.push(i);
+        pairs.push([entry.tempFile, join(chunkDir, `${i}.ast.json`)]);
+      }
+    });
+    const manifest = join(chunkDir, "manifest.json");
+    writeFileSync(manifest, JSON.stringify(pairs), "utf-8");
+    const out = await spawnCapture(
+      process.env.PHP_CMD || "php",
+      [PHP_BATCH_DRIVER, autoload, manifest, opts.targetVersion ?? ""],
+      { timeout: spawnTimeout(), maxBuffer: MAX_PARSER_OUTPUT_BYTES }
+    );
+    const statuses = new Map();
+    for (const line of `${out.stdout || ""}`.split(/\r?\n/)) {
+      const [status, index, message] = line.split("\t");
+      const at = Number.parseInt(index, 10);
+      if (Number.isNaN(at) || at < 0 || at >= pending.length) {
+        continue;
+      }
+      if (status === "ok") {
+        statuses.set(at, { ok: true });
+      } else if (status === "fail") {
+        let text = message ?? "";
+        try {
+          text = JSON.parse(text);
+        } catch {
+          // keep the raw text
+        }
+        statuses.set(at, { ok: false, message: `${text}` });
+      }
+    }
+    const results = staged.map((entry) =>
+      entry.diagnostic ? { ok: false, diagnostic: entry.diagnostic } : undefined
+    );
+    for (const [at, i] of pending.entries()) {
+      const status = statuses.get(at);
+      if (!status) {
+        continue;
+      }
+      if (!status.ok) {
+        results[i] = finishParse(
+          files[i],
+          staged[i],
+          { stdout: "", stderr: status.message },
+          opts
+        );
+        continue;
+      }
+      let stdout;
+      try {
+        stdout = readFileSync(pairs[at][1], "utf-8");
+      } catch {
+        continue;
+      }
+      results[i] = finishParse(
+        files[i],
+        staged[i],
+        { stdout, stderr: "" },
+        opts
+      );
+    }
+    // Whatever the driver never finished is parsed in isolation.
+    for (let i = 0; i < files.length; i++) {
+      if (!results[i]) {
+        results[i] = await parseOneFile(files[i], opts);
+      }
+    }
+    return results;
+  } finally {
+    try {
+      rmSync(chunkDir, { recursive: true, force: true });
+    } catch {
+      // ignore cleanup failure
+    }
+  }
 }
 
 /**
@@ -1617,10 +1858,19 @@ export async function runBatch(opts) {
   mkdirSync(outputDir, { recursive: true });
 
   // 2. Discover files. The exclude option is a source string; compile it once here.
-  const excludeRegex = new RegExp(opts.exclude ?? DEFAULT_EXCLUDE);
+  const exclude = opts.exclude ?? DEFAULT_EXCLUDE;
+  const excludeRegex = new RegExp(
+    opts.includeVendor && exclude === DEFAULT_EXCLUDE
+      ? DEFAULT_EXCLUDE_WITH_VENDOR
+      : exclude
+  );
+  const skippedDirs = opts.includeVendor
+    ? new Set([...VENDOR_DIRS].filter((name) => !DEPENDENCY_DIRS.has(name)))
+    : VENDOR_DIRS;
   const { included, excludedCount, skippedNonPhpCount } = discoverFiles(
     inputRoot,
-    excludeRegex
+    excludeRegex,
+    skippedDirs
   );
 
   const counters = {
@@ -1643,25 +1893,7 @@ export async function runBatch(opts) {
   // 3. Parse through a bounded pool, writing one *.json AST per parsed file with per-file failure
   // isolation (Requirement 2.4). The loop invariant parsed + failed == processed holds because
   // every processed item lands in exactly one of the two branches below.
-  await runInPool(included, opts.threads ?? DEFAULT_THREADS, async (file) => {
-    let result;
-    try {
-      result = await parseOneFile(file, runOpts);
-    } catch (err) {
-      // Defensive: parseOneFile is designed not to throw, but an unexpected throw must still be
-      // isolated to this file so it never aborts the batch.
-      const relFilePath = relative(inputRoot, file) || basename(file);
-      diagnostics.push(
-        buildDiagnostic(
-          file,
-          `Unexpected parse failure: ${err.message}`,
-          relFilePath
-        )
-      );
-      counters.failed += 1;
-      return;
-    }
-
+  const recordResult = (file, result) => {
     if (result.ok) {
       const astPath = astFilePath(outputDir, inputRoot, file);
       try {
@@ -1687,7 +1919,56 @@ export async function runBatch(opts) {
       diagnostics.push(result.diagnostic);
       counters.failed += 1;
     }
-  });
+  };
+  const recordUnexpected = (file, err) => {
+    // Defensive: the parse functions are designed not to throw, but an unexpected throw must still
+    // be isolated to its files so it never aborts the batch.
+    const relFilePath = relative(inputRoot, file) || basename(file);
+    diagnostics.push(
+      buildDiagnostic(
+        file,
+        `Unexpected parse failure: ${err.message}`,
+        relFilePath
+      )
+    );
+    counters.failed += 1;
+  };
+
+  const threads = opts.threads ?? DEFAULT_THREADS;
+  const filesPerProcess = batchDriverAutoload()
+    ? (opts.filesPerProcess ??
+      Math.min(
+        MAX_FILES_PER_PROCESS,
+        Math.max(1, Math.ceil(included.length / threads))
+      ))
+    : 1;
+  if (filesPerProcess === 1) {
+    await runInPool(included, threads, async (file) => {
+      let result;
+      try {
+        result = await parseOneFile(file, runOpts);
+      } catch (err) {
+        recordUnexpected(file, err);
+        return;
+      }
+      recordResult(file, result);
+    });
+  } else {
+    const chunks = [];
+    for (let i = 0; i < included.length; i += filesPerProcess) {
+      chunks.push(included.slice(i, i + filesPerProcess));
+    }
+    await runInPool(chunks, threads, async (chunk) => {
+      let results;
+      try {
+        results = await parseChunk(chunk, runOpts);
+      } catch (err) {
+        chunk.forEach((file) => recordUnexpected(file, err));
+        return;
+      }
+      chunk.forEach((file, i) => recordResult(file, results[i]));
+    });
+  }
 
   // 4. Write side-records. Manifest is always written; diagnostics only when failures occurred
   // (writeDiagnostics removes any stale file on a clean run — Requirement 2.7).

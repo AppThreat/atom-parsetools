@@ -53,6 +53,8 @@ Options:
       --target-version <x.y>  pin PHP grammar (alias: --parser-target)
       --max-depth <n>         depth cap before truncation (default: 250)
       --threads <n>           worker processes for directory runs (default: 10)
+      --files-per-process <n> files one PHP interpreter parses in a directory run (max 100; default: sized to the tree, 1 = one php-parse per file)
+      --include-vendor        also parse vendor/ and node_modules/ (skipped by default)
       --fail-on-error         exit non-zero if any file failed
       --parser-info           print parser/runtime capability report and exit 0
       --version               print generator version and exit 0

@@ -145,10 +145,13 @@ async function runWithThreads(threads) {
   process.env.PHPASTGEN_STUB_PROBES = probeDir;
 
   const started = Date.now();
+  // One php-parse per file: the stub speaks that protocol, and this suite is about how many of
+  // them run at once. Chunked runs are covered by phpastgen-chunk.js.
   const exitCode = await runBatch({
     input: inputDir,
     output: outputDir,
-    threads
+    threads,
+    filesPerProcess: 1
   });
   const elapsedMs = Date.now() - started;
 

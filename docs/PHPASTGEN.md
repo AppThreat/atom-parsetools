@@ -14,6 +14,8 @@ Options:
       --target-version <x.y>  pin PHP grammar (alias: --parser-target)
       --max-depth <n>         depth cap before truncation (default: 250)
       --threads <n>           worker processes for directory runs (default: 10)
+      --files-per-process <n> files one PHP interpreter parses in a directory run (max 100; default: sized to the tree, 1 = one php-parse per file)
+      --include-vendor        also parse vendor/ and node_modules/ (skipped by default)
       --fail-on-error         exit non-zero if any file failed
       --parser-info           print parser/runtime capability report and exit 0
       --version               print generator version and exit 0
@@ -29,7 +31,7 @@ The parser ships inside the package under `plugins/`, installed by Composer at b
 ```text
 Parser backend: nikic/php-parser@5.8.0
 PHP version: 8.4.14
-Generator version: 2.0.0
+Generator version: 2.1.0
 Supported target versions: 8.0, 8.1, 8.2, 8.3, 8.4, 8.5 (default)
 Token emulation: enabled (parse target grammars up to 8.5 without a matching PHP runtime)
 ```
@@ -45,6 +47,8 @@ Pin a grammar with `--target-version 8.1` (alias `--parser-target`) when reprodu
 Discovery recognizes the extensions `php`, `phtml`, `php3`, `php4`, `php5`, `phps`, and `inc`. Files with no recognized extension are sniffed: if the first 512 bytes contain `<?php` or `<?=`, the file is treated as PHP. This catches things like legacy `.lib` and template files that PHP projects accumulate.
 
 The directories `.git`, `.svn`, `.hg`, `vendor`, `node_modules`, `.idea`, and `.vscode` are skipped wholesale, matched as exact path components and never followed through symlinks. On top of that, the `--exclude` regex (default `^(tests?|vendor|Tests?)`) drops matching relative paths.
+
+`--include-vendor` parses the dependency trees, `vendor` and `node_modules`, too, and drops `vendor` from the default `--exclude`. Use it when the consumer follows calls and data into dependency code, as atom does: a dependency that was never parsed is a gap in every flow that passes through it. Version-control and editor directories stay skipped.
 
 ## Batch output
 
@@ -73,7 +77,9 @@ Every batch run writes two side-records into the output directory, both ending i
 
 ## Concurrency and failure behavior
 
-Directory runs spawn up to `--threads` concurrent `php-parse` subprocesses (default 10, clamped to 1 through 64). Values outside the range warn and fall back to the default rather than failing.
+Directory runs keep up to `--threads` PHP interpreters busy at once (default 10, clamped to 1 through 64). Values outside the range warn and fall back to the default rather than failing.
+
+Each interpreter parses a chunk of files through `phpbatch.php`, with the parser setup `php-parse --with-recovery --resolve-names -P --json-dump` uses, so a tree of thousands of files costs a few interpreter starts rather than one per file. That is what keeps vendored projects affordable where starting a process is slow, as on Windows. Chunks are sized to spread the tree over the threads, at most 100 files each; `--files-per-process` overrides the size, and `--files-per-process 1` runs one `php-parse` per file as before. The output is the same either way, except that a string literal holding bytes that are not UTF-8 (`"\x80"` escapes, binary fixtures) no longer costs the whole file: the chunked parser substitutes those bytes where `php-parse` gives up. A file the interpreter never reports, because it died or hit `ATOM_TIMEOUT`, is parsed again on its own.
 
 A file that fails to parse is reported, counted in the manifest, and skipped. The run completes and exits zero. Pass `--fail-on-error` to make the exit status reflect per-file failures in CI contexts.
 

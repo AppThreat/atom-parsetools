@@ -123,6 +123,14 @@ const signal = (p, sig) => {
   }
 };
 
+const report = (message) => {
+  try {
+    writeSync(2, message);
+  } catch {
+    // nobody reads stderr any more
+  }
+};
+
 const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
 const timer = setInterval(() => {
@@ -130,7 +138,7 @@ const timer = setInterval(() => {
     return;
   }
   clearInterval(timer);
-  writeSync(2, "atom-parsetools: supervising process " + pid + " is gone; stopping.\\n");
+  report("atom-parsetools: supervising process " + pid + " is gone; stopping.\\n");
   if (isWin) {
     // Stops this process and everything it started.
     spawnSync("taskkill", ["/T", "/F", "/PID", String(process.pid)]);
@@ -138,7 +146,7 @@ const timer = setInterval(() => {
   }
   const pairs = processPairs();
   if (!pairs) {
-    writeSync(2, "atom-parsetools: cannot list processes (no ps or /proc); processes this tool started may keep running.\\n");
+    report("atom-parsetools: cannot list processes (no ps or /proc); processes this tool started may keep running.\\n");
   }
   const helpers = pairs ? descendantsOf(pairs, process.pid) : [];
   helpers.forEach((p) => signal(p, "SIGTERM"));
