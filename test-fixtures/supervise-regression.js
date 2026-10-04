@@ -103,16 +103,18 @@ spawnSync(process.execPath, ["-e", ${JSON.stringify(
 `
 );
 
-async function startTool(env, viaIntermediate) {
+async function startTool(env, viaIntermediate, toolStdio = "ignore") {
   rmSync(pidsFile, { force: true });
   let launcher;
   if (viaIntermediate) {
-    // An intermediate parent (atom, in real use) that is killed outright.
+    // An intermediate parent (atom, in real use) that is killed outright. atom reads its
+    // helpers' output through pipes, so with "pipe" the tool's stderr has no reader once the
+    // intermediate is gone.
     launcher = spawn(
       process.execPath,
       [
         "-e",
-        `require("node:child_process").spawn(process.execPath, [${JSON.stringify(tool)}], { stdio: "ignore" }); setInterval(() => {}, 1000);`
+        `const c = require("node:child_process").spawn(process.execPath, [${JSON.stringify(tool)}], { stdio: ${JSON.stringify(toolStdio)} }); c.stdout?.resume(); c.stderr?.resume(); setInterval(() => {}, 1000);`
       ],
       { env: { ...process.env, ...env }, stdio: "ignore" }
     );
@@ -165,7 +167,24 @@ try {
     "the tool outlived its parent"
   );
 
-  // 3. Without ATOM_PARENT_PID nothing watches: the tool keeps running after its parent dies.
+  // 3. As 2, with the tool's stdout and stderr piped to the parent that dies: the watchdog's
+  // notice then hits a closed pipe, which must not stop it from stopping the tool.
+  const piped = await startTool(
+    { ATOM_PARENT_PID: String(process.pid) },
+    true,
+    "pipe"
+  );
+  piped.launcher.kill("SIGKILL");
+  assert.ok(
+    await waitFor(() => !isAlive(piped.pids.child)),
+    "the tool's child outlived a parent that read its output"
+  );
+  assert.ok(
+    await waitFor(() => !isAlive(piped.pids.tool)),
+    "the tool outlived a parent that read its output"
+  );
+
+  // 4. Without ATOM_PARENT_PID nothing watches: the tool keeps running after its parent dies.
   const third = await startTool({ ATOM_PARENT_PID: "" }, true);
   third.launcher.kill("SIGKILL");
   await sleep(2500);
