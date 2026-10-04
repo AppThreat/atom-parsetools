@@ -529,7 +529,11 @@ export function isRecognizedPhp(filePath) {
  * @param {Set<string>} [skippedDirs] directory names whose subtrees are skipped wholesale
  * @returns {{ included: string[], excludedCount: number, skippedNonPhpCount: number }}
  */
-export function discoverFiles(inputPath, excludeRegex, skippedDirs = VENDOR_DIRS) {
+export function discoverFiles(
+  inputPath,
+  excludeRegex,
+  skippedDirs = VENDOR_DIRS
+) {
   // Use lstat so a symlinked file/dir is classified by the link itself, not its target.
   let rootStat;
   try {
@@ -1736,7 +1740,12 @@ export async function parseChunk(files, opts = {}) {
       } catch {
         continue;
       }
-      results[i] = finishParse(files[i], staged[i], { stdout, stderr: "" }, opts);
+      results[i] = finishParse(
+        files[i],
+        staged[i],
+        { stdout, stderr: "" },
+        opts
+      );
     }
     // Whatever the driver never finished is parsed in isolation.
     for (let i = 0; i < files.length; i++) {
@@ -1916,7 +1925,11 @@ export async function runBatch(opts) {
     // be isolated to its files so it never aborts the batch.
     const relFilePath = relative(inputRoot, file) || basename(file);
     diagnostics.push(
-      buildDiagnostic(file, `Unexpected parse failure: ${err.message}`, relFilePath)
+      buildDiagnostic(
+        file,
+        `Unexpected parse failure: ${err.message}`,
+        relFilePath
+      )
     );
     counters.failed += 1;
   };

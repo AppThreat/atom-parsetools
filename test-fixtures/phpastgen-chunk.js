@@ -162,7 +162,11 @@ try {
         [...perFile.keys()].sort()
       );
       for (const [path, text] of perFile) {
-        assert.equal(recovered.get(path), text, `${path} differs after a retry`);
+        assert.equal(
+          recovered.get(path),
+          text,
+          `${path} differs after a retry`
+        );
       }
     } finally {
       if (previous === undefined) {
