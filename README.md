@@ -5,7 +5,7 @@ This package hosts a collection of parsing tools that complement the `@appthreat
 - astgen - Generates AST for JavaScript, TypeScript, Vue and Svelte projects in JSON format
 - phpastgen - Generates AST for PHP projects using `php-parse` command from `nikic/php-parser`
 - rbastgen - Generates AST for Ruby projects using AppThreat's [`ruby_ast_gen`](https://github.com/AppThreat/ruby_ast_gen) gem (2.0.1)
-- scalasem - Produces a Scala semantics report from the compiler's own output: definitions, call sites and references with file and line.
+- scalasem - Produces a Scala semantics report from the compiler's own output: definitions, call sites and references with file and line, plus the crypto, endpoint, service and call stack evidence derived from them.
 
 ## Documentation
 
@@ -100,7 +100,7 @@ Example:
 scalasem $(pwd) slices.json
 ```
 
-Discovers the build (sbt, mill, maven, scala-cli, or the outputs a previous build left), resolves the compiler that wrote the project's TASTy files, and reports definitions, call sites and references with file and line, plus Play routes and endpoint configuration values. `--no-build` analyses without starting a build tool. The [scalasem guide](docs/SCALASEM.md) covers the pipeline and the report schema.
+Discovers the build (sbt, mill, maven, scala-cli, or the outputs a previous build left), reads Scala 3 TASTy through the compiler that wrote it and Scala 2 SemanticDB, and reports definitions, call sites and references with file and line, plus Play routes, endpoint configuration values and the derived crypto, endpoint, service and call stack evidence. `--no-build` analyses without starting a build tool. The [scalasem guide](docs/SCALASEM.md) covers the pipeline and the report schema.
 
 ## Testing
 
