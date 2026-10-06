@@ -829,6 +829,88 @@ assert.ok(
   millWithTests.some((m) => m.id === "app/test" && m.scope === "test"),
   "Mill test modules on request"
 );
+// A Scala 2 Mill module reads the SemanticDB its `semanticDbData` task left, and a run that
+// may build asks Mill for it, by the module's selector.
+write(
+  join(mill, "out/app/2.13.15/semanticDbData.dest/data/META-INF/semanticdb/A.scala.semanticdb")
+);
+assert.deepStrictEqual(
+  (await inventory(join(scratch, mill), { noBuild: true })).modules[0].semanticdbDirs,
+  [join(scratch, mill, "out/app/2.13.15/semanticDbData.dest")]
+);
+if (process.platform !== "win32") {
+  const millLog = join(scratch, "mill-stub.log");
+  write(
+    "mill-stub.js",
+    `#!${process.execPath}
+require("node:fs").appendFileSync(${JSON.stringify(millLog)}, process.argv.slice(2).join(" ") + "\\n");
+`
+  );
+  chmodSync(join(scratch, "mill-stub.js"), 0o755);
+  await inventory(join(scratch, mill), {
+    millCommand: join(scratch, "mill-stub.js"),
+    installDeps: false
+  });
+  assert.ok(
+    readFileSync(millLog, "utf-8").split("\n").includes("--no-server app[2.13.15].semanticDbData"),
+    "SemanticDB for the Scala 2 module only"
+  );
+
+  // A Scala 2 Maven build compiles once more with the cached plugin, through the
+  // scala-maven-plugin's addScalacArgs, writing into the scalasem cache.
+  write(
+    join("maven-legacy", "pom.xml"),
+    "<project><properties><scala.version>2.13.12</scala.version></properties>" +
+      "<build><plugins><plugin><artifactId>scala-maven-plugin</artifactId></plugin></plugins></build></project>"
+  );
+  const legacyJar = join(
+    scratch,
+    "m2-cache",
+    "https/repo1.maven.org/maven2/org/scalameta/semanticdb-scalac_2.13.12/4.9.9/semanticdb-scalac_2.13.12-4.9.9.jar"
+  );
+  mkdirSync(dirname(legacyJar), { recursive: true });
+  writeFileSync(legacyJar, Buffer.alloc(2048));
+  const mvnLog = join(scratch, "mvn-stub.log");
+  write(
+    "mvn-stub.js",
+    `#!${process.execPath}
+require("node:fs").appendFileSync(${JSON.stringify(mvnLog)}, JSON.stringify(process.argv.slice(2)) + "\\n");
+`
+  );
+  chmodSync(join(scratch, "mvn-stub.js"), 0o755);
+  const cacheBefore = process.env.COURSIER_CACHE;
+  process.env.COURSIER_CACHE = join(scratch, "m2-cache");
+  process.env.MVN_CMD = join(scratch, "mvn-stub.js");
+  process.env.SCALASEM_CACHE_DIR = join(scratch, "scalasem-cache-mvn");
+  const legacy = await inventory(join(scratch, "maven-legacy"), { installDeps: false });
+  delete process.env.MVN_CMD;
+  delete process.env.SCALASEM_CACHE_DIR;
+  if (cacheBefore === undefined) {
+    delete process.env.COURSIER_CACHE;
+  } else {
+    process.env.COURSIER_CACHE = cacheBefore;
+  }
+  const compileWith = readFileSync(mvnLog, "utf-8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line))
+    .find((args) => args.some((a) => a.startsWith("-DaddScalacArgs=")));
+  const scalacArgs = compileWith
+    .find((a) => a.startsWith("-DaddScalacArgs="))
+    .slice("-DaddScalacArgs=".length)
+    .split("|");
+  assert.ok(
+    scalacArgs.includes(`-Xplugin:${legacyJar}`) &&
+      scalacArgs.some((a) =>
+        a.startsWith(`-P:semanticdb:targetroot:${join(scratch, "scalasem-cache-mvn")}`)
+      ),
+    `plugin and target root: ${scalacArgs}`
+  );
+  assert.ok(
+    legacy.diagnostics.some((d) => d.code === "semanticdb-missing"),
+    "a compile that wrote nothing is reported"
+  );
+}
 
 const sbt2Left = join("sbt2-left");
 write(join(sbt2Left, "build.sbt"));
