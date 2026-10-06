@@ -134,12 +134,7 @@ async function main(argv) {
       version: detected.version,
       modules: modulesWithOutput,
       fileEntries,
-      config: config.routes.length
-        ? {
-            routes: config.routes,
-            ...(config.values.length ? { values: config.values } : {})
-          }
-        : { routes: [] },
+      config,
       diagnostics: mergeDiagnostics(diagnostics),
       toolchains,
       factsSources,

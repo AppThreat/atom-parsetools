@@ -50,6 +50,13 @@ const streams = join(
 mkdirSync(streams, { recursive: true });
 writeFileSync(join(streams, "export"), exported);
 
+// A project without a route file still reports the endpoints its configuration names.
+mkdirSync(join(project, "conf"), { recursive: true });
+writeFileSync(
+  join(project, "conf", "application.conf"),
+  'db.default.url = "jdbc:postgresql://admin:hunter2@db.internal:5432/app"\n'
+);
+
 function runScalasem(args) {
   return spawnSync(process.execPath, [scalasem, ...args], {
     encoding: "utf-8"
@@ -91,6 +98,12 @@ for (const key of fileKeys) {
   assert.ok(Array.isArray(entry.calls) && entry.calls.length > 0);
   assert.ok(Array.isArray(entry.references));
 }
+
+assert.deepStrictEqual(
+  report.config.values.map((v) => `${v.key}=${v.value}`),
+  ["db.default.url=jdbc:postgresql://db.internal:5432/app"],
+  "configuration values without a route file, credentials removed"
+);
 
 assert.ok(
   report.modules[0].classpath.some(
