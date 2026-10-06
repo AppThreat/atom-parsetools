@@ -648,6 +648,15 @@
               },
               "call": {
                 "type": "string"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
               }
             },
             "additionalProperties": false,
@@ -770,6 +779,9 @@
         "line": {
           "type": "integer",
           "minimum": 1
+        },
+        "ref": {
+          "type": "string"
         }
       },
       "additionalProperties": false
@@ -913,7 +925,9 @@
             "algorithm",
             "protocol",
             "keystore",
-            "native-binding"
+            "native-binding",
+            "native-call",
+            "rng"
           ]
         },
         "api": {
@@ -956,6 +970,13 @@
           "type": "string"
         },
         "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "weak": {
+          "type": "boolean"
+        },
+        "bits": {
           "type": "integer",
           "minimum": 1
         }
