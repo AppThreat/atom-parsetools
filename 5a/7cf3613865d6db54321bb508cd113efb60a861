@@ -1,0 +1,24 @@
+lib/scalasem/derive/graph.js
+  s_5e2537d4d8b695::t_3ed896e07a3ce1 275-279,288,307,309-310,319-321,323-325,327-340,342-358,361-364,366-367,400,402-405,408,410-413,415-425
+  s_5e2537d4d8b695::t_d0192038bda763 73-74,78-80,99-114,161-166,431,435-436
+  s_5e2537d4d8b695::t_71f8a796cb89ef 429-430,440
+test-fixtures/scalasem-derive.js
+  s_5e2537d4d8b695::t_08e4f4256e65b0 503-535,543
+  s_5e2537d4d8b695::t_651743024673a8 536-542,544-553
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5a7cf3613865d6db54321bb508cd113efb60a861",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
