@@ -230,7 +230,7 @@ assert.ok(
 // such as `uri"..."` takes the interpolation as its argument.
 const shapes = [
   "package p",
-  "object K {",
+  '@link("crypto") object K {',
   "  def send(): Unit = {",
   '    val r = new ProducerRecord[String, String]("order-events", "k", "v")',
   '    val u = uri"https://payments.example.com/v2/charges"',
@@ -260,6 +260,8 @@ const shapeFacts = semanticdbFacts(scratch, {
   synthetics: [],
   occurrences: [
     occurrence(1, "K", "p/K.", 2),
+    // An annotation is not a call.
+    occurrence(1, '("crypto")', "scala/scalanative/unsafe/link#`<init>`()."),
     occurrence(2, "send", "p/K.send().", 2),
     occurrence(
       3,
