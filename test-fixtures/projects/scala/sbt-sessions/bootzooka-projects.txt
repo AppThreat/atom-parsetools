@@ -1,0 +1,44 @@
+[info] entering *experimental* thin client - BEEP WHIRR
+[info] server was not detected. starting an instance
+[info] welcome to sbt 2.0.10 (Eclipse Adoptium Java 21.0.7)
+[info] loading project definition from /src/bootzooka/project
+[info] set current project to bootzooka (in build file:/src/bootzooka/)
+[warn] there are 13 keys that are not used by any other settings/tasks:
+[warn]  
+[warn] * docker / Debian / daemonGroup
+[warn]   +- Debian / daemonGroup := (Linux / daemonGroup).value:115
+[warn] * docker / Debian / daemonGroupGid
+[warn]   +- Debian / daemonGroupGid := (Linux / daemonGroupGid).value:116
+[warn] * docker / Debian / daemonUser
+[warn]   +- Debian / daemonUser := (Linux / daemonUser).value:113
+[warn] * docker / Debian / daemonUserUid
+[warn]   +- Debian / daemonUserUid := (Linux / daemonUserUid).value:114
+[warn] * docker / Debian / executableScriptName
+[warn]   +- Debian / executableScriptName := (Linux / executableScriptName).value:89
+[warn] * docker / Linux / javaOptions
+[warn]   +- Linux / javaOptions := (Universal / javaOptions).value:54
+[warn] * docker / Rpm / daemonGroupGid
+[warn]   +- Rpm / daemonGroupGid := (Linux / daemonGroupGid).value:140
+[warn] * docker / Rpm / daemonUserUid
+[warn]   +- Rpm / daemonUserUid := (Linux / daemonUserUid).value:138
+[warn] * docker / Rpm / executableScriptName
+[warn]   +- Rpm / executableScriptName := (Linux / executableScriptName).value:106
+[warn] * docker / Rpm / name
+[warn]   +- Rpm / name := (Linux / name).value:104
+[warn] * docker / Universal / executableScriptName
+[warn]   +- Universal / executableScriptName := executableScriptName.value:74
+[warn] * docker / Universal-docs / name
+[warn]   +- UniversalDocs / name := (Universal / name).value:70
+[warn] * docker / Universal-src / name
+[warn]   +- UniversalSrc / name := (Universal / name).value:71
+[warn]  
+[warn] note: a setting might still be used by a command; to exclude a key from this `lintUnused` check
+[warn] either append it to `Global / excludeLintKeys` or call .withRank(KeyRanks.Invisible) on the key
+[info] terminate the server with `shutdown`
+> projects
+[info] In file:/src/bootzooka/
+[info] 	   backend
+[info] 	   docker
+[info] 	 * root
+[info] 	   ui
+[success] Total time: 0 s, completed Oct 6, 2026, 10:17:31 AM
