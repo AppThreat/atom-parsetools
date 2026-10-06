@@ -41,6 +41,7 @@
   },
   "tapir": {
     "prefix": "sttp.tapir.",
+    "pathConversion": "stringToPath",
     "captures": ["path", "paths"],
     "inputs": [
       "query",

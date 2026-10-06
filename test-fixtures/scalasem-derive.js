@@ -3,7 +3,8 @@
 // showcase inspector recordings, and facts written out by hand for the shapes no fixture
 // project has. No compiler runs.
 import { strict as assert } from "node:assert";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 
@@ -588,6 +589,86 @@ assert.deepStrictEqual(
     "kafka.topic=orders"
   ]
 );
+
+// tapir chains that start at a value holding an endpoint, with a constant path segment. The
+// compiler records a selection at the start of its chain, and a constant segment as the
+// string-to-path conversion of its value.
+{
+  const dir = mkdtempSync(join(tmpdir(), "scalasem-tapir-"));
+  const lines = [
+    "object Api:",
+    '  private val Base = "admin"',
+    "  val version = baseEndpoint.get",
+    '    .in(Base / "version")',
+    "  val user = secureEndpoint[Key].post",
+    "    .in(Base)"
+  ];
+  writeFileSync(join(dir, "Api.scala"), `${lines.join("\n")}\n`);
+  const at = (line, text) => lines[line - 1].indexOf(text) + 1;
+  const tapirCall = (line, text, owner, name, args) => ({
+    line,
+    column: at(line, text),
+    caller: "p.Api$.version",
+    owner,
+    name,
+    ...(args ? { args } : {})
+  });
+  const routes = deriveEvidence(
+    deriveContext(
+      new Map([
+        [
+          "Api.scala",
+          {
+            definitions: [
+              { kind: "object", owner: "p", name: "Api", line: 1, endLine: 6 }
+            ],
+            calls: [
+              tapirCall(
+                3,
+                "baseEndpoint",
+                "sttp.tapir.EndpointInputsOps",
+                "in"
+              ),
+              tapirCall(4, "Base", "sttp.tapir.Tapir", "stringToPath", [
+                { index: 0, const: "admin", sym: "p.Api$.Base" }
+              ]),
+              tapirCall(
+                5,
+                "secureEndpoint",
+                "sttp.tapir.EndpointInputsOps",
+                "in"
+              ),
+              tapirCall(6, "Base", "sttp.tapir.Tapir", "stringToPath", [
+                { index: 0, const: "admin", sym: "p.Api$.Base" }
+              ])
+            ],
+            references: [
+              {
+                line: 3,
+                column: at(3, "baseEndpoint"),
+                symbol: "sttp.tapir.EndpointInputsOps.get",
+                kind: "term"
+              },
+              {
+                line: 5,
+                column: at(5, "secureEndpoint"),
+                symbol: "sttp.tapir.EndpointInputsOps.post",
+                kind: "term"
+              }
+            ]
+          }
+        ]
+      ]),
+      {},
+      { projectDir: dir }
+    )
+  ).endpoints;
+  assert.deepStrictEqual(
+    routes.map((e) => `${e.line} ${e.method} ${e.path}`),
+    ["3 GET /admin/version", "5 POST /admin"]
+  );
+  rmSync(dir, { recursive: true, force: true });
+}
 
 console.log(
   `scalasem-derive: ${crypto.length} crypto findings, ${services.length} services, ${endpoints.length} endpoints, ${CANONICAL_ALGORITHMS.length} canonical names`
