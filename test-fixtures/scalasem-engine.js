@@ -709,6 +709,49 @@ for (const command of commands) {
     ),
     "the failing project is reported"
   );
+
+  // sbt 2 runs in-process, so a server that was already running is neither used nor stopped.
+  // A server that appears during the inventory is stopped. The stub records its arguments.
+  const sbt2Build = join(scratch, "sbt2-server");
+  write(join("sbt2-server", "build.sbt"));
+  write(
+    join("sbt2-server", "project", "build.properties"),
+    "sbt.version=2.0.10\n"
+  );
+  const sbt2Log = join(scratch, "sbt2-stub.log");
+  const serverFile = join(sbt2Build, "project", "target", "active.json");
+  write(
+    "sbt2-stub.js",
+    `#!${process.execPath}
+const fs = require("node:fs");
+fs.appendFileSync(${JSON.stringify(sbt2Log)}, process.argv.slice(2).join(" ") + "\\n");
+if (process.env.STUB_STARTS_SERVER) fs.writeFileSync(${JSON.stringify(serverFile)}, "{}");
+`
+  );
+  const sbt2Stub = join(scratch, "sbt2-stub.js");
+  chmodSync(sbt2Stub, 0o755);
+  write(join("sbt2-server", "project", "target", "active.json"), "{}");
+  await inventory(sbt2Build, { sbtCommand: sbt2Stub, noCompile: true });
+  const kept = readFileSync(sbt2Log, "utf-8").trim().split("\n");
+  assert.ok(
+    kept.every((line) => line.startsWith("--server -batch")),
+    `in-process sbt 2: ${kept}`
+  );
+  assert.ok(
+    !kept.some((line) => line.endsWith("shutdown")),
+    "a running server is left alone"
+  );
+  rmSync(serverFile);
+  rmSync(sbt2Log);
+  process.env.STUB_STARTS_SERVER = "1";
+  await inventory(sbt2Build, { sbtCommand: sbt2Stub, noCompile: true });
+  delete process.env.STUB_STARTS_SERVER;
+  assert.ok(
+    readFileSync(sbt2Log, "utf-8")
+      .trim()
+      .endsWith("-batch -no-colors shutdown"),
+    "a server the inventory started is stopped"
+  );
 }
 rmSync(scratch, { recursive: true, force: true });
 
