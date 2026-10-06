@@ -144,10 +144,18 @@ const report = buildReport({
   fileEntries,
   config,
   diagnostics: [{ code: "unreadable-tasty", module: "showcase", count: 1 }],
-  toolchains: [{ version: "3.3.7", source: "sbt" }]
+  toolchains: [
+    { version: "3.3.7", source: "sbt" },
+    { version: "3.3.7", source: "sbt" }
+  ]
 });
 violations = validate(report, schema, "$");
 assert.deepStrictEqual(violations, [], `built report violates the schema:\n${violations.join("\n")}`);
+assert.deepStrictEqual(
+  report._meta.compilers,
+  [{ source: "sbt", version: "3.3.7" }],
+  "one compiler entry for modules that share it"
+);
 
 // Sorting: two builds of the same parts produce the same bytes.
 assert.deepStrictEqual(
