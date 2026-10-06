@@ -218,7 +218,14 @@ for (const [file, raw] of legacyFacts) {
 const legacyReport = buildReport({
   projectDir: "/src/legacy",
   tool: "sbt",
-  modules: [{ ...legacyModule, classDirs: [], sourceRoots: [], classpath: [] }],
+  modules: [
+    {
+      ...legacyModule,
+      classDirs: [],
+      sourceRoots: ["/src/legacy"],
+      classpath: []
+    }
+  ],
   fileEntries: legacyEntries,
   config: { routes: [], values: [], routerMounts: [] },
   diagnostics: [
@@ -240,6 +247,11 @@ assert.deepStrictEqual(
 assert.ok(
   legacyReport.endpoints.length && legacyReport.callGraph.edges.length,
   "the Scala 2 report carries derived evidence"
+);
+assert.deepStrictEqual(
+  legacyReport.modules[0].sourceRoots,
+  ["."],
+  "a source root that is the project directory stays relative"
 );
 
 // Sorting: two builds of the same parts produce the same bytes.
