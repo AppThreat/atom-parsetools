@@ -1,73 +1,93 @@
 {
-  "description": "Route DSL tables: which calls and extractors build path segments, and which name the HTTP verbs.",
-  "verbs": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
-  "tapir": {
-    "segmentOwners": ["sttp.tapir.Tapir"],
-    "literalNames": ["stringToPath"],
-    "captureNames": ["path", "paths"],
-    "verbOwnerPrefix": "sttp.tapir.EndpointInputsOps."
-  },
-  "http4s": {
-    "segmentOwner": "org.http4s.dsl.impl./$",
-    "captureOwner": "org.http4s.dsl.impl.PathVar",
-    "verbPrefix": "org.http4s.dsl.impl.Methods.",
-    "routerOwner": "org.http4s.server.Router$"
-  },
-  "pekko": {
+  "description": "Route DSLs. Every reader parses the route structure from the source tokens; the symbol prefixes confirm that a token is the framework's own.",
+  "directives": {
     "ownerPrefixes": [
-      "org.apache.pekko.http.scaladsl.server.",
-      "akka.http.scaladsl.server."
+      "akka.http.scaladsl.server.directives.",
+      "org.apache.pekko.http.scaladsl.server.directives."
     ],
-    "pathNames": ["path", "pathPrefix", "pathSuffix", "pathEnd", "pathEndOrSingleSlash", "pathSingleSlash"],
-    "prefixNames": ["pathPrefix", "pathPrefixes"],
-    "verbs": {
-      "get": "GET",
-      "post": "POST",
-      "put": "PUT",
-      "delete": "DELETE",
-      "patch": "PATCH",
-      "head": "HEAD",
-      "options": "OPTIONS"
-    },
-    "matchers": ["Segment", "Segments", "IntNumber", "LongNumber", "JavaUUID", "Remaining", "RemainingPath", "Neutral"],
-    "composer": "~"
+    "directives": [
+      "path",
+      "pathPrefix",
+      "rawPathPrefix",
+      "pathEnd",
+      "pathEndOrSingleSlash",
+      "pathSingleSlash",
+      "get",
+      "post",
+      "put",
+      "patch",
+      "delete",
+      "head",
+      "options"
+    ],
+    "prefixes": ["pathPrefix", "rawPathPrefix"],
+    "terminals": ["path", "pathEnd", "pathEndOrSingleSlash", "pathSingleSlash"],
+    "captures": [
+      "Segment",
+      "Segments",
+      "IntNumber",
+      "LongNumber",
+      "DoubleNumber",
+      "HexIntNumber",
+      "HexLongNumber",
+      "JavaUUID",
+      "Remaining",
+      "RemainingPath"
+    ]
+  },
+  "patterns": {
+    "verbPrefixes": ["org.http4s.", "zio.http."],
+    "router": "org.http4s.server.Router"
+  },
+  "tapir": {
+    "prefix": "sttp.tapir.",
+    "captures": ["path", "paths"],
+    "inputs": [
+      "query",
+      "header",
+      "headers",
+      "cookie",
+      "cookies",
+      "jsonBody",
+      "stringBody",
+      "formBody",
+      "multipartBody",
+      "byteArrayBody",
+      "auth",
+      "extractFromRequest"
+    ]
   },
   "zio": {
-    "segmentOwners": ["zio.http.codec.PathCodec$"],
-    "captureOwners": ["zio.http.package$", "zio.http.codec.PathCodec$"],
-    "captureNames": ["int", "string", "long", "boolean", "uuid", "literal"],
-    "routeOwner": "zio.http.RoutePattern",
-    "routeNames": ["->"],
-    "verbPrefix": "zio.http.Method."
+    "prefix": "zio.http.",
+    "captures": ["int", "long", "string", "uuid", "boolean", "anyString"]
   },
   "cask": {
-    "annotationPrefixes": ["cask.endpoints.", "cask."],
-    "verbs": {
-      "get": "GET",
-      "post": "POST",
-      "put": "PUT",
-      "delete": "DELETE",
-      "patch": "PATCH",
-      "route": "GET",
-      "getJson": "GET",
-      "postJson": "POST",
-      "webSocketUpgraded": "GET"
+    "endpoints": {
+      "get": ["GET"],
+      "getJson": ["GET"],
+      "post": ["POST"],
+      "postJson": ["POST"],
+      "postForm": ["POST"],
+      "put": ["PUT"],
+      "patch": ["PATCH"],
+      "delete": ["DELETE"],
+      "options": ["OPTIONS"],
+      "websocket": ["GET"],
+      "staticFiles": ["GET"],
+      "staticResources": ["GET"],
+      "route": ["GET"]
     }
   },
   "scalatra": {
-    "ownerPrefixes": ["org.scalatra.", "com.github.tototoshi."],
-    "verbs": {
-      "get": "GET",
-      "post": "POST",
-      "put": "PUT",
-      "delete": "DELETE",
-      "patch": "PATCH",
-      "options": "OPTIONS",
-      "head": "HEAD"
-    }
+    "verbs": ["get", "post", "put", "delete", "patch", "head", "options"],
+    "ancestors": [
+      "org.scalatra.ScalatraBase",
+      "org.scalatra.ScalatraServlet",
+      "org.scalatra.ScalatraFilter",
+      "org.scalatra.CoreDsl"
+    ]
   },
-  "play": {
-    "framework": "play",
-    "generatedPaths": ["target/", "out/"]
+  "sird": {
+    "prefix": "play.api.routing.sird"
   }
 }

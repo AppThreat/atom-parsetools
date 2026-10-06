@@ -18,7 +18,9 @@ function recorded(name) {
     readFileSync(join(projects, "evidence", `${name}.facts.json`), "utf-8")
   );
   return deriveEvidence(
-    deriveContext(new Map(Object.entries(recording.files)), recording.config)
+    deriveContext(new Map(Object.entries(recording.files)), recording.config, {
+      projectDir: join(projects, "evidence", name)
+    })
   );
 }
 
@@ -436,6 +438,77 @@ assert.deepStrictEqual(
   ]
 );
 
+// Endpoints of every route DSL the services fixture uses, read from the source tokens and
+// confirmed by the compiler's symbols; the decoy string in Http4sRoutes is not a route.
+const endpoints = recorded("services-jvm").endpoints;
+const routeOf = (e) =>
+  `${e.file.split("/").pop()}:${e.line} ${e.framework} ${e.method} ${e.path}`;
+assert.deepStrictEqual(endpoints.map(routeOf), [
+  "CaskRoutes.scala:4 cask GET /cask/hello/{name}",
+  "CaskRoutes.scala:7 cask POST /cask/echo",
+  "Http4sRoutes.scala:10 http4s GET /api/users/{id}",
+  "Http4sRoutes.scala:11 http4s POST /api/users",
+  "Http4sRoutes.scala:12 http4s DELETE /api/users/{}",
+  "PekkoRoutes.scala:10 pekko-http GET /orders/{}",
+  "PekkoRoutes.scala:11 pekko-http POST /orders",
+  "PekkoRoutes.scala:13 pekko-http GET /health",
+  "TapirEndpoints.scala:6 tapir GET /api/v1/items/{id}",
+  "TapirEndpoints.scala:7 tapir POST /api/v1/items",
+  "ZioRoutes.scala:7 zio-http GET /zio/health",
+  "ZioRoutes.scala:8 zio-http GET /zio/users/{id}"
+]);
+assert.ok(
+  endpoints.every((e) => !String(e.handler).includes("$anonfun")),
+  "handlers are the members routes are declared in"
+);
+assert.deepStrictEqual(
+  recorded("play-app").endpoints.map(routeOf),
+  [
+    "admin.routes:1 play GET /admin/stats",
+    "routes:3 play GET /",
+    "routes:5 play GET /accounts/{id}",
+    "routes:7 play POST /accounts",
+    "routes:9 play GET /files/{path}",
+    "routes:11 play GET /admin/stats",
+    "routes:12 play GET /assets/{file}"
+  ],
+  "a mounted router's route at its own line and at its mount, with the mount prefix"
+);
+
+// The same readers over Scala 2 facts from SemanticDB.
+const { semanticdbModuleFacts } = await import("../lib/scalasem/semanticdb.js");
+const legacyDir = join(projects, "semanticdb");
+const legacy = deriveEvidence(
+  deriveContext(
+    semanticdbModuleFacts(legacyDir, {
+      semanticdbDirs: [join(legacyDir, "meta")]
+    }),
+    {},
+    { projectDir: legacyDir }
+  )
+);
+assert.deepStrictEqual(legacy.endpoints.map(routeOf), [
+  "Routes.scala:11 akka-http GET /legacy/users/{}",
+  "Routes.scala:16 akka-http POST /legacy/hash"
+]);
+assert.ok(
+  legacy.callStacks.some(
+    (stack) =>
+      stack.sink.name === "run" &&
+      stack.frames.map((f) => f.line).join(",") === "9,13,15"
+  ),
+  "a Scala 2 call stack from the route through Store.find to slick"
+);
+
+// Normalized paths.
+const { normalizePath } = await import("../lib/scalasem/derive/endpoints.js");
+assert.deepStrictEqual(
+  ["/:userName.atom", "/item/$id<[0-9]+>", "/files/*rest", "users/${id}/"].map(
+    normalizePath
+  ),
+  ["/{userName}.atom", "/item/{id}", "/files/{rest}", "/users/{id}"]
+);
+
 // The configuration reader: nested keys, comments, environment overrides, one line blocks.
 const { hoconAssignments } = await import("../lib/scalasem/config.js");
 assert.deepStrictEqual(
@@ -461,5 +534,5 @@ assert.deepStrictEqual(
 );
 
 console.log(
-  `scalasem-derive: ${crypto.length} crypto findings, ${services.length} services, ${CANONICAL_ALGORITHMS.length} canonical names`
+  `scalasem-derive: ${crypto.length} crypto findings, ${services.length} services, ${endpoints.length} endpoints, ${CANONICAL_ALGORITHMS.length} canonical names`
 );

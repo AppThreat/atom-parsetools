@@ -89,10 +89,14 @@ async function main(argv) {
   const readTotal = collected.readFiles;
   const config = parseProjectConfig(projectDir);
   const evidence = deriveEvidence(
-    deriveContext(rawFiles, {
-      routes: config.routes,
-      values: config.values
-    })
+    deriveContext(
+      rawFiles,
+      {
+        routes: config.routes,
+        values: config.values
+      },
+      { projectDir }
+    )
   );
   const fileEntries = {};
   for (const [file, facts] of rawFiles) {
