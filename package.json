@@ -22,7 +22,8 @@
     "test:vue": "node test-fixtures/astgen-vue-regression.js",
     "test:svelte": "node test-fixtures/astgen-svelte-regression.js",
     "test:supervise": "node test-fixtures/supervise-regression.js",
-    "test:scala": "node test-fixtures/scalasem-engine.js && node test-fixtures/scalasem-report-schema.js && node test-fixtures/scalasem-jvm.js && node test-fixtures/scalasem-cli.js"
+    "test:scala": "node test-fixtures/scalasem-engine.js && node test-fixtures/scalasem-report-schema.js && node test-fixtures/scalasem-jvm.js && node test-fixtures/scalasem-cli.js",
+    "test:scala:record": "node test-fixtures/record-scalasem-inspector.js"
   },
   "dependencies": {
     "@appthreat/atom-common": "^1.1.0",

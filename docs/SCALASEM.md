@@ -254,4 +254,5 @@ with its own global base so the user's global sbt plugins stay out of it.
 several compiler releases and recorded sbt 1 and sbt 2 inventory sessions, and runs the helper
 end to end when a JDK is present. The JVM part compiles the helper with every release the local
 caches hold; with `CI` or `SCALASEM_TEST_FETCH` set it fetches the first release when the
-caches are empty.
+caches are empty. After a change to the helper, `npm run test:scala:record` re-records the
+inspector output the engine tests read.
