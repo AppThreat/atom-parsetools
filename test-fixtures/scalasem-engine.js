@@ -616,7 +616,12 @@ if (process.platform !== "win32") {
     join(stubBuild, "project", "build.properties"),
     "sbt.version=1.10.11\n"
   );
-  write(join(stubBuild, "target", "scala-3.3.7", "classes", "a", "A.tasty"));
+  // Leftover output: the current tree of a, an older Scala version of a, and the tree of the
+  // project the inventory cannot describe.
+  write(join(stubBuild, "a", "target", "scala-3.3.7", "classes", "a", "A.tasty"));
+  write(join(stubBuild, "a", "target", "scala-3.1.3", "classes", "a", "Old.tasty"));
+  write(join(stubBuild, "bad", "target", "scala-3.3.7", "classes", "b", "B.tasty"));
+  const stubDir = join(scratch, stubBuild);
   const stub = join(scratch, "sbt-stub.js");
   write(
     "sbt-stub.js",
@@ -636,19 +641,25 @@ for (const command of commands) {
     process.exit(1);
   }
   if (key?.endsWith("scalaInstance")) console.log("Scala instance { version label 3.3.7, actual version 3.3.7, library jars: , compiler jars: , other jars: }");
-  if (key?.endsWith("classDirectory")) console.log(\`/build/\${project}/target/scala-3.3.7/classes\`);
+  if (key?.endsWith("classDirectory")) console.log(\`${stubDir}/\${project}/target/scala-3.3.7/classes\`);
 }
 `
   );
   chmodSync(stub, 0o755);
-  const stubbed = await inventory(join(scratch, stubBuild), {
+  const stubbed = await inventory(stubDir, {
     sbtCommand: stub,
     noCompile: true
   });
   const stubbedIds = stubbed.modules.map((m) => m.id);
-  assert.ok(
-    stubbedIds.includes("a") && stubbedIds.includes("c"),
-    `projects around the failure: ${stubbedIds}`
+  assert.deepStrictEqual(
+    stubbedIds,
+    ["a", "c", "bad"],
+    "projects around the failure, and the leftover output of the failing one"
+  );
+  assert.deepStrictEqual(
+    stubbed.modules[2].classDirs,
+    [join(stubDir, "bad", "target", "scala-3.3.7", "classes")],
+    "only the tree of the project the build could not describe"
   );
   assert.ok(
     stubbed.diagnostics.some(
