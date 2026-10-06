@@ -289,6 +289,19 @@ write(
   join(mill, "out/app/3.3.4/upstreamCompileOutput.json"),
   millValue([{ classes: `ref:v0:722b91f7:${join(scratch, mill, "out/util/jvm/3.3.4/compile.dest/classes")}` }])
 );
+write(join(mill, "app/src/app/http/Routes.scala"));
+write(
+  join(mill, "out/app/3.3.4/allSources.json"),
+  millValue([`ref:v0:0741a394:${join(scratch, mill, "app/src")}`])
+);
+write(
+  join(mill, "out/app/3.3.4/allSourceFiles.json"),
+  millValue([`ref:v0:250ffa4a:${join(scratch, mill, "app/src/app/http/Routes.scala")}`])
+);
+write(
+  join(mill, "out/util/jvm/3.3.4/allSourceFiles.json"),
+  millValue([`ref:v0:8c609c5a:${join(scratch, mill, "util/src/util/U.scala")}`])
+);
 const { inventory } = await import("../lib/scalasem/build.js");
 const millModules = (await inventory(join(scratch, mill), { noBuild: true })).modules;
 assert.deepStrictEqual(
@@ -303,6 +316,16 @@ assert.deepStrictEqual(
 assert.ok(
   millModules[1].classpath.some((c) => c.path.endsWith(join("util", "jvm", "3.3.4", "compile.dest", "classes"))),
   "upstream module classes on the classpath"
+);
+assert.deepStrictEqual(
+  millModules[1].sourceRoots,
+  [join(scratch, mill, "app/src")],
+  "Mill source roots from the module's sources, not each package directory"
+);
+assert.deepStrictEqual(
+  millModules[2].sourceRoots,
+  [join(scratch, mill, "util/src/util")],
+  "Mill source file directories when the sources are not recorded"
 );
 const millWithTests = (await inventory(join(scratch, mill), { noBuild: true, includeTests: true })).modules;
 assert.ok(millWithTests.some((m) => m.id === "app/test" && m.scope === "test"), "Mill test modules on request");
