@@ -8,6 +8,7 @@
     { "owner": "akka.http.scaladsl.model.Uri$", "name": "apply", "arg": 0, "client": "akka-http" },
     { "owner": "org.http4s.Uri$", "nameIn": ["unsafeFromString", "fromString"], "arg": 0, "client": "http4s" },
     { "owner": "org.http4s.syntax.LiteralsSyntax", "name": "uri", "arg": 0, "client": "http4s" },
+    { "owner": "org.http4s.syntax.LiteralsOps", "name": "uri", "arg": 0, "client": "http4s" },
     { "ownerPrefix": "okhttp3.Request", "name": "url", "arg": 0, "client": "okhttp" },
     { "owner": "org.scalajs.dom.package$", "name": "fetch", "arg": 0, "client": "scalajs-dom" },
     { "owner": "org.scalajs.dom.WebSocket", "name": "<init>", "arg": 0, "client": "scalajs-dom" },

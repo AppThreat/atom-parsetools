@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 
+import { deriveContext, deriveEvidence } from "../lib/scalasem/derive/index.js";
 import { inspectModule } from "../lib/scalasem/inspect.js";
 import { argumentLists, codeTokens, tokenize } from "../lib/scalasem/lexer.js";
 import {
@@ -223,6 +224,74 @@ assert.ok(
     { installDeps: false, semanticdb: "never" }
   ).files.size === 0,
   "no fallback when SemanticDB is turned off"
+);
+
+// Scala 2 places the constructor of `new C[T](...)` on its argument list, and an interpolator
+// such as `uri"..."` takes the interpolation as its argument.
+const shapes = [
+  "package p",
+  "object K {",
+  "  def send(): Unit = {",
+  '    val r = new ProducerRecord[String, String]("order-events", "k", "v")',
+  '    val u = uri"https://payments.example.com/v2/charges"',
+  "  }",
+  "}"
+];
+mkdirSync(join(scratch, "src", "p"), { recursive: true });
+writeFileSync(join(scratch, "src", "p", "K.scala"), `${shapes.join("\n")}\n`);
+const occurrence = (line, text, symbol, role = 1) => {
+  const startChar = shapes[line].indexOf(text);
+  return {
+    range: {
+      startLine: line,
+      startChar,
+      endLine: line,
+      endChar: startChar + 1
+    },
+    symbol,
+    role
+  };
+};
+const shapeFacts = semanticdbFacts(scratch, {
+  uri: "src/p/K.scala",
+  symbols: [],
+  synthetics: [],
+  occurrences: [
+    occurrence(1, "K", "p/K.", 2),
+    occurrence(2, "send", "p/K.send().", 2),
+    occurrence(
+      3,
+      '("order-events"',
+      "org/apache/kafka/clients/producer/ProducerRecord#`<init>`(+4)."
+    ),
+    occurrence(4, 'uri"', "org/http4s/syntax/LiteralsOps#uri().")
+  ]
+}).facts;
+assert.deepStrictEqual(
+  shapeFacts.calls.map((c) => [c.name, c.args]),
+  [
+    [
+      "<init>",
+      [
+        { index: 0, string: "order-events" },
+        { index: 1, string: "k" },
+        { index: 2, string: "v" }
+      ]
+    ],
+    ["uri", [{ index: 0, parts: ["https://payments.example.com/v2/charges"] }]]
+  ]
+);
+assert.deepStrictEqual(
+  deriveEvidence(
+    deriveContext(
+      new Map([["src/p/K.scala", shapeFacts]]),
+      {},
+      {
+        projectDir: scratch
+      }
+    )
+  ).services.map((x) => `${x.client} ${x.url || x.topic}`),
+  ["kafka order-events", "http4s https://payments.example.com/v2/charges"]
 );
 rmSync(scratch, { recursive: true, force: true });
 assert.strictEqual(
