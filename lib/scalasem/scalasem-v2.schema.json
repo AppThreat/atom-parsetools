@@ -168,6 +168,9 @@
               "module": {
                 "type": "string"
               },
+              "tool": {
+                "type": "string"
+              },
               "detail": {
                 "type": "string"
               },
