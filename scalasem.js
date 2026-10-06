@@ -152,5 +152,10 @@ function mergeDiagnostics(diagnostics) {
 }
 
 exitWithSupervisor();
-const ok = await main(process.argv.slice(2));
+let ok = false;
+try {
+  ok = await main(process.argv.slice(2));
+} catch (err) {
+  console.error(`scalasem failed: ${err?.stack || err}`);
+}
 process.exit(ok ? 0 : 1);
