@@ -3,7 +3,7 @@
 // The no build form runs the same way without starting a build tool.
 import { strict as assert } from "node:assert";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -16,6 +16,16 @@ const project = join(out, "project");
 cpSync(join(process.cwd(), "test-fixtures", "projects", "scala", "showcase"), project, {
   recursive: true
 });
+
+// The no build form reads the classpath the last build exported next to its outputs.
+const repository = join(out, "repository", "org", "example", "dep_3", "1.0");
+const exported = join(repository, "dep_3-1.0.jar");
+mkdirSync(repository, { recursive: true });
+// An empty but valid zip archive: the end of central directory record alone.
+writeFileSync(exported, Buffer.from([0x50, 0x4b, 0x05, 0x06, ...new Array(18).fill(0)]));
+const streams = join(project, "target", "streams", "compile", "dependencyClasspath", "_global", "streams");
+mkdirSync(streams, { recursive: true });
+writeFileSync(join(streams, "export"), exported);
 
 function runScalasem(args) {
   return spawnSync(process.execPath, [scalasem, ...args], { encoding: "utf-8" });
@@ -33,6 +43,11 @@ const report = JSON.parse(readFileSync(join(out, "slices.json"), "utf-8"));
 
 // The version 1 keys and the version 2 contract.
 assert.strictEqual(report._meta.schemaVersion, "scalasem/2");
+assert.deepStrictEqual(
+  report.modules.map((m) => m.classDirs),
+  [["target/scala-3.3.7/classes"]],
+  "one module for the class directory, not one per package"
+);
 assert.ok(report.config && Array.isArray(report.config.routes), "config.routes present");
 assert.ok(Array.isArray(report.modules), "modules present");
 const fileKeys = Object.keys(report).filter((k) => k.endsWith(".scala"));
@@ -46,6 +61,11 @@ for (const key of fileKeys) {
   assert.ok(Array.isArray(entry.calls) && entry.calls.length > 0);
   assert.ok(Array.isArray(entry.references));
 }
+
+assert.ok(
+  report.modules[0].classpath.some((c) => c.group === "org.example" && c.artifact === "dep_3"),
+  "leftover classpath of the last build read"
+);
 
 // A second run with no flags at all, the exact form atom uses.
 result = runScalasem([project, join(out, "atom.json")]);

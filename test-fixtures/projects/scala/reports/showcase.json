@@ -11,12 +11,12 @@
       }
     ],
     "counts": {
-      "calls": 60,
+      "calls": 27,
       "crypto": 0,
-      "definitions": 44,
+      "definitions": 29,
       "endpoints": 0,
       "files": 1,
-      "references": 85,
+      "references": 64,
       "routes": 0
     },
     "diagnostics": [],
@@ -38,26 +38,26 @@
   "modules": [
     {
       "classDirs": [
-        "target/scala-3.3.7/classes/showcase"
+        "target/scala-3.3.7/classes"
       ],
       "classpath": [
-        {
-          "artifact": "scala-library",
-          "group": "org.scala-lang",
-          "path": "/coursier-cache/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16.jar",
-          "version": "2.13.16"
-        },
         {
           "artifact": "scala3-library_3",
           "group": "org.scala-lang",
           "path": "/coursier-cache/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.3.7/scala3-library_3-3.3.7.jar",
           "version": "3.3.7"
+        },
+        {
+          "artifact": "scala-library",
+          "group": "org.scala-lang",
+          "path": "/coursier-cache/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.16/scala-library-2.13.16.jar",
+          "version": "2.13.16"
         }
       ],
       "id": "showcase",
       "platform": "jvm",
       "sourceRoots": [
-        "/Users/prabhu/work/AppThreat/atom-parsetools/test-fixtures/projects/scala"
+        "/src/showcase"
       ]
     }
   ],
@@ -71,53 +71,6 @@
   "services": [],
   "src/main/scala/showcase/Sample.scala": {
     "calls": [
-      {
-        "args": [
-          {
-            "const": -889275714,
-            "sym": "showcase.Envelope._$acc"
-          },
-          {
-            "int": -1984138256
-          }
-        ],
-        "caller": "showcase.Envelope.hashCode",
-        "column": 12,
-        "line": 5,
-        "name": "mix",
-        "owner": "scala.runtime.Statics$",
-        "signature": "(scala.Int,scala.Int)scala.Int"
-      },
-      {
-        "args": [
-          {
-            "const": -889275714,
-            "sym": "showcase.Envelope._$acc"
-          },
-          {
-            "int": 2
-          }
-        ],
-        "caller": "showcase.Envelope.hashCode",
-        "column": 12,
-        "line": 5,
-        "name": "finalizeHash",
-        "owner": "scala.runtime.Statics$",
-        "signature": "(scala.Int,scala.Int)scala.Int"
-      },
-      {
-        "args": [
-          {
-            "int": 0
-          }
-        ],
-        "caller": "showcase.Envelope$.fromProduct",
-        "column": 12,
-        "line": 5,
-        "name": "productElement",
-        "owner": "scala.Product",
-        "signature": "(scala.Int)java.lang.Object"
-      },
       {
         "caller": "showcase.Envelope",
         "column": 1,
@@ -143,142 +96,6 @@
         "signature": "()java.lang.Object"
       },
       {
-        "caller": "showcase.Envelope$.fromProduct",
-        "column": 12,
-        "line": 5,
-        "name": "<init>",
-        "owner": "showcase.Envelope",
-        "signature": "(scala.Long,java.lang.String)showcase.Envelope"
-      },
-      {
-        "caller": "showcase.Envelope$.writeReplace",
-        "column": 12,
-        "line": 5,
-        "name": "<init>",
-        "owner": "scala.runtime.ModuleSerializationProxy",
-        "signature": "(java.lang.Class)scala.runtime.ModuleSerializationProxy"
-      },
-      {
-        "caller": "showcase.Envelope.canEqual",
-        "column": 12,
-        "line": 5,
-        "name": "isInstanceOf",
-        "owner": "scala.Any",
-        "signature": "(1)scala.Boolean"
-      },
-      {
-        "caller": "showcase.Envelope.copy",
-        "column": 1,
-        "line": 5,
-        "name": "<init>",
-        "owner": "showcase.Envelope",
-        "signature": "(scala.Long,java.lang.String)showcase.Envelope"
-      },
-      {
-        "caller": "showcase.Envelope.equals",
-        "column": 12,
-        "line": 5,
-        "name": "$asInstanceOf$",
-        "owner": "scala.Any",
-        "signature": "(1)java.lang.Object"
-      },
-      {
-        "caller": "showcase.Envelope.equals",
-        "column": 12,
-        "line": 5,
-        "name": "&&",
-        "owner": "scala.Boolean",
-        "signature": "(scala.Boolean)scala.Boolean"
-      },
-      {
-        "caller": "showcase.Envelope.equals",
-        "column": 12,
-        "line": 5,
-        "name": "==",
-        "owner": "scala.Any",
-        "signature": "(java.lang.Object)scala.Boolean"
-      },
-      {
-        "caller": "showcase.Envelope.equals",
-        "column": 12,
-        "line": 5,
-        "name": "==",
-        "owner": "scala.Long",
-        "signature": "(scala.Long)scala.Boolean"
-      },
-      {
-        "caller": "showcase.Envelope.equals",
-        "column": 12,
-        "line": 5,
-        "name": "canEqual",
-        "owner": "scala.Equals",
-        "signature": "(java.lang.Object)scala.Boolean"
-      },
-      {
-        "caller": "showcase.Envelope.equals",
-        "column": 12,
-        "line": 5,
-        "name": "eq",
-        "owner": "java.lang.Object",
-        "signature": "(java.lang.Object)scala.Boolean"
-      },
-      {
-        "caller": "showcase.Envelope.equals",
-        "column": 12,
-        "line": 5,
-        "name": "||",
-        "owner": "scala.Boolean",
-        "signature": "(scala.Boolean)scala.Boolean"
-      },
-      {
-        "caller": "showcase.Envelope.hashCode",
-        "column": 12,
-        "line": 5,
-        "name": "anyHash",
-        "owner": "scala.runtime.Statics$",
-        "signature": "(java.lang.Object)scala.Int"
-      },
-      {
-        "caller": "showcase.Envelope.hashCode",
-        "column": 12,
-        "line": 5,
-        "name": "longHash",
-        "owner": "scala.runtime.Statics$",
-        "signature": "(scala.Long)scala.Int"
-      },
-      {
-        "caller": "showcase.Envelope.productElement",
-        "column": 12,
-        "line": 5,
-        "name": "<init>",
-        "owner": "java.lang.IndexOutOfBoundsException",
-        "signature": "(java.lang.String)java.lang.IndexOutOfBoundsException"
-      },
-      {
-        "caller": "showcase.Envelope.productElement",
-        "column": 12,
-        "line": 5,
-        "name": "throw",
-        "owner": "<special-ops>",
-        "signature": "(java.lang.Throwable)scala.Nothing"
-      },
-      {
-        "caller": "showcase.Envelope.productElement",
-        "column": 12,
-        "line": 5,
-        "name": "toString",
-        "owner": "scala.Any",
-        "signature": "()java.lang.String"
-      },
-      {
-        "caller": "showcase.Envelope.toString",
-        "column": 12,
-        "line": 5,
-        "name": "_toString",
-        "owner": "scala.runtime.ScalaRunTime$",
-        "signature": "(scala.Product)java.lang.String"
-      },
-      {
         "caller": "showcase.Sample",
         "column": 1,
         "line": 7,
@@ -295,21 +112,14 @@
         "signature": "()java.lang.Object"
       },
       {
-        "caller": "showcase.Sample$.writeReplace",
-        "column": 8,
-        "line": 7,
-        "name": "<init>",
-        "owner": "scala.runtime.ModuleSerializationProxy",
-        "signature": "(java.lang.Class)scala.runtime.ModuleSerializationProxy"
-      },
-      {
         "args": [
           {
             "const": "AES/GCM/NoPadding",
+            "index": 0,
             "sym": "showcase.Sample$.Algorithm"
           }
         ],
-        "caller": "showcase.Sample$._$cipher",
+        "caller": "showcase.Sample$.encrypt",
         "column": 18,
         "line": 12,
         "name": "getInstance",
@@ -320,15 +130,34 @@
         "args": [
           {
             "const": "SHA-256",
+            "index": 0,
             "sym": "showcase.Sample$.DigestName"
           }
         ],
-        "caller": "showcase.Sample$._$digest",
+        "caller": "showcase.Sample$.encrypt",
         "column": 18,
         "line": 13,
         "name": "getInstance",
         "owner": "java.security.MessageDigest$",
         "signature": "(java.lang.String)java.security.MessageDigest"
+      },
+      {
+        "args": [
+          {
+            "index": 0,
+            "redacted": "string"
+          },
+          {
+            "index": 0,
+            "redacted": "string"
+          }
+        ],
+        "caller": "showcase.Sample$.encrypt",
+        "column": 15,
+        "line": 14,
+        "name": "apply",
+        "owner": "scala.StringContext$",
+        "signature": "(scala.collection.immutable.Seq)scala.StringContext"
       },
       {
         "caller": "showcase.Sample$.encrypt",
@@ -340,19 +169,29 @@
       },
       {
         "caller": "showcase.Sample$.encrypt",
-        "column": 15,
-        "line": 14,
-        "name": "apply",
-        "owner": "scala.StringContext$",
-        "signature": "(scala.collection.immutable.Seq)scala.StringContext"
-      },
-      {
-        "caller": "showcase.Sample$.encrypt",
         "column": 5,
         "line": 14,
         "name": "println",
         "owner": "scala.Predef$",
         "signature": "(java.lang.Object)scala.Unit"
+      },
+      {
+        "args": [
+          {
+            "index": 0,
+            "redacted": "string"
+          },
+          {
+            "index": 0,
+            "redacted": "string"
+          }
+        ],
+        "caller": "showcase.Sample$.describe",
+        "column": 47,
+        "line": 16,
+        "name": "apply",
+        "owner": "scala.StringContext$",
+        "signature": "(scala.collection.immutable.Seq)scala.StringContext"
       },
       {
         "caller": "showcase.Sample$.describe",
@@ -363,16 +202,9 @@
         "signature": "(scala.collection.immutable.Seq)java.lang.String"
       },
       {
-        "caller": "showcase.Sample$.describe",
-        "column": 47,
-        "line": 16,
-        "name": "apply",
-        "owner": "scala.StringContext$",
-        "signature": "(scala.collection.immutable.Seq)scala.StringContext"
-      },
-      {
         "args": [
           {
+            "index": 0,
             "int": 0
           }
         ],
@@ -386,6 +218,7 @@
       {
         "args": [
           {
+            "index": 0,
             "int": 1
           }
         ],
@@ -421,20 +254,34 @@
         "signature": "(2,scala.Function1,scala.math.Ordering)scala.math.Ordering"
       },
       {
-        "caller": "showcase.Sample$.summary",
-        "column": 27,
-        "line": 25,
-        "name": "s",
-        "owner": "scala.StringContext",
-        "signature": "(scala.collection.immutable.Seq)java.lang.String"
-      },
-      {
+        "args": [
+          {
+            "index": 0,
+            "redacted": "string"
+          },
+          {
+            "index": 0,
+            "redacted": "string"
+          },
+          {
+            "index": 0,
+            "redacted": "string"
+          }
+        ],
         "caller": "showcase.Sample$.summary",
         "column": 29,
         "line": 25,
         "name": "apply",
         "owner": "scala.StringContext$",
         "signature": "(scala.collection.immutable.Seq)scala.StringContext"
+      },
+      {
+        "caller": "showcase.Sample$.summary",
+        "column": 27,
+        "line": 25,
+        "name": "s",
+        "owner": "scala.StringContext",
+        "signature": "(scala.collection.immutable.Seq)java.lang.String"
       },
       {
         "caller": "showcase.Color",
@@ -445,19 +292,13 @@
         "signature": "()java.lang.Object"
       },
       {
-        "caller": "showcase.Color$.writeReplace",
-        "column": 6,
-        "line": 27,
-        "name": "<init>",
-        "owner": "scala.runtime.ModuleSerializationProxy",
-        "signature": "(java.lang.Class)scala.runtime.ModuleSerializationProxy"
-      },
-      {
         "args": [
           {
+            "index": 0,
             "int": 0
           },
           {
+            "index": 1,
             "string": "Red"
           }
         ],
@@ -471,9 +312,11 @@
       {
         "args": [
           {
+            "index": 0,
             "int": 1
           },
           {
+            "index": 1,
             "string": "Green"
           }
         ],
@@ -501,14 +344,6 @@
         "signature": "()java.lang.Object"
       },
       {
-        "caller": "showcase.Color$.$new",
-        "column": 13,
-        "line": 28,
-        "name": "<init>",
-        "owner": "showcase.Color$._$$anon",
-        "signature": "()showcase.Color$._$$anon"
-      },
-      {
         "caller": "showcase.Color$.$values",
         "column": 13,
         "line": 28,
@@ -531,95 +366,9 @@
         "name": "classOf",
         "owner": "scala.Predef$",
         "signature": "(1)java.lang.Class"
-      },
-      {
-        "caller": "showcase.Color$._$$anon",
-        "column": 13,
-        "line": 28,
-        "name": "<init>",
-        "owner": "showcase.Color",
-        "signature": "()showcase.Color"
-      },
-      {
-        "caller": "showcase.Color$._$$anon.hashCode",
-        "column": 13,
-        "line": 28,
-        "name": "hashCode",
-        "owner": "java.lang.String",
-        "signature": "()scala.Int"
-      },
-      {
-        "caller": "showcase.Color$._$$anon.readResolve",
-        "column": 13,
-        "line": 28,
-        "name": "fromOrdinal",
-        "owner": "showcase.Color$",
-        "signature": "(scala.Int)showcase.Color"
-      },
-      {
-        "caller": "showcase.Color$.fromOrdinal",
-        "column": 13,
-        "line": 28,
-        "name": "<init>",
-        "owner": "java.util.NoSuchElementException",
-        "signature": "(java.lang.String)java.util.NoSuchElementException"
-      },
-      {
-        "caller": "showcase.Color$.fromOrdinal",
-        "column": 13,
-        "line": 28,
-        "name": "apply",
-        "owner": "scala.Array",
-        "signature": "(scala.Int)java.lang.Object"
-      },
-      {
-        "caller": "showcase.Color$.fromOrdinal",
-        "column": 13,
-        "line": 28,
-        "name": "toString",
-        "owner": "scala.Any",
-        "signature": "()java.lang.String"
-      },
-      {
-        "caller": "showcase.Color$.valueOf",
-        "column": 13,
-        "line": 28,
-        "name": "+",
-        "owner": "java.lang.String",
-        "signature": "(java.lang.Object)java.lang.String"
-      },
-      {
-        "caller": "showcase.Color$.valueOf",
-        "column": 13,
-        "line": 28,
-        "name": "<init>",
-        "owner": "java.lang.IllegalArgumentException",
-        "signature": "(java.lang.String)java.lang.IllegalArgumentException"
-      },
-      {
-        "caller": "showcase.Color$.valueOf",
-        "column": 13,
-        "line": 28,
-        "name": "throw",
-        "owner": "<special-ops>",
-        "signature": "(java.lang.Throwable)scala.Nothing"
-      },
-      {
-        "caller": "showcase.Color$.values",
-        "column": 13,
-        "line": 28,
-        "name": "clone",
-        "owner": "scala.Array",
-        "signature": "()java.lang.Object"
       }
     ],
     "constants": [
-      {
-        "line": 5,
-        "sym": "showcase.Envelope._$acc",
-        "tpe": "int",
-        "value": -889275714
-      },
       {
         "line": 8,
         "sym": "showcase.Sample$.Algorithm",
@@ -635,20 +384,12 @@
     ],
     "definitions": [
       {
-        "annotations": [
-          {
-            "args": [
-              "src/main/scala/showcase/Sample.scala"
-            ],
-            "name": "scala.annotation.internal.SourceFile"
-          }
-        ],
         "endLine": 5,
         "flags": [
           "case"
         ],
         "id": "5:1:Envelope",
-        "kind": "def",
+        "kind": "class",
         "line": 5,
         "name": "Envelope",
         "owner": "showcase",
@@ -661,53 +402,8 @@
       },
       {
         "endLine": 5,
-        "id": "5:12:n",
-        "kind": "def",
-        "line": 5,
-        "name": "n",
-        "owner": "showcase.Envelope.productElement",
-        "signature": "()"
-      },
-      {
-        "endLine": 5,
-        "id": "5:12:n",
-        "kind": "def",
-        "line": 5,
-        "name": "n",
-        "owner": "showcase.Envelope.productElementName",
-        "signature": "()"
-      },
-      {
-        "endLine": 5,
-        "id": "5:12:that",
-        "kind": "def",
-        "line": 5,
-        "name": "that",
-        "owner": "showcase.Envelope.canEqual",
-        "signature": "()"
-      },
-      {
-        "endLine": 5,
-        "id": "5:12:x$0",
-        "kind": "def",
-        "line": 5,
-        "name": "x$0",
-        "owner": "showcase.Envelope$.fromProduct",
-        "signature": "()"
-      },
-      {
-        "endLine": 5,
-        "id": "5:12:x$0",
-        "kind": "def",
-        "line": 5,
-        "name": "x$0",
-        "owner": "showcase.Envelope.equals",
-        "signature": "()"
-      },
-      {
-        "endLine": 5,
         "id": "5:1:<init>",
-        "kind": "class",
+        "kind": "def",
         "line": 5,
         "name": "<init>",
         "owner": "showcase.Envelope$",
@@ -716,7 +412,7 @@
       {
         "endLine": 5,
         "id": "5:20:<init>",
-        "kind": "class",
+        "kind": "def",
         "line": 5,
         "name": "<init>",
         "owner": "showcase.Envelope",
@@ -725,7 +421,7 @@
       {
         "endLine": 5,
         "id": "5:21:id",
-        "kind": "def",
+        "kind": "val",
         "line": 5,
         "name": "id",
         "owner": "showcase.Envelope",
@@ -734,16 +430,7 @@
       {
         "endLine": 5,
         "id": "5:21:id",
-        "kind": "def",
-        "line": 5,
-        "name": "id",
-        "owner": "showcase.Envelope$.apply",
-        "signature": "()"
-      },
-      {
-        "endLine": 5,
-        "id": "5:21:id",
-        "kind": "def",
+        "kind": "val",
         "line": 5,
         "name": "id",
         "owner": "showcase.Envelope.<init>",
@@ -751,17 +438,8 @@
       },
       {
         "endLine": 5,
-        "id": "5:21:id",
-        "kind": "def",
-        "line": 5,
-        "name": "id",
-        "owner": "showcase.Envelope.copy",
-        "signature": "()"
-      },
-      {
-        "endLine": 5,
         "id": "5:31:payload",
-        "kind": "def",
+        "kind": "val",
         "line": 5,
         "name": "payload",
         "owner": "showcase.Envelope",
@@ -770,39 +448,13 @@
       {
         "endLine": 5,
         "id": "5:31:payload",
-        "kind": "def",
-        "line": 5,
-        "name": "payload",
-        "owner": "showcase.Envelope$.apply",
-        "signature": "()"
-      },
-      {
-        "endLine": 5,
-        "id": "5:31:payload",
-        "kind": "def",
+        "kind": "val",
         "line": 5,
         "name": "payload",
         "owner": "showcase.Envelope.<init>",
         "signature": "()"
       },
       {
-        "endLine": 5,
-        "id": "5:31:payload",
-        "kind": "def",
-        "line": 5,
-        "name": "payload",
-        "owner": "showcase.Envelope.copy",
-        "signature": "()"
-      },
-      {
-        "annotations": [
-          {
-            "args": [
-              "src/main/scala/showcase/Sample.scala"
-            ],
-            "name": "scala.annotation.internal.SourceFile"
-          }
-        ],
         "endLine": 25,
         "flags": [
           "final",
@@ -838,7 +490,7 @@
           "final"
         ],
         "id": "8:3:Algorithm",
-        "kind": "def",
+        "kind": "val",
         "line": 8,
         "name": "Algorithm",
         "owner": "showcase.Sample$",
@@ -847,7 +499,7 @@
       {
         "endLine": 8,
         "id": "8:3:<init>",
-        "kind": "class",
+        "kind": "def",
         "line": 8,
         "name": "<init>",
         "owner": "showcase.Sample$",
@@ -859,7 +511,7 @@
           "inline"
         ],
         "id": "9:3:DigestName",
-        "kind": "def",
+        "kind": "val",
         "line": 9,
         "name": "DigestName",
         "owner": "showcase.Sample$",
@@ -868,7 +520,7 @@
       {
         "endLine": 11,
         "id": "11:15:data",
-        "kind": "def",
+        "kind": "val",
         "line": 11,
         "name": "data",
         "owner": "showcase.Sample$.encrypt",
@@ -886,7 +538,7 @@
       {
         "endLine": 12,
         "id": "12:5:cipher",
-        "kind": "def",
+        "kind": "val",
         "line": 12,
         "name": "cipher",
         "owner": "showcase.Sample$.encrypt",
@@ -895,7 +547,7 @@
       {
         "endLine": 13,
         "id": "13:5:digest",
-        "kind": "def",
+        "kind": "val",
         "line": 13,
         "name": "digest",
         "owner": "showcase.Sample$.encrypt",
@@ -904,7 +556,7 @@
       {
         "endLine": 16,
         "id": "16:16:algorithm",
-        "kind": "def",
+        "kind": "val",
         "line": 16,
         "name": "algorithm",
         "owner": "showcase.Sample$.describe",
@@ -936,7 +588,7 @@
       {
         "endLine": 19,
         "id": "19:12:n",
-        "kind": "def",
+        "kind": "val",
         "line": 19,
         "name": "n",
         "owner": "showcase.Sample$.loop",
@@ -945,7 +597,7 @@
       {
         "endLine": 19,
         "id": "19:20:acc",
-        "kind": "def",
+        "kind": "val",
         "line": 19,
         "name": "acc",
         "owner": "showcase.Sample$.loop",
@@ -959,7 +611,7 @@
           "lazy"
         ],
         "id": "22:3:ordering",
-        "kind": "def",
+        "kind": "val",
         "line": 22,
         "name": "ordering",
         "owner": "showcase.Sample$",
@@ -968,7 +620,7 @@
       {
         "endLine": 24,
         "id": "24:14:e",
-        "kind": "def",
+        "kind": "val",
         "line": 24,
         "name": "e",
         "owner": "showcase.Sample$.summary",
@@ -987,26 +639,12 @@
         "signature": "(showcase.Envelope)java.lang.String"
       },
       {
-        "annotations": [
-          {
-            "args": [
-              "src/main/scala/showcase/Sample.scala"
-            ],
-            "name": "scala.annotation.internal.SourceFile"
-          },
-          {
-            "name": "scala.annotation.internal.Child"
-          },
-          {
-            "name": "scala.annotation.internal.Child"
-          }
-        ],
         "endLine": 28,
         "flags": [
           "enum"
         ],
         "id": "27:1:Color",
-        "kind": "def",
+        "kind": "class",
         "line": 27,
         "name": "Color",
         "owner": "showcase",
@@ -1017,22 +655,13 @@
         "signature": "()"
       },
       {
-        "endLine": 27,
-        "id": "27:6:x$0",
-        "kind": "def",
-        "line": 27,
-        "name": "x$0",
-        "owner": "showcase.Color$.ordinal",
-        "signature": "()"
-      },
-      {
         "endLine": 28,
         "flags": [
           "case",
           "enum"
         ],
         "id": "28:13:Green",
-        "kind": "def",
+        "kind": "val",
         "line": 28,
         "name": "Green",
         "owner": "showcase.Color$",
@@ -1045,7 +674,7 @@
           "enum"
         ],
         "id": "28:8:Red",
-        "kind": "def",
+        "kind": "val",
         "line": 28,
         "name": "Red",
         "owner": "showcase.Color$",
@@ -1053,53 +682,8 @@
       },
       {
         "endLine": 28,
-        "id": "28:13:$name",
-        "kind": "def",
-        "line": 28,
-        "name": "$name",
-        "owner": "showcase.Color$.$new",
-        "signature": "()"
-      },
-      {
-        "endLine": 28,
-        "id": "28:13:$name",
-        "kind": "def",
-        "line": 28,
-        "name": "$name",
-        "owner": "showcase.Color$.valueOf",
-        "signature": "()"
-      },
-      {
-        "endLine": 28,
-        "id": "28:13:<init>",
-        "kind": "class",
-        "line": 28,
-        "name": "<init>",
-        "owner": "showcase.Color$._$$anon",
-        "signature": "()showcase.Color$._$$anon"
-      },
-      {
-        "endLine": 28,
-        "id": "28:13:_$ordinal",
-        "kind": "def",
-        "line": 28,
-        "name": "_$ordinal",
-        "owner": "showcase.Color$.$new",
-        "signature": "()"
-      },
-      {
-        "endLine": 28,
-        "id": "28:13:ordinal",
-        "kind": "def",
-        "line": 28,
-        "name": "ordinal",
-        "owner": "showcase.Color$.fromOrdinal",
-        "signature": "()"
-      },
-      {
-        "endLine": 28,
         "id": "28:3:<init>",
-        "kind": "class",
+        "kind": "def",
         "line": 28,
         "name": "<init>",
         "owner": "showcase.Color",
@@ -1108,7 +692,7 @@
       {
         "endLine": 28,
         "id": "28:3:<init>",
-        "kind": "class",
+        "kind": "def",
         "line": 28,
         "name": "<init>",
         "owner": "showcase.Color$",
@@ -1125,6 +709,13 @@
     "platform": "jvm",
     "references": [
       {
+        "column": 25,
+        "kind": "import",
+        "line": 3,
+        "owner": "scala.annotation",
+        "symbol": "scala.annotation.tailrec"
+      },
+      {
         "column": 1,
         "kind": "term",
         "line": 5,
@@ -1133,17 +724,10 @@
       },
       {
         "column": 1,
-        "kind": "term",
+        "kind": "type",
         "line": 5,
-        "owner": "showcase.Envelope$.apply",
-        "symbol": "showcase.Envelope$._$id"
-      },
-      {
-        "column": 1,
-        "kind": "term",
-        "line": 5,
-        "owner": "showcase.Envelope$.unapply",
-        "symbol": "showcase.Envelope$._$x$1"
+        "owner": "scala",
+        "symbol": "scala.AnyRef"
       },
       {
         "column": 1,
@@ -1153,18 +737,11 @@
         "symbol": "scala.deriving.Mirror$.Product"
       },
       {
-        "column": 12,
-        "kind": "term",
+        "column": 1,
+        "kind": "type",
         "line": 5,
-        "owner": "<special-ops>",
-        "symbol": "<special-ops>.throw"
-      },
-      {
-        "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "java.lang.IndexOutOfBoundsException",
-        "symbol": "java.lang.IndexOutOfBoundsException.<init>"
+        "owner": "showcase",
+        "symbol": "showcase.Envelope$"
       },
       {
         "column": 12,
@@ -1175,87 +752,10 @@
       },
       {
         "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "scala.Any",
-        "symbol": "scala.Any.$asInstanceOf$"
-      },
-      {
-        "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "scala.Boolean",
-        "symbol": "scala.Boolean.||"
-      },
-      {
-        "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "scala.Equals",
-        "symbol": "scala.Equals.canEqual"
-      },
-      {
-        "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "scala.Long",
-        "symbol": "scala.Long.=="
-      },
-      {
-        "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "scala.Product",
-        "symbol": "scala.Product.productElement"
-      },
-      {
-        "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "scala.runtime.ModuleSerializationProxy",
-        "symbol": "scala.runtime.ModuleSerializationProxy.<init>"
-      },
-      {
-        "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "scala.runtime.ScalaRunTime$",
-        "symbol": "scala.runtime.ScalaRunTime$._toString"
-      },
-      {
-        "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "scala.runtime.Statics$",
-        "symbol": "scala.runtime.Statics$.mix"
-      },
-      {
-        "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "showcase",
-        "symbol": "showcase.Envelope"
-      },
-      {
-        "column": 12,
-        "kind": "term",
-        "line": 5,
-        "owner": "showcase.Envelope$.fromProduct",
-        "symbol": "showcase.Envelope$._$x$0"
-      },
-      {
-        "column": 12,
         "kind": "type",
         "line": 5,
         "owner": "java.lang",
         "symbol": "java.lang.Object"
-      },
-      {
-        "column": 12,
-        "kind": "type",
-        "line": 5,
-        "owner": "scala.runtime",
-        "symbol": "scala.runtime.ModuleSerializationProxy"
       },
       {
         "column": 25,
@@ -1272,18 +772,25 @@
         "symbol": "scala.Predef$.String"
       },
       {
+        "column": 46,
+        "kind": "type",
+        "line": 5,
+        "owner": "scala",
+        "symbol": "scala.Unit"
+      },
+      {
+        "column": 47,
+        "kind": "type",
+        "line": 5,
+        "owner": "scala",
+        "symbol": "scala.Product"
+      },
+      {
         "column": 47,
         "kind": "type",
         "line": 5,
         "owner": "scala.package$",
         "symbol": "scala.package$.Serializable"
-      },
-      {
-        "column": 1,
-        "kind": "type",
-        "line": 7,
-        "owner": "showcase",
-        "symbol": "showcase.Sample$"
       },
       {
         "column": 8,
@@ -1294,31 +801,10 @@
       },
       {
         "column": 8,
-        "kind": "term",
-        "line": 7,
-        "owner": "scala.runtime.ModuleSerializationProxy",
-        "symbol": "scala.runtime.ModuleSerializationProxy.<init>"
-      },
-      {
-        "column": 8,
         "kind": "type",
         "line": 7,
         "owner": "java.lang",
         "symbol": "java.lang.Object"
-      },
-      {
-        "column": 8,
-        "kind": "type",
-        "line": 7,
-        "owner": "scala",
-        "symbol": "scala.AnyRef"
-      },
-      {
-        "column": 8,
-        "kind": "type",
-        "line": 7,
-        "owner": "scala.runtime",
-        "symbol": "scala.runtime.ModuleSerializationProxy"
       },
       {
         "column": 3,
@@ -1340,6 +826,20 @@
         "line": 11,
         "owner": "scala",
         "symbol": "scala.Array"
+      },
+      {
+        "column": 27,
+        "kind": "type",
+        "line": 11,
+        "owner": "scala",
+        "symbol": "scala.Byte"
+      },
+      {
+        "column": 35,
+        "kind": "type",
+        "line": 11,
+        "owner": "scala",
+        "symbol": "scala.Unit"
       },
       {
         "column": 15,
@@ -1398,6 +898,20 @@
         "symbol": "scala.Array.length"
       },
       {
+        "column": 38,
+        "kind": "type",
+        "line": 14,
+        "owner": "scala",
+        "symbol": "scala.Any"
+      },
+      {
+        "column": 45,
+        "kind": "type",
+        "line": 14,
+        "owner": "scala.Predef$",
+        "symbol": "scala.Predef$.String"
+      },
+      {
         "column": 5,
         "kind": "term",
         "line": 14,
@@ -1433,11 +947,32 @@
         "symbol": "scala.StringContext$.apply"
       },
       {
+        "column": 67,
+        "kind": "type",
+        "line": 16,
+        "owner": "scala",
+        "symbol": "scala.Any"
+      },
+      {
         "column": 15,
         "kind": "type",
         "line": 19,
         "owner": "scala",
         "symbol": "scala.Int"
+      },
+      {
+        "column": 34,
+        "kind": "term",
+        "line": 20,
+        "owner": "scala.Int",
+        "symbol": "scala.Int.-"
+      },
+      {
+        "column": 41,
+        "kind": "term",
+        "line": 20,
+        "owner": "scala.Int",
+        "symbol": "scala.Int.+"
       },
       {
         "column": 8,
@@ -1454,13 +989,6 @@
         "symbol": "scala.package$.Ordering"
       },
       {
-        "column": 28,
-        "kind": "type",
-        "line": 22,
-        "owner": "showcase",
-        "symbol": "showcase.Envelope"
-      },
-      {
         "column": 40,
         "kind": "term",
         "line": 22,
@@ -1475,11 +1003,11 @@
         "symbol": "scala.Long"
       },
       {
-        "column": 17,
-        "kind": "type",
-        "line": 24,
-        "owner": "showcase",
-        "symbol": "showcase.Envelope"
+        "column": 57,
+        "kind": "term",
+        "line": 22,
+        "owner": "scala.math.Ordering$",
+        "symbol": "scala.math.Ordering$.Long"
       },
       {
         "column": 18,
@@ -1510,32 +1038,18 @@
         "symbol": "scala.StringContext$.apply"
       },
       {
+        "column": 49,
+        "kind": "type",
+        "line": 25,
+        "owner": "scala",
+        "symbol": "scala.Any"
+      },
+      {
         "column": 6,
         "kind": "term",
         "line": 27,
         "owner": "java.lang.Object",
         "symbol": "java.lang.Object.<init>"
-      },
-      {
-        "column": 6,
-        "kind": "term",
-        "line": 27,
-        "owner": "scala.reflect.Enum",
-        "symbol": "scala.reflect.Enum.ordinal"
-      },
-      {
-        "column": 6,
-        "kind": "term",
-        "line": 27,
-        "owner": "scala.runtime.ModuleSerializationProxy",
-        "symbol": "scala.runtime.ModuleSerializationProxy.<init>"
-      },
-      {
-        "column": 6,
-        "kind": "term",
-        "line": 27,
-        "owner": "showcase.Color$.ordinal",
-        "symbol": "showcase.Color$._$x$0"
       },
       {
         "column": 6,
@@ -1545,74 +1059,11 @@
         "symbol": "java.lang.Object"
       },
       {
-        "column": 6,
-        "kind": "type",
-        "line": 27,
+        "column": 13,
+        "kind": "term",
+        "line": 28,
         "owner": "scala",
-        "symbol": "scala.AnyRef"
-      },
-      {
-        "column": 6,
-        "kind": "type",
-        "line": 27,
-        "owner": "scala.runtime",
-        "symbol": "scala.runtime.ModuleSerializationProxy"
-      },
-      {
-        "column": 6,
-        "kind": "type",
-        "line": 27,
-        "owner": "showcase",
-        "symbol": "showcase.Color"
-      },
-      {
-        "column": 6,
-        "kind": "type",
-        "line": 27,
-        "owner": "showcase.Color$",
-        "symbol": "showcase.Color$.MirroredMonoType"
-      },
-      {
-        "column": 13,
-        "kind": "term",
-        "line": 28,
-        "owner": "<special-ops>",
-        "symbol": "<special-ops>.throw"
-      },
-      {
-        "column": 13,
-        "kind": "term",
-        "line": 28,
-        "owner": "java.lang.IllegalArgumentException",
-        "symbol": "java.lang.IllegalArgumentException.<init>"
-      },
-      {
-        "column": 13,
-        "kind": "term",
-        "line": 28,
-        "owner": "java.lang.String",
-        "symbol": "java.lang.String.+"
-      },
-      {
-        "column": 13,
-        "kind": "term",
-        "line": 28,
-        "owner": "java.util.NoSuchElementException",
-        "symbol": "java.util.NoSuchElementException.<init>"
-      },
-      {
-        "column": 13,
-        "kind": "term",
-        "line": 28,
-        "owner": "scala.Any",
-        "symbol": "scala.Any.toString"
-      },
-      {
-        "column": 13,
-        "kind": "term",
-        "line": 28,
-        "owner": "scala.Array",
-        "symbol": "scala.Array.clone"
+        "symbol": "scala.Array"
       },
       {
         "column": 13,
@@ -1639,43 +1090,15 @@
         "column": 13,
         "kind": "term",
         "line": 28,
-        "owner": "showcase.Color$._$$anon",
-        "symbol": "showcase.Color$._$$anon.ordinal"
+        "owner": "showcase.Color$",
+        "symbol": "showcase.Color$.Green"
       },
       {
         "column": 13,
         "kind": "term",
         "line": 28,
-        "owner": "showcase.Color$.fromOrdinal",
-        "symbol": "showcase.Color$._$ordinal"
-      },
-      {
-        "column": 13,
-        "kind": "term",
-        "line": 28,
-        "owner": "showcase.Color$.valueOf",
-        "symbol": "showcase.Color$._$$name"
-      },
-      {
-        "column": 13,
-        "kind": "type",
-        "line": 28,
-        "owner": "java.lang",
-        "symbol": "java.lang.String"
-      },
-      {
-        "column": 13,
-        "kind": "type",
-        "line": 28,
-        "owner": "java.util",
-        "symbol": "java.util.NoSuchElementException"
-      },
-      {
-        "column": 13,
-        "kind": "type",
-        "line": 28,
-        "owner": "scala.runtime",
-        "symbol": "scala.runtime.EnumValue"
+        "owner": "showcase.Color$",
+        "symbol": "showcase.Color$.Red"
       },
       {
         "column": 3,
@@ -1690,6 +1113,13 @@
         "line": 28,
         "owner": "showcase.Color$",
         "symbol": "showcase.Color$.<init>"
+      },
+      {
+        "column": 3,
+        "kind": "type",
+        "line": 28,
+        "owner": "scala",
+        "symbol": "scala.AnyRef"
       },
       {
         "column": 3,
@@ -1713,11 +1143,18 @@
         "symbol": "scala.reflect.Enum"
       },
       {
-        "column": 8,
-        "kind": "import",
+        "column": 3,
+        "kind": "type",
         "line": 28,
         "owner": "showcase",
-        "symbol": "showcase.Color"
+        "symbol": "showcase.Color$"
+      },
+      {
+        "column": 8,
+        "kind": "term",
+        "line": 28,
+        "owner": "showcase.Color$",
+        "symbol": "showcase.Color$.$new"
       }
     ],
     "scope": "main",
@@ -1725,11 +1162,9 @@
     "tags": [],
     "usedTypes": [
       "javax.crypto.Cipher",
-      "showcase.Color",
-      "showcase.Color$.MirroredMonoType",
-      "showcase.Envelope",
-      "showcase.Sample",
-      "showcase.Sample$"
+      "showcase.Color$",
+      "showcase.Envelope$",
+      "showcase.Sample"
     ]
   }
 }
