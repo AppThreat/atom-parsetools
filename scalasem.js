@@ -93,7 +93,8 @@ async function main(argv) {
       rawFiles,
       {
         routes: config.routes,
-        values: config.values
+        values: config.values,
+        routerMounts: config.routerMounts
       },
       { projectDir }
     )

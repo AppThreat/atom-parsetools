@@ -29,9 +29,19 @@ const recording = {
   files: Object.fromEntries(
     [...collected.files.entries()].sort(([a], [b]) => a.localeCompare(b))
   ),
-  config: { routes: config.routes, values: config.values }
+  config: {
+    routes: config.routes,
+    values: config.values,
+    routerMounts: config.routerMounts
+  }
 };
-const outDir = join(process.cwd(), "test-fixtures", "projects", "scala", "evidence");
+const outDir = join(
+  process.cwd(),
+  "test-fixtures",
+  "projects",
+  "scala",
+  "evidence"
+);
 mkdirSync(outDir, { recursive: true });
 const text = JSON.stringify(recording);
 if (text.includes(projectDir)) {
