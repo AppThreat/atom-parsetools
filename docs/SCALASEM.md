@@ -195,8 +195,34 @@ keeps working and exits 0 on success.
 
 The first four keys of a file entry are the version 1 keys, kept so existing consumers keep
 working. `usedTypes` is derived from the version 2 references, `literals` from the arguments
-of calls and the constants. `endpoints`, `services`, `crypto`, `callStacks` and `callGraph`
-are part of the schema and stay empty until the analysis passes that fill them are released.
+of calls and the constants, and `tags` also carries the crypto, framework route, database and
+http client tags of the derived evidence. A file compiled into several modules of a cross
+build lists the platforms it targets in `platforms`; otherwise `platform` names the one.
+`factsSource` says which reader produced the facts of the file, `tasty` or `semanticdb`.
+
+- **Callers** name the method a call sits in as the source reads: closures, local vals and
+  template statements resolve to the method or class around them. The bodies the compiler
+  generates for case classes and enums are not reported.
+- **References** cover types, terms and imports. Every imported member is a reference on its
+  import line; a wildcard import references the package or object it opens.
+- **Crypto findings** name the algorithm, protocol, key store or native binding, with the
+  primitive, mode, key size, curve, provider and the weak flag. The argument an algorithm
+  comes from is followed to its call sites and local values within four boundaries; the
+  finding then sits where the literal appears and `via` names the chain. An API call whose
+  argument stays unknown is kept with `resolution: "unresolved"` and no algorithm.
+- **Endpoints** are the routes of the frameworks the corpus covers: Play route files with
+  mounted sub-routers reported at their mount point, Play SIRD, Akka and Pekko directives,
+  http4s patterns with router prefixes, tapir builders, ZIO HTTP routes, cask annotations
+  and Scalatra actions.
+- **Services** are outbound clients and data stores with their URL, host or topic, sanitized
+  the way the writer treats URLs. Values resolve through literals, constants, call sites,
+  interpolation parts and configuration keys.
+- **Entry points** are main methods, application objects, route handlers and the actions the
+  route table names.
+- **Call stacks** walk the call graph from entry points to library calls, every distinct
+  route once, at most three stacks per library owner and twelve frames deep.
+- **jsModules** and **nativeBindings** list the JavaScript modules the facades import and
+  the native libraries the extern objects bind to.
 
 - **Callers** name the method a call sits in as the source reads: closures, local vals and
   template statements resolve to the method or class around them. The bodies the compiler
