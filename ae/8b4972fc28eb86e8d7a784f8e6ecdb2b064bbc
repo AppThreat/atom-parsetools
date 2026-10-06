@@ -1,0 +1,32 @@
+lib/scalasem/collect.js
+  s_5e2537d4d8b695::t_3024a080a78053 14
+test-fixtures/scalasem-derive.js
+  s_5e2537d4d8b695::t_e14a5f3e2f0e3f 270,276,282
+lib/scalasem/semanticdb.js
+  s_5e2537d4d8b695::t_d989dc6b1f9b19 771
+test-fixtures/scalasem-engine.js
+  s_5e2537d4d8b695::t_e14a5f3e2f0e3f 774
+test-fixtures/scalasem-report-schema.js
+  s_5e2537d4d8b695::t_d989dc6b1f9b19 12-13,201-243
+  s_5e2537d4d8b695::t_aeba2163db493d 244
+test-fixtures/scalasem-semanticdb.js
+  s_5e2537d4d8b695::t_e14a5f3e2f0e3f 128
+lib/scalasem/derive/crypto.js
+  s_5e2537d4d8b695::t_4c6e5dda5a96f4 406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ae8b4972fc28eb86e8d7a784f8e6ecdb2b064bbc",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
