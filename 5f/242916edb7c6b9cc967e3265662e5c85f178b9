@@ -1,0 +1,22 @@
+test-fixtures/scalasem-report-schema.js
+  s_5e2537d4d8b695::t_06020518cf7e8c 221-228,251-254
+  s_5e2537d4d8b695::t_3260b4322695f7 255
+lib/scalasem/schema.js
+  s_5e2537d4d8b695::t_06020518cf7e8c 152-156
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "5f242916edb7c6b9cc967e3265662e5c85f178b9",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
