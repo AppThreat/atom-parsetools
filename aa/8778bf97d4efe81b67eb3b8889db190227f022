@@ -1,0 +1,26 @@
+lib/scalasem/semanticdb.js
+  s_5e2537d4d8b695::t_994ca37bc8244b 826-830,835-841
+test-fixtures/scalasem-semanticdb.js
+  s_5e2537d4d8b695::t_9664e03f666758 9,278-285
+  s_5e2537d4d8b695::t_b82a9b79275d0a 228-277,286,292
+  s_5e2537d4d8b695::t_9d3b552bc0227b 287-291
+  s_5e2537d4d8b695::t_9ee909de9bec80 293-295
+lib/scalasem/rules/services.json
+  s_5e2537d4d8b695::t_f00e8e0a330fbb 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "aa8778bf97d4efe81b67eb3b8889db190227f022",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
