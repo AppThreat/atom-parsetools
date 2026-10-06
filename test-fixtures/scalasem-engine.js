@@ -616,7 +616,12 @@ write(join(platforms, "js/target/scala-3.3.7/classes/app/web/A.sjsir"));
 write(join(platforms, "native/target/scala-3.3.7/classes/app/cli/B.tasty"));
 write(join(platforms, "native/target/scala-3.3.7/classes/app/cli/B.nir"));
 write(join(platforms, "linked/target/scala-3.3.7/classes/app/C.tasty"));
-const nativelib = join(scratch, platforms, "lib", "nativelib_native0.5_3-0.5.8.jar");
+const nativelib = join(
+  scratch,
+  platforms,
+  "lib",
+  "nativelib_native0.5_3-0.5.8.jar"
+);
 write(join(platforms, "lib", "nativelib_native0.5_3-0.5.8.jar"));
 write(
   join(
@@ -649,9 +654,15 @@ if (process.platform !== "win32") {
   );
   // Leftover output: the current tree of a, an older Scala version of a, and the tree of the
   // project the inventory cannot describe.
-  write(join(stubBuild, "a", "target", "scala-3.3.7", "classes", "a", "A.tasty"));
-  write(join(stubBuild, "a", "target", "scala-3.1.3", "classes", "a", "Old.tasty"));
-  write(join(stubBuild, "bad", "target", "scala-3.3.7", "classes", "b", "B.tasty"));
+  write(
+    join(stubBuild, "a", "target", "scala-3.3.7", "classes", "a", "A.tasty")
+  );
+  write(
+    join(stubBuild, "a", "target", "scala-3.1.3", "classes", "a", "Old.tasty")
+  );
+  write(
+    join(stubBuild, "bad", "target", "scala-3.3.7", "classes", "b", "B.tasty")
+  );
   const stubDir = join(scratch, stubBuild);
   const stub = join(scratch, "sbt-stub.js");
   write(
