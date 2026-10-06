@@ -228,6 +228,13 @@
               },
               "router": {
                 "type": "string"
+              },
+              "mountFile": {
+                "type": "string"
+              },
+              "mountLine": {
+                "type": "integer",
+                "minimum": 1
               }
             },
             "additionalProperties": false
@@ -627,6 +634,10 @@
             }
           },
           "additionalProperties": false
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
         }
       },
       "additionalProperties": false

@@ -1,0 +1,314 @@
+{
+  "description": "Outbound service and data store APIs: which call sites carry a URL, a host or a topic.",
+  "urlCalls": [
+    {
+      "ownerPrefix": "java.net.URI$",
+      "name": "create",
+      "arg": 0,
+      "client": "java.net.uri"
+    },
+    {
+      "ownerPrefix": "org.apache.pekko.http.scaladsl.model.Uri$",
+      "name": "apply",
+      "arg": 0,
+      "client": "pekko-http"
+    },
+    {
+      "ownerPrefix": "akka.http.scaladsl.model.Uri$",
+      "name": "apply",
+      "arg": 0,
+      "client": "akka-http"
+    },
+    {
+      "ownerPrefix": "org.http4s.Uri$",
+      "name": "unsafeFromString",
+      "arg": 0,
+      "client": "http4s"
+    },
+    {
+      "ownerPrefix": "okhttp3.Request$Builder",
+      "name": "url",
+      "arg": 0,
+      "client": "okhttp"
+    },
+    {
+      "ownerPrefix": "org.scalajs.dom.package$",
+      "name": "fetch",
+      "arg": 0,
+      "client": "scalajs-dom"
+    },
+    {
+      "ownerPrefix": "org.scalajs.dom.WebSocket",
+      "name": "<init>",
+      "arg": 0,
+      "client": "scalajs-dom"
+    },
+    {
+      "ownerPrefix": "org.scalajs.dom.XMLHttpRequest",
+      "name": "open",
+      "arg": 1,
+      "client": "scalajs-dom"
+    },
+    {
+      "ownerPrefix": "play.api.libs.ws",
+      "name": "url",
+      "arg": 0,
+      "client": "play-ws"
+    },
+    {
+      "ownerPrefix": "okhttp3.Request$.Builder",
+      "name": "url",
+      "arg": 0,
+      "client": "okhttp"
+    }
+  ],
+  "httpClients": [
+    {
+      "ownerPrefix": "sttp.client4",
+      "nameIn": [
+        "get",
+        "post",
+        "put",
+        "delete",
+        "patch",
+        "head",
+        "options",
+        "body",
+        "send"
+      ],
+      "kind": "http-client",
+      "client": "sttp",
+      "urlFrom": "parts"
+    },
+    {
+      "ownerPrefix": "sttp.client3",
+      "nameIn": [
+        "get",
+        "post",
+        "put",
+        "delete",
+        "patch",
+        "send"
+      ],
+      "kind": "http-client",
+      "client": "sttp",
+      "urlFrom": "parts"
+    },
+    {
+      "ownerPrefix": "org.http4s.client",
+      "nameIn": [
+        "expect",
+        "expectOption",
+        "get",
+        "post",
+        "put",
+        "delete",
+        "run",
+        "stream"
+      ],
+      "kind": "http-client",
+      "client": "http4s",
+      "urlFrom": "parts-or-line"
+    },
+    {
+      "ownerPrefix": "org.http4s.ember.client",
+      "nameIn": [
+        "build",
+        "use"
+      ],
+      "kind": "http-client",
+      "client": "http4s",
+      "urlFrom": "line",
+      "skip": true
+    },
+    {
+      "ownerPrefix": "org.apache.pekko.http.scaladsl.HttpExt",
+      "name": "singleRequest",
+      "kind": "http-client",
+      "client": "pekko-http",
+      "urlFrom": "line"
+    },
+    {
+      "ownerPrefix": "akka.http.scaladsl.HttpExt",
+      "name": "singleRequest",
+      "kind": "http-client",
+      "client": "akka-http",
+      "urlFrom": "line"
+    },
+    {
+      "ownerPrefix": "java.net.http",
+      "nameIn": [
+        "send",
+        "sendAsync"
+      ],
+      "kind": "http-client",
+      "client": "java.net.http",
+      "urlFrom": "caller"
+    },
+    {
+      "ownerPrefix": "org.apache.pekko.http.scaladsl.model.HttpRequest$",
+      "name": "apply",
+      "kind": "http-client",
+      "client": "pekko-http",
+      "urlFrom": "args"
+    },
+    {
+      "ownerPrefix": "akka.http.scaladsl.model.HttpRequest$",
+      "name": "apply",
+      "kind": "http-client",
+      "client": "akka-http",
+      "urlFrom": "args"
+    },
+    {
+      "ownerPrefix": "io.lemonlabs.uri",
+      "nameIn": [
+        "parse",
+        "apply"
+      ],
+      "kind": "http-client",
+      "client": "scala-uri",
+      "urlFrom": "args"
+    },
+    {
+      "ownerPrefix": "requests.",
+      "name": "apply",
+      "kind": "http-client",
+      "client": "requests-scala",
+      "urlFrom": "args"
+    }
+  ],
+  "dataStores": [
+    {
+      "ownerPrefix": "java.sql.DriverManager$",
+      "name": "getConnection",
+      "arg": 0,
+      "kind": "datastore",
+      "client": "jdbc"
+    },
+    {
+      "ownerPrefix": "com.zaxxer.hikari",
+      "name": "setJdbcUrl",
+      "arg": 0,
+      "kind": "datastore",
+      "client": "hikari"
+    },
+    {
+      "ownerPrefix": "slick.jdbc",
+      "nameIn": [
+        "forURL",
+        "forURLIfExists",
+        "forDataSource",
+        "forConfig"
+      ],
+      "arg": 0,
+      "kind": "datastore",
+      "client": "slick"
+    },
+    {
+      "ownerPrefix": "doobie.util.transactor",
+      "name": "fromDriverManager",
+      "arg": 1,
+      "kind": "datastore",
+      "client": "doobie"
+    },
+    {
+      "ownerPrefix": "org.mongodb.scala",
+      "nameIn": [
+        "create",
+        "apply"
+      ],
+      "arg": 0,
+      "kind": "datastore",
+      "client": "mongodb"
+    },
+    {
+      "ownerPrefix": "redis.clients.jedis",
+      "nameIn": [
+        "<init>",
+        "setUrl"
+      ],
+      "arg": 0,
+      "kind": "datastore",
+      "client": "jedis"
+    },
+    {
+      "ownerPrefix": "dev.profunktor.redis4cats",
+      "nameIn": [
+        "apply",
+        "fromClient"
+      ],
+      "arg": 0,
+      "kind": "datastore",
+      "client": "redis4cats"
+    },
+    {
+      "ownerPrefix": "io.lettuce.core",
+      "nameIn": [
+        "create",
+        "createRedisURI"
+      ],
+      "arg": 0,
+      "kind": "datastore",
+      "client": "lettuce"
+    }
+  ],
+  "messaging": [
+    {
+      "ownerPrefix": "org.apache.kafka.clients.producer.ProducerRecord",
+      "name": "<init>",
+      "arg": 0,
+      "kind": "messaging",
+      "client": "kafka",
+      "prefix": "kafka:"
+    },
+    {
+      "ownerPrefix": "org.apache.kafka.clients.consumer",
+      "nameIn": [
+        "subscribe",
+        "assign"
+      ],
+      "arg": 0,
+      "kind": "messaging",
+      "client": "kafka",
+      "prefix": "kafka:"
+    },
+    {
+      "ownerPrefix": "software.amazon.awssdk",
+      "nameIn": [
+        "builder",
+        "create",
+        "apply"
+      ],
+      "kind": "cloud",
+      "client": "aws-sdk",
+      "urlFrom": "none"
+    },
+    {
+      "ownerPrefix": "io.grpc",
+      "nameIn": [
+        "forAddress",
+        "forTarget"
+      ],
+      "arg": 0,
+      "kind": "cloud",
+      "client": "grpc"
+    }
+  ],
+  "bootstrapKeys": {
+    "putOwner": "java.util.Properties",
+    "keys": {
+      "bootstrap.servers": {
+        "kind": "datastore",
+        "client": "kafka"
+      }
+    }
+  },
+  "libcurl": {
+    "setter": "curl_easy_setopt",
+    "urlOption": 10002
+  },
+  "wsSchemes": [
+    "ws",
+    "wss"
+  ]
+}

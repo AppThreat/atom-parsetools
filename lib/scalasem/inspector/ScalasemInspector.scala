@@ -332,34 +332,76 @@ final class FactCollector extends Inspector:
               case _ => super.traverseTree(tree)(owner)
       Parts.traverseTree(arg)(Symbol.spliceOwner)
       if parts.isEmpty then return callArgFact(arg, index)
-      // The holes are the arguments of the outermost call, the extension method on the
-      // StringContext value.
-      val holes = arg match
-        case apply: Apply => apply.args
-        case _ => Nil
-      val holeFacts = mutable.ArrayBuffer.empty[String]
-      for hole <- holes do hole match
-        case ident: Ident =>
-          val sym = ident.symbol
-          if sym.exists && !sym.isPackageDef then
-            constantValue(sym) match
-              case Some(s: String) =>
-                holeFacts += s"""{"const":${ScalasemInspector.jsonStr(s)},"sym":${ScalasemInspector.jsonStr(sym.fullName)}}"""
-              case Some(v: Int) =>
-                holeFacts += s"""{"const":$v,"sym":${ScalasemInspector.jsonStr(sym.fullName)}}"""
-              case _ =>
-                paramIndexOf(sym, enclosing) match
-                  case Some(k) =>
-                    holeFacts += s"""{"param":${ScalasemInspector.jsonStr(sym.name.toString)},"paramIndex":$k}"""
-                  case None =>
-                    holeFacts += s"""{"ident":${ScalasemInspector.jsonStr(sym.name.toString)}}"""
-          else holeFacts += "\"\""
+      // The holes are the value arguments of the calls between the outermost one and the
+      // StringContext application, whose own argument holds the literal parts. Implicit
+      // conversion witnesses and defaults are methods and are not holes.
+      val holeValue: Tree => Option[String] =
+        case ident: Ident if ident.symbol.exists && !ident.symbol.isPackageDef =>
+          if ident.symbol.isDefDef then None
+          else
+            Some(
+              constantValue(ident.symbol) match
+                case Some(s: String) =>
+                  s"""{"const":${ScalasemInspector.jsonStr(s)},"sym":${ScalasemInspector.jsonStr(ident.symbol.fullName)}}"""
+                case Some(v: Int) =>
+                  s"""{"const":$v,"sym":${ScalasemInspector.jsonStr(ident.symbol.fullName)}}"""
+                case _ =>
+                  paramIndexOf(ident.symbol, enclosing) match
+                    case Some(k) =>
+                      s"""{"param":${ScalasemInspector.jsonStr(ident.symbol.name.toString)},"paramIndex":$k}"""
+                    case None =>
+                      s"""{"ident":${ScalasemInspector.jsonStr(ident.symbol.name.toString)}}"""
+            )
+        case select: Select if select.symbol.exists && !select.symbol.isPackageDef =>
+          if select.symbol.isDefDef then None
+          else
+            Some(
+              constantValue(select.symbol) match
+                case Some(s: String) =>
+                  s"""{"const":${ScalasemInspector.jsonStr(s)},"sym":${ScalasemInspector.jsonStr(select.symbol.fullName)}}"""
+                case Some(v: Int) =>
+                  s"""{"const":$v,"sym":${ScalasemInspector.jsonStr(select.symbol.fullName)}}"""
+                case _ =>
+                  s"""{"ident":${ScalasemInspector.jsonStr(select.symbol.name.toString)}}"""
+            )
         case Literal(constant) =>
           constant.value match
-            case s: String => holeFacts += ScalasemInspector.jsonStr(s)
-            case v: Int => holeFacts += v.toString
-            case _ => holeFacts += "\"\""
-        case _ => holeFacts += "\"\""
+            case s: String => Some(ScalasemInspector.jsonStr(s))
+            case v: Int => Some(v.toString)
+            case v: Long => Some(v.toString)
+            case _ => None
+        case _ => None
+      val holeFacts = mutable.ArrayBuffer.empty[String]
+      def collectHoles(tree: Tree, depth: Int): Unit =
+        if depth < 12 && holeFacts.size < 16 then
+          tree match
+            case apply: Apply =>
+              // The StringContext application carries the literal parts; every other call of
+              // the chain carries holes, a vararg list of them included.
+              val partsHolder =
+                try
+                  val target = callSymbol(apply.fun)
+                  target.exists &&
+                  (target.maybeOwner.fullName == "scala.StringContext" ||
+                    target.maybeOwner.fullName == "scala.StringContext$")
+                catch case _ => false
+              if !partsHolder then
+                for hole <- apply.args do
+                  hole match
+                    case Typed(Repeated(elems, _), _) =>
+                      for elem <- elems do
+                        holeValue(elem) match
+                          case Some(fact) => holeFacts += fact
+                          case None => ()
+                    case other =>
+                      holeValue(other) match
+                        case Some(fact) => holeFacts += fact
+                        case None => ()
+              collectHoles(apply.fun, depth + 1)
+            case typeApply: TypeApply => collectHoles(typeApply.fun, depth + 1)
+            case typed: Typed => collectHoles(typed.expr, depth + 1)
+            case _ => ()
+      collectHoles(arg, 0)
       val pieces = mutable.ArrayBuffer.empty[String]
       for (literal, i) <- parts.zipWithIndex do
         pieces += literal
@@ -367,20 +409,42 @@ final class FactCollector extends Inspector:
       List(s"""{"index":$index,"parts":[${pieces.mkString(",")}]}""")
 
     /** A call argument that is itself a call with literal string arguments, for example
-      * `toCString("jdbc:...")`: the literal arguments survive, the rest does not.
+      * `toCString("jdbc:...")`: the literal arguments survive, the rest does not. The
+      * literals of every argument list of the call count, and so does a literal receiver of
+      * an extension method.
       */
     def callArgFact(arg: Tree, index: Int): List[String] = arg match
       case apply: Apply =>
         val sym = callSymbol(apply.fun)
         if !sym.exists then return Nil
-        val literals = apply.args.collect {
-          case Literal(constant) if constant.value.isInstanceOf[String] =>
-            ScalasemInspector.jsonStr(constant.value.asInstanceOf[String])
-        }
+        val literals = mutable.ArrayBuffer.empty[String]
+        var cursor: Tree = apply
+        var guard = 0
+        while guard < 8 do
+          guard += 1
+          cursor match
+            case call: Apply =>
+              call.fun match
+                case select: Select =>
+                  select.qualifier match
+                    case Literal(constant) =>
+                      constant.value match
+                        case text: String =>
+                          literals += ScalasemInspector.jsonStr(text)
+                        case _ => ()
+                    case _ => ()
+                case _ => ()
+              literals ++= call.args.collect {
+                case Literal(constant) if constant.value.isInstanceOf[String] =>
+                  ScalasemInspector.jsonStr(constant.value.asInstanceOf[String])
+              }
+              cursor = call.fun
+            case typeApply: TypeApply => cursor = typeApply.fun
+            case _ => guard = 8
         if literals.isEmpty then Nil
         else
           List(
-            s"""{"index":$index,"call":${ScalasemInspector.jsonStr(s"${sym.owner.fullName}.${sym.name}")},"args":[${literals.mkString(",")}]}}"""
+            s"""{"index":$index,"call":${ScalasemInspector.jsonStr(s"${sym.owner.fullName}.${sym.name}")},"args":[${literals.mkString(",")}]}"""
           )
       case typeApply: TypeApply => callArgFact(typeApply.fun, index)
       case _ => Nil
@@ -408,6 +472,8 @@ final class FactCollector extends Inspector:
           fields += s"\"file\":${ScalasemInspector.jsonStr(p.sourceFile.path)}"
           fields += s"\"line\":${p.startLine + 1}"
           fields += s"\"column\":${p.startColumn + 1}"
+          if p.endLine >= p.startLine then
+            fields += s"\"endLine\":${p.endLine + 1}"
           fields += s"\"caller\":${ScalasemInspector.jsonStr(enclosingOf(owner))}"
           fields += s"\"owner\":${ScalasemInspector.jsonStr(sym.owner.fullName)}"
           fields += s"\"name\":${ScalasemInspector.jsonStr(sym.name)}"

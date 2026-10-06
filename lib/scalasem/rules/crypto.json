@@ -306,5 +306,33 @@
   "keySizeFloor": {
     "RSA": 2048,
     "DSA": 2048
+  },
+  "jsDynamic": {
+    "ownerPrefix": "scala.scalajs.js.Dynamic",
+    "memberNames": [
+      "createHash",
+      "createHmac",
+      "createCipheriv",
+      "createDecipheriv",
+      "generateKey",
+      "randomBytes",
+      "pbkdf2",
+      "scrypt"
+    ],
+    "hashMembers": [
+      "createHash",
+      "createHmac"
+    ],
+    "primitiveOf": {
+      "createHash": "hash",
+      "createHmac": "mac",
+      "createCipheriv": "block-cipher",
+      "createDecipheriv": "block-cipher",
+      "pbkdf2": "kdf",
+      "scrypt": "kdf",
+      "generateKey": "block-cipher"
+    },
+    "api": "node-crypto",
+    "provider": "node:crypto"
   }
 }
