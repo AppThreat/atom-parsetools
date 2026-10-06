@@ -718,6 +718,19 @@ assert.deepStrictEqual(
   ["7 HS256"]
 );
 
+// A Scala Native binding to a crypto function that names no algorithm is still reported.
+assert.ok(
+  recorded("scala-native-app").crypto.some(
+    (f) =>
+      f.kind === "native-binding" &&
+      f.name === "EVP_Digest" &&
+      f.line === 11 &&
+      !f.algorithm &&
+      f.resolution === "unresolved"
+  ),
+  "EVP_Digest binding"
+);
+
 console.log(
   `scalasem-derive: ${crypto.length} crypto findings, ${services.length} services, ${endpoints.length} endpoints, ${CANONICAL_ALGORITHMS.length} canonical names`
 );
