@@ -111,9 +111,14 @@ async function main(argv) {
   );
   const fileEntries = {};
   for (const [file, facts] of rawFiles) {
-    fileEntries[file] = buildFileEntry(facts, moduleOf.get(file), file, {
+    const entry = buildFileEntry(facts, moduleOf.get(file), file, {
       caps: reportCaps()
     });
+    const derived = evidence.tagsByFile?.get(file);
+    if (derived?.size) {
+      entry.tags = [...new Set([...entry.tags, ...derived])].sort();
+    }
+    fileEntries[file] = entry;
   }
   const report = buildReport(
     {
