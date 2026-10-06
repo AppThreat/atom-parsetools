@@ -835,10 +835,14 @@ assert.ok(
 // A Scala 2 Mill module reads the SemanticDB its `semanticDbData` task left, and a run that
 // may build asks Mill for it, by the module's selector.
 write(
-  join(mill, "out/app/2.13.15/semanticDbData.dest/data/META-INF/semanticdb/A.scala.semanticdb")
+  join(
+    mill,
+    "out/app/2.13.15/semanticDbData.dest/data/META-INF/semanticdb/A.scala.semanticdb"
+  )
 );
 assert.deepStrictEqual(
-  (await inventory(join(scratch, mill), { noBuild: true })).modules[0].semanticdbDirs,
+  (await inventory(join(scratch, mill), { noBuild: true })).modules[0]
+    .semanticdbDirs,
   [join(scratch, mill, "out/app/2.13.15/semanticDbData.dest")]
 );
 if (process.platform !== "win32") {
@@ -855,7 +859,9 @@ require("node:fs").appendFileSync(${JSON.stringify(millLog)}, process.argv.slice
     installDeps: false
   });
   assert.ok(
-    readFileSync(millLog, "utf-8").split("\n").includes("--no-server app[2.13.15].semanticDbData"),
+    readFileSync(millLog, "utf-8")
+      .split("\n")
+      .includes("--no-server app[2.13.15].semanticDbData"),
     "SemanticDB for the Scala 2 module only"
   );
 
@@ -885,7 +891,9 @@ require("node:fs").appendFileSync(${JSON.stringify(mvnLog)}, JSON.stringify(proc
   process.env.COURSIER_CACHE = join(scratch, "m2-cache");
   process.env.MVN_CMD = join(scratch, "mvn-stub.js");
   process.env.SCALASEM_CACHE_DIR = join(scratch, "scalasem-cache-mvn");
-  const legacy = await inventory(join(scratch, "maven-legacy"), { installDeps: false });
+  const legacy = await inventory(join(scratch, "maven-legacy"), {
+    installDeps: false
+  });
   delete process.env.MVN_CMD;
   delete process.env.SCALASEM_CACHE_DIR;
   if (cacheBefore === undefined) {
@@ -905,7 +913,9 @@ require("node:fs").appendFileSync(${JSON.stringify(mvnLog)}, JSON.stringify(proc
   assert.ok(
     scalacArgs.includes(`-Xplugin:${legacyJar}`) &&
       scalacArgs.some((a) =>
-        a.startsWith(`-P:semanticdb:targetroot:${join(scratch, "scalasem-cache-mvn")}`)
+        a.startsWith(
+          `-P:semanticdb:targetroot:${join(scratch, "scalasem-cache-mvn")}`
+        )
       ),
     `plugin and target root: ${scalacArgs}`
   );

@@ -47,7 +47,13 @@ const tastyFiles = readdirSync(join(classDir, "showcase"))
   .map((f) => join(classDir, "showcase", f));
 assert.deepStrictEqual(
   tastyFiles.map((f) => basename(f)).sort(),
-  ["Color.tasty", "Envelope.tasty", "Holder.tasty", "Sample.tasty", "Shapes.tasty"],
+  [
+    "Color.tasty",
+    "Envelope.tasty",
+    "Holder.tasty",
+    "Sample.tasty",
+    "Shapes.tasty"
+  ],
   "expected the compiled TASTy files of the fixture"
 );
 
