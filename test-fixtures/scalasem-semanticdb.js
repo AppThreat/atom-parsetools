@@ -234,6 +234,7 @@ const shapes = [
   "  def send(): Unit = {",
   '    val r = new ProducerRecord[String, String]("order-events", "k", "v")',
   '    val u = uri"https://payments.example.com/v2/charges"',
+  "    val d = new SHA3Digest(256)",
   "  }",
   "}"
 ];
@@ -265,7 +266,9 @@ const shapeFacts = semanticdbFacts(scratch, {
       '("order-events"',
       "org/apache/kafka/clients/producer/ProducerRecord#`<init>`(+4)."
     ),
-    occurrence(4, 'uri"', "org/http4s/syntax/LiteralsOps#uri().")
+    occurrence(4, 'uri"', "org/http4s/syntax/LiteralsOps#uri()."),
+    // Scala 3 records only the class of `new C(...)`.
+    occurrence(5, "SHA3Digest", "org/bouncycastle/crypto/digests/SHA3Digest#")
   ]
 }).facts;
 assert.deepStrictEqual(
@@ -283,7 +286,8 @@ assert.deepStrictEqual(
         { index: 2, string: "v" }
       ]
     ],
-    ["uri", [{ index: 0, parts: ["https://payments.example.com/v2/charges"] }]]
+    ["uri", [{ index: 0, parts: ["https://payments.example.com/v2/charges"] }]],
+    ["<init>", [{ index: 0, int: 256 }]]
   ]
 );
 assert.deepStrictEqual(
