@@ -1223,6 +1223,11 @@ for (const command of commands) {
     ),
     "compiled into the scalasem cache"
   );
+  assert.match(
+    semanticdbRun,
+    /legacy(\/|\\\\)2\.13\.12"\)/,
+    "one target per module and Scala version"
+  );
   assert.ok(
     !semanticdbRun.includes("modern") && !/\bclean\b/.test(semanticdbRun),
     "Scala 3 modules stay out and nothing is cleaned"
