@@ -1,0 +1,49 @@
+.gitignore
+  s_5e2537d4d8b695::t_c6874375aabfd8 141-142
+lib/scalasem/facts.js
+  s_5e2537d4d8b695::t_1280248307b257 117-120,123-125,128-140,142-146,152-153,156-179
+lib/scalasem/inspect.js
+  s_5e2537d4d8b695::t_cd46ab59758b5f 203,238,242-251,263,349
+lib/scalasem/inspector/ScalasemInspector.scala
+  s_5e2537d4d8b695::t_b9e68bf66577a3 203-213,221-222,224-250,259-261,264,268,270-385,405,417-429,491-531,563-576,595
+lib/scalasem/scalasem-v2.schema.json
+  s_5e2537d4d8b695::t_210d321ed2d4bd 7-51,53-57,59-61,68-79,82-88,95-101,103-105,107-109,116-119,121-126,133-143,149-151,153-165,170-172,196-202,206-227,229-231,240-245,247-259,265-267,272-278,280-305,310-314,316-327,338-404,406-413,418-424,426-428,431-456,477-482,487-489,491-493,497-502,509-517,523-529,531-550,556-610,615-629,636-642,644-665,671-675,677-699,705-710,712-724,730-732,738-743,745-764,774-777,781-786,788-800,808-812,814-827,837-841,843-860,863-874,878-884,890-893,895-901,906-912,918-924,926-947,953-957,961-979,996-999,1001-1007,1012-1018
+lib/scalasem/schema.js
+  s_5e2537d4d8b695::t_c2dc2cced55bc4 154-156
+lib/scalasem/util.js
+  s_5e2537d4d8b695::t_3de2860f5314bc 241,303-305
+test-fixtures/projects/scala/inspector/showcase-3.3.7.jsonl
+  s_5e2537d4d8b695::t_ccd8a434f203d6 12,16,34,40-41,43,45,47,50,52-53,55,57,59,61-101,166-211
+test-fixtures/projects/scala/inspector/showcase-3.5.2.jsonl
+  s_5e2537d4d8b695::t_31607b24ac4820 12,16,34,40-41,43,45,47,50,52-53,55,57,59,61-101,166-211
+test-fixtures/projects/scala/inspector/showcase-3.8.4.jsonl
+  s_5e2537d4d8b695::t_20c001eebae4ee 12,16,34,40-41,43,45,47,50,52-53,55,57,59,61-101,166-211
+test-fixtures/projects/scala/inspector/showcase-3.9.0.jsonl
+  s_5e2537d4d8b695::t_06e30e7f1faf79 12,16,34,40-41,43,45,47,50,52-53,55,57,59,61-101,166-211
+test-fixtures/projects/scala/showcase/.gitignore
+  s_5e2537d4d8b695::t_636d84a2b08916 4
+test-fixtures/projects/scala/showcase/src/main/scala/showcase/Shapes.scala
+  s_5e2537d4d8b695::t_252362871c7a35 1-31
+test-fixtures/scalasem-cli.js
+  s_5e2537d4d8b695::t_689c62398f225c 84
+test-fixtures/scalasem-engine.js
+  s_5e2537d4d8b695::t_ed7006061b5189 67,132-210
+test-fixtures/scalasem-jvm.js
+  s_5e2537d4d8b695::t_60c02472411c94 49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "67641a403b0be29cd0ce747e8e35a7eaa850b554",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
