@@ -1,0 +1,23 @@
+scalasem.js
+  s_5e2537d4d8b695::t_ed9b6622d2f2fb 96-97
+lib/scalasem/config.js
+  s_5e2537d4d8b695::t_ed9b6622d2f2fb 27,39,42,107-114,139-146,175-176
+test-fixtures/record-scalasem-evidence.js
+  s_5e2537d4d8b695::t_01f3ef4cfaaa79 32-36,38-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d958a47a52280f963ff212d3f8e1be943872c2b9",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}

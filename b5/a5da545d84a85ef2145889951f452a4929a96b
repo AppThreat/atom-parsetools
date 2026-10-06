@@ -1,0 +1,36 @@
+test-fixtures/projects/scala/evidence/scala-native-app.facts.json
+  s_5e2537d4d8b695::t_86bdd2f24e7c6a 1
+test-fixtures/projects/scala/evidence/scalajs-app.facts.json
+  s_5e2537d4d8b695::t_86bdd2f24e7c6a 1
+test-fixtures/projects/scala/evidence/services-jvm.facts.json
+  s_5e2537d4d8b695::t_86bdd2f24e7c6a 1
+test-fixtures/projects/scala/evidence/crypto-jvm.facts.json
+  s_5e2537d4d8b695::t_86bdd2f24e7c6a 1
+test-fixtures/projects/scala/evidence/mill-cask.facts.json
+  s_5e2537d4d8b695::t_290abb7284c21e 1
+test-fixtures/projects/scala/evidence/callstack-app.facts.json
+  s_5e2537d4d8b695::t_86bdd2f24e7c6a 1
+test-fixtures/projects/scala/evidence/play-app.facts.json
+  s_5e2537d4d8b695::t_86bdd2f24e7c6a 1
+test-fixtures/scalasem-jvm.js
+  s_5e2537d4d8b695::t_27d144d3edf47c 48-50
+  s_5e2537d4d8b695::t_ea2e31526c6742 12
+lib/scalasem/schema.js
+  s_5e2537d4d8b695::t_bc4f64d2e2f70a 64-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b5a5da545d84a85ef2145889951f452a4929a96b",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}

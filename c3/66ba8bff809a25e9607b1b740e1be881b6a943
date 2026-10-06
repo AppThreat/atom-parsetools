@@ -1,0 +1,25 @@
+README.md
+  s_5e2537d4d8b695::t_337a895a9c467b 8,103
+docs/ENV.md
+  s_5e2537d4d8b695::t_0daaf17b3ce6e7 38-56
+docs/OUTPUT_FORMATS.md
+  s_5e2537d4d8b695::t_564c51d27d7302 95-98,102-103,105-110,118,122-128,136
+docs/SCALASEM.md
+  s_5e2537d4d8b695::t_277d11ba645fad 3-9,29,33-54,59-80,82-84,86-94,102,115,133-141,143-145,153,176-180,184-202,205,210,212-214,222-228,241-242,244,256-318,324-345,349-356,360-378,384-392
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c366ba8bff809a25e9607b1b740e1be881b6a943",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
