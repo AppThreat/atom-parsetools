@@ -220,7 +220,7 @@
               "args": {
                 "type": "array",
                 "items": {
-                  "type": ["string", "integer", "boolean"]
+                  "type": ["string", "integer", "boolean", "null"]
                 }
               }
             },
@@ -251,7 +251,9 @@
               "long": { "type": "integer" },
               "boolean": { "type": "boolean" },
               "const": { "type": ["string", "integer"] },
-              "sym": { "type": "string" }
+              "sym": { "type": "string" },
+              "index": { "type": "integer", "minimum": 0 },
+              "redacted": { "type": "string", "enum": ["string", "const"] }
             },
             "additionalProperties": false,
             "minProperties": 1
@@ -274,10 +276,11 @@
     },
     "constant": {
       "type": "object",
-      "required": ["sym", "value", "tpe", "line"],
+      "required": ["sym", "tpe", "line"],
       "properties": {
         "sym": { "type": "string" },
         "value": { "type": ["string", "integer"] },
+        "redacted": { "type": "boolean" },
         "tpe": { "type": "string", "enum": ["string", "int"] },
         "line": { "type": "integer", "minimum": 1 }
       },
