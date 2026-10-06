@@ -60,6 +60,16 @@
       "name": "url",
       "arg": 0,
       "client": "okhttp"
+    },
+    {
+      "ownerPrefix": "com.raquo.laminar",
+      "nameIn": [
+        "href",
+        "src",
+        "action"
+      ],
+      "arg": 0,
+      "client": "laminar"
     }
   ],
   "httpClients": [

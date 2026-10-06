@@ -166,6 +166,17 @@
       "api": "WebCrypto",
       "provider": "org.scala-js:scalajs-dom",
       "parse": "object-literal"
+    },
+    {
+      "owner": "com.password4j.Password$",
+      "nameIn": [
+        "hash",
+        "check"
+      ],
+      "algorithm": "password4j",
+      "kind": "algorithm",
+      "api": "password4j",
+      "provider": "com.password4j:password4j"
     }
   ],
   "algorithmRefs": [
@@ -334,5 +345,31 @@
     },
     "api": "node-crypto",
     "provider": "node:crypto"
+  },
+  "password4j": {
+    "ownerPrefix": "com.password4j",
+    "methodNames": [
+      "with",
+      "withArgon2",
+      "withBcrypt",
+      "withScrypt"
+    ],
+    "factoryOwners": [
+      "com.password4j.Argon2Function",
+      "com.password4j.BCryptFunction",
+      "com.password4j.ScryptFunction"
+    ],
+    "factoryAlgorithms": {
+      "Argon2Function": "Argon2",
+      "BCryptFunction": "bcrypt",
+      "ScryptFunction": "scrypt"
+    },
+    "identAlgorithms": {
+      "Argon2": "Argon2",
+      "Bcrypt": "bcrypt",
+      "Scrypt": "scrypt"
+    },
+    "api": "password4j",
+    "provider": "com.password4j:password4j"
   }
 }

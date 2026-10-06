@@ -247,6 +247,9 @@
               "mountLine": {
                 "type": "integer",
                 "minimum": 1
+              },
+              "declaredPattern": {
+                "type": "string"
               }
             },
             "additionalProperties": false
@@ -990,6 +993,9 @@
         "line": {
           "type": "integer",
           "minimum": 1
+        },
+        "router": {
+          "type": "string"
         }
       },
       "additionalProperties": false
