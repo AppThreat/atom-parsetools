@@ -670,6 +670,26 @@ assert.deepStrictEqual(
   rmSync(dir, { recursive: true, force: true });
 }
 
+// A password4j function held in a value is the algorithm wherever the value hashes.
+assert.deepStrictEqual(
+  fromFacts({
+    "H.scala": {
+      definitions: [
+        { kind: "val", owner: "p.H$", name: "Argon2", line: 2, endLine: 3 }
+      ],
+      calls: [
+        call(3, "p.H$", "com.password4j.Argon2Function$", "getInstance", [
+          { index: 0, int: 12 }
+        ]),
+        call(5, "p.H$.hash", "com.password4j.HashBuilder", "with", [
+          { index: 0, ident: "Argon2", sym: "p.H$.Argon2" }
+        ])
+      ]
+    }
+  }).crypto.map((f) => `${f.line} ${f.algorithm} ${f.resolution}`),
+  ["3 Argon2 literal", "5 Argon2 constant"]
+);
+
 console.log(
   `scalasem-derive: ${crypto.length} crypto findings, ${services.length} services, ${endpoints.length} endpoints, ${CANONICAL_ALGORITHMS.length} canonical names`
 );
