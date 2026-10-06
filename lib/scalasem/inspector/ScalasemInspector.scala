@@ -535,6 +535,7 @@ final class FactCollector extends Inspector:
           fields += s"\"column\":${p.startColumn + 1}"
           if p.endLine >= p.startLine then
             fields += s"\"endLine\":${p.endLine + 1}"
+            fields += s"\"endColumn\":${p.endColumn + 1}"
           fields += s"\"caller\":${ScalasemInspector.jsonStr(enclosingOf(owner))}"
           // The signature of the enclosing method tells its overloads apart when a parameter
           // is followed to its call sites.
