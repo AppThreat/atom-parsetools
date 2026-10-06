@@ -97,7 +97,13 @@ async function main(argv) {
     for (const [file, facts] of inspected.files) {
       const existing = rawFiles.get(file);
       if (existing) {
-        for (const key of ["definitions", "calls", "patterns", "references", "constants"]) {
+        for (const key of [
+          "definitions",
+          "calls",
+          "patterns",
+          "references",
+          "constants"
+        ]) {
           existing[key].push(...(facts[key] || []));
         }
       } else {
