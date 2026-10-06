@@ -14,7 +14,7 @@ import { inspectModule } from "./lib/scalasem/inspect.js";
 import { buildFileEntry } from "./lib/scalasem/facts.js";
 import { parseProjectConfig } from "./lib/scalasem/config.js";
 import { buildReport, reportCaps, writeReport } from "./lib/scalasem/schema.js";
-import { deriveContext, deriveEvidence } from "./lib/scalasem/derive.js";
+import { deriveContext, deriveEvidence } from "./lib/scalasem/derive/index.js";
 
 function parseArgs(argv) {
   const positional = [];
