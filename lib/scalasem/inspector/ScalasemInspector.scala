@@ -45,7 +45,13 @@ object ScalasemInspector:
       .toList
       .filter(_.nonEmpty)
     val collector = new FactCollector
-    val ok = TastyInspector.inspectAllTastyFiles(tastyFiles, Nil, classpath)(collector)
+    val ok =
+      try TastyInspector.inspectAllTastyFiles(tastyFiles, Nil, classpath)(collector)
+      catch case err: Throwable =>
+        // A file the compiler cannot load aborts the run; whatever was collected is still
+        // printed, and the caller retries the batch without the offending file.
+        System.err.println(s"scalasem: ${err.getClass.getName}: ${Option(err.getMessage).getOrElse("")}")
+        false
     collector.printFacts(ok)
 
 /** Collects the facts of one inspection run. The facts are buffered so that the references can
@@ -336,7 +342,7 @@ final class FactCollector extends Inspector:
 
     for tasty <- tastys do
       try Walker.traverseTree(tasty.ast)(Symbol.spliceOwner)
-      catch case err: Exception =>
+      catch case err: Throwable =>
         // One file the walker cannot handle must not cost the whole batch.
         failedFiles += 1
         System.err.println(s"scalasem: ${err.getClass.getName}: ${Option(err.getMessage).getOrElse("")}")
