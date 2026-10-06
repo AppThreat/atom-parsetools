@@ -25,12 +25,24 @@ function parseArgs(argv) {
     installDeps: !["true", "1"].includes(process.env.SCALASEM_NO_INSTALL),
     includeTests: ["true", "1"].includes(process.env.SCALASEM_INCLUDE_TESTS),
     scalaVersion: process.env.SCALA_VERSION,
-    semanticdb:
-      process.env.SCALASEM_SEMANTICDB ||
-      (process.env.SCALASEM_COMPILER === "none" ? "auto" : "auto"),
+    semanticdb: process.env.SCALASEM_SEMANTICDB || "auto",
     pretty: false
   };
-  for (const arg of argv) {
+  // `--build sbt` is accepted as well as `--build=sbt`.
+  const args = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (
+      ["--build", "--semanticdb"].includes(argv[i]) &&
+      argv[i + 1] !== undefined &&
+      !argv[i + 1].startsWith("--")
+    ) {
+      args.push(`${argv[i]}=${argv[i + 1]}`);
+      i += 1;
+    } else {
+      args.push(argv[i]);
+    }
+  }
+  for (const arg of args) {
     if (arg === "--no-build") {
       opts.noBuild = true;
     } else if (arg === "--no-compile") {

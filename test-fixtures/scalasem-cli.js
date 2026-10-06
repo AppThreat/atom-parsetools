@@ -108,6 +108,19 @@ assert.strictEqual(
 );
 assert.ok(existsSync(join(out, "atom.json")), "atom form produced the file");
 
+// An option and its value as two words: the value is not taken for the output file.
+result = runScalasem([
+  project,
+  join(out, "spaced.json"),
+  "--no-build",
+  "--semanticdb",
+  "never"
+]);
+assert.strictEqual(result.status, 0, `spaced option failed: ${result.stderr}`);
+assert.ok(
+  existsSync(join(out, "spaced.json")) && !existsSync(join(project, "never"))
+);
+
 // Usage errors fail with a non-zero exit and no output file.
 result = runScalasem([join(out, "no-such-directory"), join(out, "none.json")]);
 assert.notStrictEqual(result.status, 0, "missing directory must fail");
