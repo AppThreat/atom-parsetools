@@ -195,6 +195,88 @@ for (const version of versions) {
     ),
     `${version}: lambda body calls fold to the enclosing method`
   );
+  // Argument positions count across parameter lists, as parameter positions do.
+  const callsOf = (owner, name, caller) =>
+    shapes.calls.filter(
+      (call) =>
+        call.owner === owner &&
+        call.name === name &&
+        (!caller || call.caller === caller)
+    );
+  const argsOf = (calls) => calls.flatMap((call) => call.args || []);
+  assert.deepStrictEqual(
+    argsOf(callsOf("showcase.Shapes$", "curried"))
+      .map((arg) => [arg.index, arg.string])
+      .sort(),
+    [
+      [0, "not-an-algorithm"],
+      [1, "SHA-384"]
+    ],
+    `${version}: curried arguments keep their own positions`
+  );
+  assert.deepStrictEqual(
+    argsOf(
+      callsOf(
+        "java.security.MessageDigest$",
+        "getInstance",
+        "showcase.Shapes$.curried"
+      )
+    ),
+    [{ index: 0, param: "algorithm", paramIndex: 1 }],
+    `${version}: a parameter of the second list`
+  );
+  assert.deepStrictEqual(
+    argsOf(
+      callsOf(
+        "java.security.MessageDigest$",
+        "getInstance",
+        "showcase.Shapes$.throughLocal"
+      )
+    ),
+    [{ index: 0, param: "algorithm", paramIndex: 0 }],
+    `${version}: a parameter used inside a local value`
+  );
+  const contextArgs = argsOf(callsOf("showcase.Shapes$", "withContext"));
+  assert.ok(
+    contextArgs.some((arg) => arg.index === 0 && arg.string === "SHA-224") &&
+      contextArgs.some(
+        (arg) => arg.index === 1 && arg.const === "context-label" && arg.defLine
+      ),
+    `${version}: a using argument follows the explicit ones`
+  );
+  assert.deepStrictEqual(
+    argsOf(callsOf("showcase.Shapes$", "fetch", "showcase.Shapes$.holes")),
+    [
+      {
+        index: 0,
+        parts: [
+          "https://api.example.com/users/",
+          {},
+          "/orders/",
+          { param: "name", paramIndex: 1 },
+          ""
+        ]
+      }
+    ],
+    `${version}: every interpolation hole keeps its place`
+  );
+  assert.deepStrictEqual(
+    argsOf(callsOf("showcase.Shapes$", "block", "showcase.Shapes$.blockSite")),
+    [],
+    `${version}: literals inside a block argument stay out of its parts`
+  );
+  assert.ok(
+    shapes.calls.some(
+      (call) =>
+        call.caller === "showcase.Shapes$.evaluated" && call.byName === 0
+    ),
+    `${version}: a by-name parameter read through a local value`
+  );
+  assert.deepStrictEqual(
+    (shapes.constants || []).map((c) => c.sym),
+    ["showcase.Shapes$.Host"],
+    `${version}: only object members are constants, not locals, fields or vars`
+  );
   // Extractor patterns carry their literal patterns.
   assert.ok(
     shapes.patterns.some(

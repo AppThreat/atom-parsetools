@@ -633,6 +633,10 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "defLine": {
+                "type": "integer",
+                "minimum": 1
+              },
               "ident": {
                 "type": "string"
               },
