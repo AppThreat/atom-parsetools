@@ -408,6 +408,13 @@
         },
         "truncated": {
           "type": "boolean"
+        },
+        "factsSource": {
+          "type": "string",
+          "enum": [
+            "tasty",
+            "semanticdb"
+          ]
         }
       },
       "required": [

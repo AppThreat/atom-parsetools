@@ -47,6 +47,8 @@ Every knob these tools expose beyond the command line, in one table per tool. Th
 | `SCALASEM_NO_COMPILE`             | unset               | Same as `--no-compile`: inventory only, no compilation.                                                                                  |
 | `SCALASEM_NO_INSTALL`             | unset               | Never download a missing compiler or tasty inspector jar.                                                                                |
 | `SCALASEM_INCLUDE_TESTS`          | unset               | Same as `--include-tests`.                                                                                                               |
+| `SCALASEM_SEMANTICDB`             | `auto`              | Same as `--semanticdb`.                                                                                                                  |
+| `SCALASEM_COMPILER`               | unset               | `none` disables the TASTy reader and reads SemanticDB for every module.                                                                  |
 | `SCALASEM_CACHE_DIR`              | `~/.cache/scalasem` | Where the compiled inspector helper is cached.                                                                                           |
 | `SCALASEM_MAX_*`                  | see the guide       | Writer caps, for example `SCALASEM_MAX_CALLS_PER_FILE`.                                                                                  |
 | `JAVA_HOME`                       | unset               | The JVM the helper runs with.                                                                                                            |

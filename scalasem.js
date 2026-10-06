@@ -25,6 +25,9 @@ function parseArgs(argv) {
     installDeps: !["true", "1"].includes(process.env.SCALASEM_NO_INSTALL),
     includeTests: ["true", "1"].includes(process.env.SCALASEM_INCLUDE_TESTS),
     scalaVersion: process.env.SCALA_VERSION,
+    semanticdb:
+      process.env.SCALASEM_SEMANTICDB ||
+      (process.env.SCALASEM_COMPILER === "none" ? "auto" : "auto"),
     pretty: false
   };
   for (const arg of argv) {
@@ -39,8 +42,7 @@ function parseArgs(argv) {
     } else if (arg.startsWith("--build=")) {
       opts.build = arg.slice("--build=".length);
     } else if (arg.startsWith("--semanticdb=")) {
-      // Accepted for forward compatibility; the SemanticDB reader is opt-in from a later
-      // release and defaults to auto, which today means TASTy only.
+      opts.semanticdb = arg.slice("--semanticdb=".length);
     } else if (arg.startsWith("--max-")) {
       const [name, value] = arg.slice("--max-".length).split("=");
       const envName = `SCALASEM_MAX_${name.replace(/-/g, "_").toUpperCase()}`;
@@ -75,6 +77,7 @@ async function main(argv) {
   const detected = await inventory(projectDir, opts);
   const diagnostics = [...detected.diagnostics];
   const toolchains = [];
+  const factsSources = new Set();
   const rawFiles = new Map();
   const moduleOf = new Map();
   const modulesWithOutput = [];
@@ -87,6 +90,9 @@ async function main(argv) {
     toolchains.push(...inspected.toolchains);
     tastyTotal += inspected.tastyFiles;
     readTotal += inspected.readFiles;
+    if (inspected.factsSource) {
+      factsSources.add(inspected.factsSource);
+    }
     for (const [file, facts] of inspected.files) {
       const existing = rawFiles.get(file);
       if (existing) {
@@ -135,6 +141,7 @@ async function main(argv) {
         : { routes: [] },
       diagnostics: mergeDiagnostics(diagnostics),
       toolchains,
+      factsSources,
       evidence
     },
     reportCaps()

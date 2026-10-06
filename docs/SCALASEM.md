@@ -53,8 +53,17 @@ the compiler that reads it and one crash ends the whole batch. The TASTy Inspect
 through the compiler's real unpickler instead, which is why the compiler that wrote the files
 is resolved first: its version is recorded in every TASTy header.
 
-Scala 2 builds produce class files only. They are reported through a diagnostic and no facts,
-because the SemanticDB based reader for them ships in a later release.
+Scala 2 builds produce class files only. Their facts come from SemanticDB: the settings are
+injected through the sbt command line (`semanticdbEnabled`, a `semanticdbVersion` pinned to a
+release published for the exact Scala version, and the synthetics flag of the Scala 2
+plugin), never by editing a build file, and the files are decoded in place. The same reader
+serves every module when `--semanticdb always` or `SCALASEM_COMPILER=none` asks for it, which
+is the fallback when no compiler can be resolved. Scala 2 call graph edges carry
+`confidence: approximate`, because SemanticDB has no body extents and the source lexer
+recovers the enclosing definitions.
+
+Producing SemanticDB changes the compiler options, so the next normal build of the project
+recompiles. `--semanticdb never` or `SCALASEM_SEMANTICDB=never` opts out.
 
 ## The build tools
 
@@ -98,6 +107,7 @@ recorded instead.
 | `--no-build`      | Never start a build tool; read what the last build left on disk. |
 | `--no-compile`    | Build tools may run for the inventory, but nothing is compiled.  |
 | `--build=<tool>`  | Force one build tool instead of detecting it.                    |
+| `--semanticdb=<mode>` | `auto` reads SemanticDB for Scala 2 modules and produces it when missing; `always` reads it for every module; `never` disables the reader. |
 | `--include-tests` | Include test sources in the report.                              |
 | `--pretty`        | Indent the output.                                               |
 | `--max-<cap>=N`   | Override a writer cap, for example `--max-calls-per-file=5000`.  |
