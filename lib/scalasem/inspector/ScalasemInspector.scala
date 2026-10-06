@@ -56,6 +56,7 @@ final class FactCollector extends Inspector:
   private val projectSymbols = mutable.Set.empty[String]
   private val refs = mutable.LinkedHashMap.empty[String, String]
   private var unresolvedSymbols = 0
+  private var failedFiles = 0
 
   def inspect(using Quotes)(tastys: List[Tasty[quotes.type]]): Unit =
     import quotes.reflect.*
@@ -333,7 +334,12 @@ final class FactCollector extends Inspector:
           typeApply.args.foreach(traverseTree(_)(owner))
         case other => traverseTree(other)(owner)
 
-    for tasty <- tastys do Walker.traverseTree(tasty.ast)(Symbol.spliceOwner)
+    for tasty <- tastys do
+      try Walker.traverseTree(tasty.ast)(Symbol.spliceOwner)
+      catch case err: Exception =>
+        // One file the walker cannot handle must not cost the whole batch.
+        failedFiles += 1
+        System.err.println(s"scalasem: ${err.getClass.getName}: ${Option(err.getMessage).getOrElse("")}")
 
   def printFacts(inspectorOk: Boolean): Unit =
     for key <- refs.keys do
@@ -341,6 +347,8 @@ final class FactCollector extends Inspector:
       if !isProjectOwner(owner) then facts += refs(key)
     if unresolvedSymbols > 0 then
       facts += s"""{"kind":"diag","code":"unresolved-symbols","count":$unresolvedSymbols}"""
+    if failedFiles > 0 then
+      facts += s"""{"kind":"diag","code":"walker-failed","count":$failedFiles}"""
     if !inspectorOk then facts += """{"kind":"diag","code":"inspector-errors"}"""
     for fact <- facts do println(fact)
 
