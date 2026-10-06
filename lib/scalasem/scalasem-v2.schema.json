@@ -908,6 +908,9 @@
         "algorithm": {
           "type": "string"
         },
+        "name": {
+          "type": "string"
+        },
         "primitive": {
           "type": "string"
         },
