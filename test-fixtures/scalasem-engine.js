@@ -516,6 +516,82 @@ assert.ok(
   "secret constant left the report"
 );
 
+// URLs lose credentials that sit anywhere in them, and token shaped path segments.
+for (const [url, clean] of [
+  ["jdbc:mysql://root:pa/ss@db:3306/app", "jdbc:mysql://db:3306/app"],
+  ["SASL_SSL://alice:s3cr3t@broker:9093", "SASL_SSL://broker:9093"],
+  ["mongodb://u:p@h1,h2/db?x=1", "mongodb://h1,h2/db"],
+  ["https://host:8080/v1/items", "https://host:8080/v1/items"],
+  [
+    "https://hooks.slack.com/services/T0000/B0000/hT5ab9XAMPLEkEY2nB7mPqR",
+    "https://hooks.slack.com/services/T0000/B0000/{}"
+  ],
+  [
+    "https://api.telegram.org/bot123456789:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw/sendMessage",
+    "https://api.telegram.org/{}/sendMessage"
+  ]
+]) {
+  assert.strictEqual(sanitizeUrl(url), clean);
+}
+
+// Interpolation pieces keep their shape, and a call or constant named for a credential
+// never has its strings quoted.
+const pieces = buildFileEntry(
+  {
+    calls: [
+      {
+        line: 3,
+        column: 5,
+        caller: "app.Auth.setup",
+        owner: "app.Client",
+        name: "fetch",
+        args: [
+          {
+            index: 0,
+            parts: [
+              "https://user:pw@api.example.com/users/",
+              { ident: "id" },
+              ""
+            ]
+          }
+        ]
+      },
+      {
+        line: 4,
+        column: 5,
+        caller: "app.Auth.setup",
+        owner: "org.pac4j.oidc.config.OidcConfiguration",
+        name: "setSecret",
+        args: [{ index: 0, string: "unXK_RSCbCXLTic2JACTiAo9" }]
+      }
+    ],
+    constants: [
+      {
+        sym: "app.Auth.ClientSecret",
+        value: "pac4j-demo-passwd",
+        tpe: "string",
+        line: 2
+      }
+    ]
+  },
+  module,
+  "app/Auth.scala",
+  {}
+);
+assert.deepStrictEqual(pieces.calls[0].args[0].parts, [
+  "https://api.example.com/users/",
+  { ident: "id" },
+  ""
+]);
+assert.deepStrictEqual(pieces.calls[1].args, [
+  { index: 0, redacted: "string" }
+]);
+assert.ok(
+  !JSON.stringify(pieces).includes("unXK") &&
+    !JSON.stringify(pieces).includes("pac4j-demo-passwd"),
+  "credentials named by their call or value stay out of the report"
+);
+
 // The writer sorts set-like arrays but keeps positional ones in order.
 const sorted = sortKeysDeep({
   "b.scala": {
