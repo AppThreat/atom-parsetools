@@ -53,17 +53,25 @@ the compiler that reads it and one crash ends the whole batch. The TASTy Inspect
 through the compiler's real unpickler instead, which is why the compiler that wrote the files
 is resolved first: its version is recorded in every TASTy header.
 
-Scala 2 builds produce class files only. Their facts come from SemanticDB: the settings are
-injected through the sbt command line (`semanticdbEnabled`, a `semanticdbVersion` pinned to a
-release published for the exact Scala version, and the synthetics flag of the Scala 2
-plugin), never by editing a build file, and the files are decoded in place. The same reader
-serves every module when `--semanticdb always` or `SCALASEM_COMPILER=none` asks for it, which
-is the fallback when no compiler can be resolved. Scala 2 call graph edges carry
-`confidence: approximate`, because SemanticDB has no body extents and the source lexer
-recovers the enclosing definitions.
+Scala 2 builds produce class files only. Their facts come from SemanticDB. The settings are
+injected through the sbt command line and scoped to the Scala 2 modules, never written into a
+build file:
+- `semanticdbEnabled`;
+- a `semanticdbVersion` pinned to the plugin release for the module's exact Scala version,
+  taken from the local caches or, when installs are allowed, from Maven Central;
+- the synthetics flag of the Scala 2 plugin.
 
-Producing SemanticDB changes the compiler options, so the next normal build of the project
-recompiles. `--semanticdb never` or `SCALASEM_SEMANTICDB=never` opts out.
+Each of those modules compiles into a target directory of its own under the scalasem cache.
+The project's build output and its incremental compiler state stay as they are, and the next
+run is incremental. A module whose Scala version has no plugin release in reach reports
+`semanticdb-unavailable`, and one that compiled without SemanticDB reports
+`semanticdb-missing`.
+
+The same reader serves every module when `--semanticdb always` or `SCALASEM_COMPILER=none`
+asks for it, which is the fallback when no compiler can be resolved. Scala 2 call graph edges
+carry `confidence: approximate`, because SemanticDB has no body extents and the source lexer
+recovers the enclosing definitions. `--semanticdb never` or `SCALASEM_SEMANTICDB=never` opts
+out of producing and reading SemanticDB.
 
 ## The build tools
 

@@ -831,6 +831,84 @@ if (process.env.STUB_STARTS_SERVER) fs.writeFileSync(${JSON.stringify(serverFile
       .endsWith("-batch -no-colors shutdown"),
     "a server the inventory started is stopped"
   );
+
+  // A Scala 2 module compiles once more with SemanticDB, into a target directory of its own,
+  // with the plugin release cached for its exact Scala version. Scala 3 modules are left out
+  // and nothing is ever cleaned.
+  const scala2Build = join(scratch, "scala2-build");
+  write(join("scala2-build", "build.sbt"));
+  write(
+    join("scala2-build", "project", "build.properties"),
+    "sbt.version=1.10.11\n"
+  );
+  const pluginJar = join(
+    scratch,
+    "csr",
+    "https/repo1.maven.org/maven2/org/scalameta/semanticdb-scalac_2.13.12/4.9.9/semanticdb-scalac_2.13.12-4.9.9.jar"
+  );
+  mkdirSync(dirname(pluginJar), { recursive: true });
+  writeFileSync(pluginJar, Buffer.alloc(2048));
+  const scala2Log = join(scratch, "scala2-stub.log");
+  write(
+    "scala2-stub.js",
+    `#!${process.execPath}
+const fs = require("node:fs");
+const args = process.argv.slice(2).filter((a) => !a.startsWith("-"));
+fs.appendFileSync(${JSON.stringify(scala2Log)}, args.join(" ") + "\\n");
+const commands = args.join(" ").split("; ");
+if (commands[0] === "projects") {
+  console.log("[info] In file:/build/\\n[info] \\t * legacy\\n[info] \\t   modern\\n[info] \\t   util-lib");
+  process.exit(0);
+}
+for (const command of commands) {
+  const mark = /^eval println\\("(.+)"\\)$/.exec(command);
+  if (mark) { console.log(mark[1]); continue; }
+  const [verb, key] = command.split(" ");
+  const project = (key || "").split("/")[0];
+  const version = project === "modern" ? "3.3.7" : "2.13.12";
+  if (key?.endsWith("scalaInstance")) console.log(\`Scala instance { version label \${version}, actual version \${version}, library jars: , compiler jars: , other jars: }\`);
+  if (key?.endsWith("classDirectory")) console.log(\`${scala2Build}/\${project}/target/classes\`);
+}
+`
+  );
+  const scala2Stub = join(scratch, "scala2-stub.js");
+  chmodSync(scala2Stub, 0o755);
+  const cacheBefore = process.env.COURSIER_CACHE;
+  process.env.COURSIER_CACHE = join(scratch, "csr");
+  process.env.SCALASEM_CACHE_DIR = join(scratch, "scalasem-cache");
+  await inventory(scala2Build, {
+    sbtCommand: scala2Stub,
+    installDeps: false
+  });
+  if (cacheBefore === undefined) {
+    delete process.env.COURSIER_CACHE;
+  } else {
+    process.env.COURSIER_CACHE = cacheBefore;
+  }
+  delete process.env.SCALASEM_CACHE_DIR;
+  const semanticdbRun = readFileSync(scala2Log, "utf-8")
+    .split("\n")
+    .find((line) => line.includes("semanticdbEnabled"));
+  assert.ok(semanticdbRun, "a SemanticDB compile runs for the Scala 2 modules");
+  assert.ok(
+    semanticdbRun.includes('set LocalProject("util-lib") / semanticdbVersion := "4.9.9"') &&
+      semanticdbRun.includes('set LocalProject("legacy") / semanticdbVersion := "4.9.9"'),
+    `plugin pinned per module: ${semanticdbRun}`
+  );
+  assert.ok(
+    semanticdbRun.includes(
+      `set LocalProject("legacy") / target := file(${JSON.stringify(join(scratch, "scalasem-cache", "semanticdb"))}`.slice(0, -1)
+    ),
+    "compiled into the scalasem cache"
+  );
+  assert.ok(
+    !semanticdbRun.includes("modern") && !/\bclean\b/.test(semanticdbRun),
+    "Scala 3 modules stay out and nothing is cleaned"
+  );
+  assert.ok(
+    semanticdbRun.endsWith("legacy/compile; util-lib/compile"),
+    "only the Scala 2 modules compile"
+  );
 }
 rmSync(scratch, { recursive: true, force: true });
 
