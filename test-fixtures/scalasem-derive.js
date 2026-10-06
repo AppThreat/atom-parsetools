@@ -499,6 +499,11 @@ assert.ok(
   ),
   "a Scala 2 call stack from the route through Store.find to slick"
 );
+assert.ok(
+  legacy.callGraph.edges.length &&
+    legacy.callGraph.edges.every((edge) => edge.confidence === "approximate"),
+  "callers recovered from SemanticDB are approximate"
+);
 
 // Call stacks: the shortest route first, no dispatch through a library supertype, and no
 // test as an entry.

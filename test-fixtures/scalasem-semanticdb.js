@@ -1,11 +1,12 @@
 // Tests for the SemanticDB reader over recorded files: the protobuf decoder, the symbol
 // grammar, the source lexer and the facts of a Scala 2 module. No compiler is needed.
 import { strict as assert } from "node:assert";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 
+import { inspectModule } from "../lib/scalasem/inspect.js";
 import { argumentLists, codeTokens, tokenize } from "../lib/scalasem/lexer.js";
 import {
   decodeTextDocuments,
@@ -184,6 +185,44 @@ assert.deepStrictEqual(
   readSemanticdbDir(scratch),
   [],
   "a broken file is skipped"
+);
+
+// TASTy no compiler can read falls back to the SemanticDB the build left for those sources.
+mkdirSync(join(scratch, "classes", "corpus"), { recursive: true });
+writeFileSync(join(scratch, "classes", "corpus", "Routes.tasty"), "");
+const fallback = inspectModule(
+  project,
+  {
+    id: "legacy",
+    scalaVersion: "3.3.7",
+    classDirs: [join(scratch, "classes")],
+    semanticdbDirs: [join(project, "meta")],
+    classpath: []
+  },
+  { installDeps: false }
+);
+assert.ok(
+  fallback.diagnostics.some((d) => d.code === "compiler-unavailable"),
+  "the unreadable TASTy is reported"
+);
+assert.strictEqual(fallback.factsSource, "semanticdb");
+assert.deepStrictEqual(
+  [...fallback.files.values()].map((f) => f.factsSource),
+  ["semanticdb", "semanticdb"]
+);
+assert.ok(
+  inspectModule(
+    project,
+    {
+      id: "legacy",
+      scalaVersion: "3.3.7",
+      classDirs: [join(scratch, "classes")],
+      semanticdbDirs: [join(project, "meta")],
+      classpath: []
+    },
+    { installDeps: false, semanticdb: "never" }
+  ).files.size === 0,
+  "no fallback when SemanticDB is turned off"
 );
 rmSync(scratch, { recursive: true, force: true });
 assert.strictEqual(
