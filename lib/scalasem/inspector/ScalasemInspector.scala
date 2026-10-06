@@ -73,8 +73,18 @@ final class FactCollector extends Inspector:
         if p.startLine >= 0 then Some(p) else None
       catch case _ => None
 
+    /** The definition a call belongs to as the source reads: closures, local vals and the
+      * statements of a template body resolve to the method or class around them.
+      */
     def enclosingOf(owner: Symbol): String =
-      val full = owner.fullName
+      def local(sym: Symbol): Boolean =
+        sym.exists && !sym.isClassDef && !sym.isPackageDef && sym.maybeOwner.exists &&
+          !sym.maybeOwner.isClassDef
+      var sym = owner
+      while sym.exists && (sym.isLocalDummy || sym.name.startsWith("$anonfun") ||
+          (sym.isValDef && local(sym))) do
+        sym = sym.maybeOwner
+      val full = (if sym.exists then sym else owner).fullName
       val anon = full.indexOf("$anonfun")
       if anon > 0 then full.substring(0, anon - 1) else full
 
@@ -104,7 +114,12 @@ final class FactCollector extends Inspector:
     def addFact(fields: String*): Unit = facts += fields.mkString("{", ",", "}")
 
     def annotationFacts(sym: Symbol): String =
-      val annotations = sym.annotations.flatMap(annotation =>
+      // The compiler's own bookkeeping (source file, sealed children) is not source evidence.
+      val sourceAnnotations = sym.annotations.filter(annotation =>
+        try !annotation.tpe.typeSymbol.fullName.startsWith("scala.annotation.internal.")
+        catch case _ => false
+      )
+      val annotations = sourceAnnotations.flatMap(annotation =>
         try
           val name = annotation.tpe.typeSymbol.fullName
           val args = mutable.ArrayBuffer.empty[String]
@@ -193,27 +208,29 @@ final class FactCollector extends Inspector:
       case _ => Symbol.noSymbol
 
     /** Argument facts: string and number literals, references to constant vals, and the spread
-      * of a repeated argument.
+      * of a repeated argument. Each fact carries the position of the parameter it is passed to;
+      * the elements of a repeated argument share the position of the repeated parameter.
       */
-    def argumentFacts(arg: Tree): List[String] = arg match
-      case NamedArg(_, inner) => argumentFacts(inner)
-      case Repeated(elems, _) => elems.flatMap(argumentFacts)
+    def argumentFacts(arg: Tree, index: Int): List[String] = arg match
+      case NamedArg(_, inner) => argumentFacts(inner, index)
+      case Typed(inner, _) => argumentFacts(inner, index)
+      case Repeated(elems, _) => elems.flatMap(argumentFacts(_, index))
       case Literal(constant) =>
         constant.value match
-          case s: String => List(s"""{"string":${ScalasemInspector.jsonStr(s)}}""")
-          case v: Int => List(s"""{"int":$v}""")
-          case v: Long => List(s"""{"long":$v}""")
-          case v: Boolean => List(s"""{"boolean":$v}""")
+          case s: String => List(s"""{"index":$index,"string":${ScalasemInspector.jsonStr(s)}}""")
+          case v: Int => List(s"""{"index":$index,"int":$v}""")
+          case v: Long => List(s"""{"index":$index,"long":$v}""")
+          case v: Boolean => List(s"""{"index":$index,"boolean":$v}""")
           case _ => Nil
       case ident: Ident =>
         constantValue(ident.symbol) match
           case Some(s: String) =>
             List(
-              s"""{"const":${ScalasemInspector.jsonStr(s)},"sym":${ScalasemInspector.jsonStr(ident.symbol.fullName)}}"""
+              s"""{"index":$index,"const":${ScalasemInspector.jsonStr(s)},"sym":${ScalasemInspector.jsonStr(ident.symbol.fullName)}}"""
             )
           case Some(v: Int) =>
             List(
-              s"""{"const":$v,"sym":${ScalasemInspector.jsonStr(ident.symbol.fullName)}}"""
+              s"""{"index":$index,"const":$v,"sym":${ScalasemInspector.jsonStr(ident.symbol.fullName)}}"""
             )
           case _ => Nil
       case _ => Nil
@@ -246,9 +263,23 @@ final class FactCollector extends Inspector:
           val signature = signatureOf(sym)
           if signature.nonEmpty then
             fields += s"\"signature\":${ScalasemInspector.jsonStr(signature)}"
-          val argFacts = args.flatMap(argumentFacts)
+          val argFacts = args.zipWithIndex.flatMap((arg, index) => argumentFacts(arg, index))
           if argFacts.nonEmpty then fields += s"\"args\":[${argFacts.mkString(",")}]"
           addFact(fields.toSeq*)
+
+    /** One reference per symbol, owner and line is enough for every consumer. */
+    def recordReference(p: Position, symbol: String, owner: String, kind: String): Unit =
+      val key = s"${p.sourceFile.path}#${p.startLine + 1}#$owner#$symbol"
+      if !refs.contains(key) then
+        refs(key) = Seq(
+          "\"kind\":\"ref\"",
+          s"\"file\":${ScalasemInspector.jsonStr(p.sourceFile.path)}",
+          s"\"line\":${p.startLine + 1}",
+          s"\"column\":${p.startColumn + 1}",
+          s"\"symbol\":${ScalasemInspector.jsonStr(symbol)}",
+          s"\"owner\":${ScalasemInspector.jsonStr(owner)}",
+          s"\"refKind\":${ScalasemInspector.jsonStr(kind)}",
+        ).mkString("{", ",", "}")
 
     def emitReference(tree: Tree, kind: String): Unit =
       val sym = tree match
@@ -262,22 +293,37 @@ final class FactCollector extends Inspector:
         if kind != "type" then unresolvedSymbols += 1
         return
       if sym.isLocalDummy || sym.flags.is(Flags.Package) then return
-      position(tree) match
-        case None => ()
-        case Some(p) =>
-          val ownerName = sym.owner.fullName
-          // One reference per owner and line is enough for every consumer.
-          val key = s"${p.sourceFile.path}#${p.startLine + 1}#$ownerName"
-          if !refs.contains(key) then
-            refs(key) = Seq(
-              "\"kind\":\"ref\"",
-              s"\"file\":${ScalasemInspector.jsonStr(p.sourceFile.path)}",
-              s"\"line\":${p.startLine + 1}",
-              s"\"column\":${p.startColumn + 1}",
-              s"\"symbol\":${ScalasemInspector.jsonStr(sym.fullName)}",
-              s"\"owner\":${ScalasemInspector.jsonStr(ownerName)}",
-              s"\"refKind\":${ScalasemInspector.jsonStr(kind)}",
-            ).mkString("{", ",", "}")
+      position(tree).foreach(p => recordReference(p, sym.fullName, sym.owner.fullName, kind))
+
+    /** The members an import names, at the line of each selector. A wildcard import records the
+      * package or object it opens, since that is the only name the source line carries.
+      */
+    def emitImportSelectors(imp: Import): Unit =
+      val base = imp.expr.symbol
+      if !base.exists then return
+      def selectorPosition(selector: Selector): Option[Position] =
+        try
+          val p = selector match
+            case s: SimpleSelector => Some(s.namePos)
+            case r: RenameSelector => Some(r.fromPos)
+            case _ => None
+          p.filter(_.startLine >= 0).orElse(position(imp))
+        catch case _ => position(imp)
+      def memberName(name: String): String =
+        val member =
+          val tpe = try base.typeMember(name) catch case _ => Symbol.noSymbol
+          if tpe.exists then tpe else try base.fieldMember(name) catch case _ => Symbol.noSymbol
+        if member.exists then member.fullName else s"${base.fullName}.$name"
+      for selector <- imp.selectors do
+        selector match
+          case s: SimpleSelector if s.name == "_" || s.name == "*" =>
+            // `import a.b.*` names the package or object itself
+            selectorPosition(s).foreach(p => recordReference(p, base.fullName, base.owner.fullName, "import"))
+          case s: SimpleSelector =>
+            selectorPosition(s).foreach(p => recordReference(p, memberName(s.name), base.fullName, "import"))
+          case r: RenameSelector =>
+            selectorPosition(r).foreach(p => recordReference(p, memberName(r.fromName), base.fullName, "import"))
+          case _ => ()
 
     object Walker extends TreeTraverser:
       override def traverseTree(tree: Tree)(owner: Symbol): Unit = tree match
@@ -309,9 +355,12 @@ final class FactCollector extends Inspector:
             projectSymbols += classDef.symbol.fullName
           super.traverseTree(tree)(owner)
         case defDef: DefDef =>
-          if !defDef.name.startsWith("$anonfun") then
-            emitDefinition(defDef.symbol, "def", position(defDef), extra = _ => ())
-          super.traverseTree(tree)(owner)
+          // The bodies the compiler generates (case class equality, enum lookups) hold no
+          // source calls, only runtime helpers placed at the declaration's line.
+          if !defDef.symbol.flags.is(Flags.Synthetic) then
+            if !defDef.name.startsWith("$anonfun") then
+              emitDefinition(defDef.symbol, "def", position(defDef), extra = _ => ())
+            super.traverseTree(tree)(owner)
         case valDef: ValDef =>
           if !valDef.name.startsWith("$anonfun") then
             emitDefinition(valDef.symbol, "val", position(valDef), extra = _ => ())
@@ -322,6 +371,7 @@ final class FactCollector extends Inspector:
           super.traverseTree(tree)(owner)
         case imp: Import =>
           emitReference(imp.expr, "import")
+          emitImportSelectors(imp)
           super.traverseTree(tree)(owner)
         case other =>
           other match
@@ -349,8 +399,10 @@ final class FactCollector extends Inspector:
 
   def printFacts(inspectorOk: Boolean): Unit =
     for key <- refs.keys do
-      val owner = key.substring(key.lastIndexOf('#') + 1)
-      if !isProjectOwner(owner) then facts += refs(key)
+      val parts = key.split('#')
+      val owner = parts(parts.length - 2)
+      val symbol = parts(parts.length - 1)
+      if !isProjectOwner(owner) && !isProjectOwner(symbol) then facts += refs(key)
     if unresolvedSymbols > 0 then
       facts += s"""{"kind":"diag","code":"unresolved-symbols","count":$unresolvedSymbols}"""
     if failedFiles > 0 then
