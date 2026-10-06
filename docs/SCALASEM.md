@@ -350,7 +350,8 @@ Everything scalasem keeps lives under `$XDG_CACHE_HOME/scalasem` (or `~/.cache/s
 the system temporary directory when neither is writable), and `SCALASEM_CACHE_DIR` moves it.
 The compiled helper is keyed by the compiler version and the content of the helper source, so
 a project is analysed without compiling the helper again. The SemanticDB targets are kept per
-project and module so the next run compiles incrementally. When the compiler or the tasty
+project, module and Scala version, so the next run compiles incrementally and a cross build's
+versions never mix. When the compiler or the tasty
 inspector of a release is missing from the local caches and installs are allowed, a throwaway
 sbt project fetches them, with its own global base so the user's global sbt plugins stay out
 of it.
