@@ -8,10 +8,7 @@ import { join } from "node:path";
 import process from "node:process";
 
 import { CANONICAL_ALGORITHMS } from "../lib/scalasem/derive/algorithms.js";
-import {
-  deriveContext,
-  deriveEvidence
-} from "../lib/scalasem/derive/index.js";
+import { deriveContext, deriveEvidence } from "../lib/scalasem/derive/index.js";
 import { parseFacts } from "../lib/scalasem/inspect.js";
 
 const projects = join(process.cwd(), "test-fixtures", "projects", "scala");
@@ -76,7 +73,9 @@ assert.ok(
 );
 // Strings that only mention an algorithm are not findings.
 assert.ok(
-  crypto.every((f) => !f.algorithm || CANONICAL_ALGORITHMS.includes(f.algorithm)),
+  crypto.every(
+    (f) => !f.algorithm || CANONICAL_ALGORITHMS.includes(f.algorithm)
+  ),
   `only canonical names: ${crypto.map((f) => f.algorithm).filter(Boolean)}`
 );
 
@@ -109,7 +108,14 @@ const call = (line, caller, owner, name, args, extra = {}) => ({
   ...extra
 });
 const digest = (line, caller, args, extra) =>
-  call(line, caller, "java.security.MessageDigest$", "getInstance", args, extra);
+  call(
+    line,
+    caller,
+    "java.security.MessageDigest$",
+    "getInstance",
+    args,
+    extra
+  );
 
 // Overloads of one method: the parameter of `mac(algorithm)` reaches the call sites of that
 // overload only, never the secret passed to `mac(secret, data)`.
@@ -123,10 +129,17 @@ const overloads = fromFacts({
       call(6, "p.A$.useOne", "p.A$", "mac", [{ index: 0, string: "SHA-256" }], {
         signature: "(java.lang.String)java.lang.Object"
       }),
-      call(7, "p.A$.useTwo", "p.A$", "mac", [
-        { index: 0, string: "wJalrXUtnFEMI-K7MDENG-bPxRfiCYEXAMPLEKEY" },
-        { index: 1, string: "data" }
-      ], { signature: "(java.lang.String,java.lang.String)java.lang.Object" })
+      call(
+        7,
+        "p.A$.useTwo",
+        "p.A$",
+        "mac",
+        [
+          { index: 0, string: "wJalrXUtnFEMI-K7MDENG-bPxRfiCYEXAMPLEKEY" },
+          { index: 1, string: "data" }
+        ],
+        { signature: "(java.lang.String,java.lang.String)java.lang.Object" }
+      )
     ]
   }
 }).crypto;
@@ -163,7 +176,10 @@ const secret = fromFacts({
   "C.scala": {
     calls: [
       digest(2, "p.C$.run", [
-        { index: 0, string: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl" }
+        {
+          index: 0,
+          string: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl"
+        }
       ])
     ]
   }
@@ -213,12 +229,22 @@ const configured = fromFacts({
       call(3, "p.E$.keys", "java.security.KeyPairGenerator$", "getInstance", [
         { index: 0, string: "DSA" }
       ]),
-      call(4, "p.E$.keys", "java.security.KeyPairGenerator", "initialize", [
-        { index: 0, int: 4096 }
-      ], { recv: { ident: "rsa", sym: "p.E$._$rsa" } }),
-      call(5, "p.E$.keys", "java.security.KeyPairGenerator", "initialize", [
-        { index: 0, int: 1024 }
-      ], { recv: { ident: "dsa", sym: "p.E$._$dsa" } })
+      call(
+        4,
+        "p.E$.keys",
+        "java.security.KeyPairGenerator",
+        "initialize",
+        [{ index: 0, int: 4096 }],
+        { recv: { ident: "rsa", sym: "p.E$._$rsa" } }
+      ),
+      call(
+        5,
+        "p.E$.keys",
+        "java.security.KeyPairGenerator",
+        "initialize",
+        [{ index: 0, int: 1024 }],
+        { recv: { ident: "dsa", sym: "p.E$._$dsa" } }
+      )
     ]
   }
 }).crypto;
@@ -235,9 +261,24 @@ const jwt = fromFacts({
   "F.scala": {
     calls: [call(5, "p.F$.sign", "pdi.jwt.JwtCirce$", "encode", [])],
     references: [
-      { line: 1, column: 1, symbol: "pdi.jwt.JwtAlgorithm$.HS256", refKind: "import" },
-      { line: 5, column: 30, symbol: "pdi.jwt.JwtAlgorithm$.RS512", refKind: "term" },
-      { line: 5, column: 40, symbol: "pdi.jwt.JwtAlgorithm$.allHmac", refKind: "term" }
+      {
+        line: 1,
+        column: 1,
+        symbol: "pdi.jwt.JwtAlgorithm$.HS256",
+        refKind: "import"
+      },
+      {
+        line: 5,
+        column: 30,
+        symbol: "pdi.jwt.JwtAlgorithm$.RS512",
+        refKind: "term"
+      },
+      {
+        line: 5,
+        column: 40,
+        symbol: "pdi.jwt.JwtAlgorithm$.allHmac",
+        refKind: "term"
+      }
     ]
   }
 }).crypto;
@@ -268,6 +309,157 @@ assert.ok(
 );
 assert.ok(!weakOf("AES/GCM/NoPadding"));
 
+// Outbound services and data stores of the services fixture.
+const services = recorded("services-jvm").services;
+const located = (s) =>
+  `${s.file.split("/").pop()}:${s.line} ${s.kind} ${s.client} ${s.url || s.host || s.topic}`;
+for (const want of [
+  "DataStores.scala:11 datastore jdbc jdbc:postgresql://db.internal:5432/orders",
+  "DataStores.scala:15 messaging kafka kafka.internal:9092",
+  "DataStores.scala:19 messaging kafka order-events",
+  "Http4sClients.scala:9 http-client http4s https://payments.example.com/v2/charges",
+  "OutboundClients.scala:14 http-client java.net.uri https://auth.example.com/oauth/token",
+  "OutboundClients.scala:19 http-client pekko-http https://inventory.example.com/api/stock",
+  "SttpClients.scala:10 http-client sttp https://api.github.com/repos/scala/scala3",
+  "SttpClients.scala:15 http-client sttp https://config.example.com/v1/settings"
+]) {
+  assert.ok(services.map(located).includes(want), `service ${want}`);
+}
+assert.ok(
+  recorded("scalajs-app").services.some(
+    (s) => s.kind === "websocket" && s.url === "wss://stream.example.com/events"
+  ),
+  "a ws URL is a websocket"
+);
+assert.ok(
+  recorded("play-app").services.some(
+    (s) =>
+      s.resolution === "config" && s.url === "https://api.stripe.com/v1/charges"
+  ),
+  "a URL read from the configuration"
+);
+
+// Values that are not endpoints, and credentials anywhere in the ones that are.
+const servicesOf = (calls, config = {}) =>
+  fromFacts({ "S.scala": { calls } }, config).services.map(located);
+assert.deepStrictEqual(
+  servicesOf([
+    call(1, "p.S$.a", "java.net.URI$", "create", [
+      { index: 0, string: "/login" }
+    ]),
+    call(2, "p.S$.a", "java.net.URI$", "create", [
+      { index: 0, string: "urn:isbn:0451450523" }
+    ]),
+    call(3, "p.S$.a", "org.mongodb.scala.bson.BsonString$", "apply", [
+      { index: 0, string: "hello world" }
+    ]),
+    call(
+      4,
+      "p.S$.a",
+      "software.amazon.awssdk.auth.credentials.AwsBasicCredentials$",
+      "create",
+      [{ index: 0, string: "AKIAIOSFODNN7EXAMPLE" }]
+    )
+  ]),
+  [],
+  "relative paths, URNs, documents and credentials are not services"
+);
+assert.deepStrictEqual(
+  servicesOf([
+    call(1, "p.S$.a", "java.net.URI$", "create", [
+      {
+        index: 0,
+        string:
+          "https://hooks.slack.com/services/T0000/B0000/hT5ab9XAMPLEkEY2nB7mPqR"
+      }
+    ]),
+    call(2, "p.S$.a", "java.util.Properties", "put", [
+      { index: 0, string: "bootstrap.servers" },
+      { index: 1, string: "SASL_SSL://alice:s3cr3t@broker:9093" }
+    ]),
+    call(
+      3,
+      "p.S$.a",
+      "software.amazon.awssdk.services.s3.S3Client$",
+      "builder",
+      []
+    )
+  ]),
+  [
+    "S.scala:1 http-client java.net.uri https://hooks.slack.com/services/T0000/B0000/{}",
+    "S.scala:2 messaging kafka broker:9093",
+    "S.scala:3 cloud aws-sdk undefined"
+  ]
+);
+// Every call site of a helper is a service of its own, and a configuration path names its URL.
+assert.deepStrictEqual(
+  servicesOf(
+    [
+      call(1, "p.S$.get", "java.net.URI$", "create", [
+        { index: 0, param: "url", paramIndex: 0 }
+      ]),
+      call(5, "p.S$.a", "p.S$", "get", [
+        { index: 0, string: "https://a.example.com" }
+      ]),
+      call(6, "p.S$.b", "p.S$", "get", [
+        { index: 0, string: "https://b.example.com" }
+      ]),
+      call(
+        7,
+        "p.S$.c",
+        "slick.jdbc.JdbcBackend$DatabaseFactoryDef",
+        "forConfig",
+        [{ index: 0, string: "db.default" }]
+      )
+    ],
+    {
+      values: [
+        {
+          key: "db.default.url",
+          value: "jdbc:postgresql://db:5432/app",
+          file: "conf/application.conf",
+          line: 3
+        },
+        {
+          key: "db.default.url",
+          value: "env:DATABASE_URL",
+          file: "conf/application.conf",
+          line: 4
+        }
+      ]
+    }
+  ),
+  [
+    "S.scala:1 http-client java.net.uri https://a.example.com",
+    "S.scala:1 http-client java.net.uri https://b.example.com",
+    "S.scala:7 datastore slick jdbc:postgresql://db:5432/app"
+  ]
+);
+
+// The configuration reader: nested keys, comments, environment overrides, one line blocks.
+const { hoconAssignments } = await import("../lib/scalasem/config.js");
+assert.deepStrictEqual(
+  hoconAssignments(
+    [
+      "db {",
+      "  default {",
+      '    url = "jdbc:postgresql://db:5432/app" # primary',
+      "    url = ${?DATABASE_URL}",
+      "  }",
+      "}",
+      'payments.url = "https://api.example.com/v1"   // gateway',
+      'kafka { bootstrap.servers = "k1:9092,k2:9092", topic = orders }'
+    ].join("\n")
+  ).map((a) => `${a.key}=${a.value}`),
+  [
+    "db.default.url=jdbc:postgresql://db:5432/app",
+    "db.default.url=${?DATABASE_URL}",
+    "payments.url=https://api.example.com/v1",
+    "kafka.bootstrap.servers=k1:9092,k2:9092",
+    "kafka.topic=orders"
+  ]
+);
+
 console.log(
-  `scalasem-derive: ${crypto.length} crypto findings, ${CANONICAL_ALGORITHMS.length} canonical names`
+  `scalasem-derive: ${crypto.length} crypto findings, ${services.length} services, ${CANONICAL_ALGORITHMS.length} canonical names`
 );
