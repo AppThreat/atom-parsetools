@@ -33,9 +33,15 @@ function validate(value, node, path) {
     errors.push(`${path}: expected ${JSON.stringify(node.const)}`);
   }
   if (node.enum && !node.enum.includes(value)) {
-    errors.push(`${path}: ${JSON.stringify(value)} is not one of ${node.enum.join(", ")}`);
+    errors.push(
+      `${path}: ${JSON.stringify(value)} is not one of ${node.enum.join(", ")}`
+    );
   }
-  const types = Array.isArray(node.type) ? node.type : node.type ? [node.type] : [];
+  const types = Array.isArray(node.type)
+    ? node.type
+    : node.type
+      ? [node.type]
+      : [];
   if (types.length) {
     const actual = Array.isArray(value)
       ? "array"
@@ -49,12 +55,18 @@ function validate(value, node, path) {
       return errors;
     }
   }
-  if (typeof value === "number" && node.minimum !== undefined && value < node.minimum) {
+  if (
+    typeof value === "number" &&
+    node.minimum !== undefined &&
+    value < node.minimum
+  ) {
     errors.push(`${path}: ${value} is below ${node.minimum}`);
   }
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
     if (node.minProperties && Object.keys(value).length < node.minProperties) {
-      errors.push(`${path}: expected at least ${node.minProperties} properties`);
+      errors.push(
+        `${path}: expected at least ${node.minProperties} properties`
+      );
     }
     for (const key of node.required || []) {
       if (!(key in value)) {
@@ -63,7 +75,9 @@ function validate(value, node, path) {
     }
     const patterns = Object.entries(node.patternProperties || {});
     for (const key of Object.keys(value)) {
-      const matching = patterns.filter(([pattern]) => new RegExp(pattern).test(key));
+      const matching = patterns.filter(([pattern]) =>
+        new RegExp(pattern).test(key)
+      );
       if (matching.length) {
         for (const [, child] of matching) {
           errors.push(...validate(value[key], child, `${path}.${key}`));
@@ -92,21 +106,42 @@ function validate(value, node, path) {
 // A recorded report of a real project.
 const recorded = JSON.parse(
   readFileSync(
-    join(process.cwd(), "test-fixtures", "projects", "scala", "reports", "showcase.json"),
+    join(
+      process.cwd(),
+      "test-fixtures",
+      "projects",
+      "scala",
+      "reports",
+      "showcase.json"
+    ),
     "utf-8"
   )
 );
 let violations = validate(recorded, schema, "$");
-assert.deepStrictEqual(violations, [], `recorded report violates the schema:\n${violations.join("\n")}`);
+assert.deepStrictEqual(
+  violations,
+  [],
+  `recorded report violates the schema:\n${violations.join("\n")}`
+);
 
 // A report built the way the writer builds it, over the recorded inspector output.
 const lines = readFileSync(
-  join(process.cwd(), "test-fixtures", "projects", "scala", "inspector", "showcase-3.3.7.jsonl"),
+  join(
+    process.cwd(),
+    "test-fixtures",
+    "projects",
+    "scala",
+    "inspector",
+    "showcase-3.3.7.jsonl"
+  ),
   "utf-8"
 )
   .split("\n")
   .filter((line) => line.trim());
-const facts = parseFacts(join(process.cwd(), "test-fixtures", "projects", "scala", "showcase"), lines);
+const facts = parseFacts(
+  join(process.cwd(), "test-fixtures", "projects", "scala", "showcase"),
+  lines
+);
 const config = parseProjectConfig(
   join(process.cwd(), "test-fixtures", "projects", "scala", "playish")
 );
@@ -150,7 +185,11 @@ const report = buildReport({
   ]
 });
 violations = validate(report, schema, "$");
-assert.deepStrictEqual(violations, [], `built report violates the schema:\n${violations.join("\n")}`);
+assert.deepStrictEqual(
+  violations,
+  [],
+  `built report violates the schema:\n${violations.join("\n")}`
+);
 assert.deepStrictEqual(
   report._meta.compilers,
   [{ source: "sbt", version: "3.3.7" }],

@@ -3,7 +3,15 @@
 // The no build form runs the same way without starting a build tool.
 import { strict as assert } from "node:assert";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -13,29 +21,48 @@ const out = mkdtempSync(join(tmpdir(), "scalasem-cli-"));
 // The fixture is copied so the build tool runs of the flag free form cannot rewrite the
 // files the repository keeps.
 const project = join(out, "project");
-cpSync(join(process.cwd(), "test-fixtures", "projects", "scala", "showcase"), project, {
-  recursive: true
-});
+cpSync(
+  join(process.cwd(), "test-fixtures", "projects", "scala", "showcase"),
+  project,
+  {
+    recursive: true
+  }
+);
 
 // The no build form reads the classpath the last build exported next to its outputs.
 const repository = join(out, "repository", "org", "example", "dep_3", "1.0");
 const exported = join(repository, "dep_3-1.0.jar");
 mkdirSync(repository, { recursive: true });
 // An empty but valid zip archive: the end of central directory record alone.
-writeFileSync(exported, Buffer.from([0x50, 0x4b, 0x05, 0x06, ...new Array(18).fill(0)]));
-const streams = join(project, "target", "streams", "compile", "dependencyClasspath", "_global", "streams");
+writeFileSync(
+  exported,
+  Buffer.from([0x50, 0x4b, 0x05, 0x06, ...new Array(18).fill(0)])
+);
+const streams = join(
+  project,
+  "target",
+  "streams",
+  "compile",
+  "dependencyClasspath",
+  "_global",
+  "streams"
+);
 mkdirSync(streams, { recursive: true });
 writeFileSync(join(streams, "export"), exported);
 
 function runScalasem(args) {
-  return spawnSync(process.execPath, [scalasem, ...args], { encoding: "utf-8" });
+  return spawnSync(process.execPath, [scalasem, ...args], {
+    encoding: "utf-8"
+  });
 }
 
 let result = runScalasem([project, join(out, "slices.json"), "--no-build"]);
 if (result.status !== 0 || !existsSync(join(out, "slices.json"))) {
   // Without a JDK or a cached compiler the analysis cannot run; that is not a failure of the
   // command line contract being tested here.
-  console.log(`scalasem-cli: skipped, analysis unavailable (${(result.stderr || "").split("\n")[0]})`);
+  console.log(
+    `scalasem-cli: skipped, analysis unavailable (${(result.stderr || "").split("\n")[0]})`
+  );
   rmSync(out, { recursive: true, force: true });
   process.exit(0);
 }
@@ -48,7 +75,10 @@ assert.deepStrictEqual(
   [["target/scala-3.3.7/classes"]],
   "one module for the class directory, not one per package"
 );
-assert.ok(report.config && Array.isArray(report.config.routes), "config.routes present");
+assert.ok(
+  report.config && Array.isArray(report.config.routes),
+  "config.routes present"
+);
 assert.ok(Array.isArray(report.modules), "modules present");
 const fileKeys = Object.keys(report).filter((k) => k.endsWith(".scala"));
 assert.ok(fileKeys.length === 1, "one source file entry");
@@ -63,13 +93,19 @@ for (const key of fileKeys) {
 }
 
 assert.ok(
-  report.modules[0].classpath.some((c) => c.group === "org.example" && c.artifact === "dep_3"),
+  report.modules[0].classpath.some(
+    (c) => c.group === "org.example" && c.artifact === "dep_3"
+  ),
   "leftover classpath of the last build read"
 );
 
 // A second run with no flags at all, the exact form atom uses.
 result = runScalasem([project, join(out, "atom.json")]);
-assert.strictEqual(result.status, 0, `scalasem <dir> <file> failed: ${result.stderr}`);
+assert.strictEqual(
+  result.status,
+  0,
+  `scalasem <dir> <file> failed: ${result.stderr}`
+);
 assert.ok(existsSync(join(out, "atom.json")), "atom form produced the file");
 
 // Usage errors fail with a non-zero exit and no output file.
@@ -78,7 +114,9 @@ assert.notStrictEqual(result.status, 0, "missing directory must fail");
 assert.ok(!existsSync(join(out, "none.json")));
 
 cleanup();
-console.log(`scalasem-cli: atom command line and no build form checked, ${fileKeys.length} entries`);
+console.log(
+  `scalasem-cli: atom command line and no build form checked, ${fileKeys.length} entries`
+);
 
 function cleanup() {
   rmSync(out, { recursive: true, force: true });
