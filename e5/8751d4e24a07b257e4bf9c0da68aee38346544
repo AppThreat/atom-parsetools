@@ -1,0 +1,22 @@
+lib/scalasem/config.js
+  s_5e2537d4d8b695::t_0fd2a410c99897 303,328-341,358
+  s_5e2537d4d8b695::t_8bf3a32d33aa39 203-208,210-213,217,225-226,229-251,254-265,268-298,312-327,342-357,361
+  s_5e2537d4d8b695::t_9a93606dce05a5 300-302,304-311
+  s_5e2537d4d8b695::t_17d5afa1135de2 364
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e58751d4e24a07b257e4bf9c0da68aee38346544",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
