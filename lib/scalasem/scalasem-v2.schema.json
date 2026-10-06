@@ -638,6 +638,10 @@
         "endLine": {
           "type": "integer",
           "minimum": 1
+        },
+        "byName": {
+          "type": "integer",
+          "minimum": 0
         }
       },
       "additionalProperties": false

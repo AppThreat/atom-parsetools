@@ -200,15 +200,19 @@ final class FactCollector extends Inspector:
             case _ => ()
         case _ => ()
 
-    /** The parameter names of a method, every parameter list flattened in declaration order. */
+    /** The value parameter names of a method, every parameter list flattened in declaration
+      * order; type parameters have no argument position and stay out.
+      */
     def paramNamesOf(sym: Symbol): Seq[String] =
       try
-        sym.paramSymss.flatten.map(_.name.toString)
+        paramSymbolsOf(sym).map(_.name.toString)
       catch case _ => Nil
 
-    /** The symbols of a method's parameters, matching `paramNamesOf` element for element. */
+    /** The symbols of a method's value parameters, matching `paramNamesOf` element for
+      * element.
+      */
     def paramSymbolsOf(sym: Symbol): Seq[Symbol] =
-      try sym.paramSymss.flatten
+      try sym.paramSymss.flatten.filter(_.isTerm)
       catch case _ => Nil
 
     def callSymbol(fun: Tree): Symbol = fun match
@@ -237,6 +241,27 @@ final class FactCollector extends Inspector:
       val params = paramSymbolsOf(enclosing)
       val found = params.indexOf(argSym)
       if found >= 0 then Some(found) else None
+
+    /** The position of a by-name parameter of the enclosing method, when the symbol is one.
+      * Evaluating such a parameter runs the argument expression the caller passed, so the
+      * reference is an application of it.
+      */
+    def byNameIndexOf(argSym: Symbol, enclosing: Symbol): Option[Int] =
+      val index = paramIndexOf(argSym, enclosing) match
+        case Some(found) => found
+        case None => return None
+      val params = paramSymbolsOf(enclosing)
+      if index >= params.length then return None
+      val isByName =
+        try
+          // The by-name type tree has no public type in the reflection API; its tree class
+          // name is the same on every release.
+          params(index).tree match
+            case paramDef: ValDef =>
+              paramDef.tpt.getClass.getSimpleName == "ByNameTypeTree"
+            case _ => false
+        catch case _ => false
+      if isByName then Some(index) else None
 
     /** Argument facts: string and number literals, references to constant vals, the position a
       * parameter of the enclosing method is passed at, identifiers that are neither, the literal
@@ -595,6 +620,28 @@ final class FactCollector extends Inspector:
           if idents.nonEmpty then fields += s"\"idents\":[${idents.mkString(",")}]"
           addFact(fields.toSeq*)
 
+    /** The application of a by-name parameter: the argument runs here, in this method. */
+    def emitByNameApplication(ident: Ident, owner: Symbol): Unit =
+      val sym = ident.symbol
+      if !sym.exists then return
+      val enclosing = enclosingMethodOf(owner)
+      byNameIndexOf(sym, enclosing) match
+        case Some(index) =>
+          position(ident) match
+            case Some(p) =>
+              addFact(
+                "\"kind\":\"call\"",
+                s"\"file\":${ScalasemInspector.jsonStr(p.sourceFile.path)}",
+                s"\"line\":${p.startLine + 1}",
+                s"\"column\":${p.startColumn + 1}",
+                s"\"caller\":${ScalasemInspector.jsonStr(enclosingOf(owner))}",
+                s"\"owner\":${ScalasemInspector.jsonStr(enclosing.fullName)}",
+                s"\"name\":${ScalasemInspector.jsonStr(sym.name.toString)}",
+                s"\"byName\":$index",
+              )
+            case None => ()
+        case None => ()
+
     object Walker extends TreeTraverser:
       override def traverseTree(tree: Tree)(owner: Symbol): Unit = tree match
         case apply: Apply =>
@@ -655,7 +702,9 @@ final class FactCollector extends Inspector:
           super.traverseTree(tree)(owner)
         case other =>
           other match
-            case ident: Ident => emitReference(ident, "term")
+            case ident: Ident =>
+              emitReference(ident, "term")
+              emitByNameApplication(ident, owner)
             case select: Select => emitReference(select, "term")
             case typeTree: TypeTree => emitReference(typeTree, "type")
             case unapply: Unapply => emitPattern(unapply)
