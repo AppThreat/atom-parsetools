@@ -106,7 +106,7 @@ const lines = readFileSync(
 )
   .split("\n")
   .filter((line) => line.trim());
-const facts = parseFacts("/src/showcase", lines);
+const facts = parseFacts(join(process.cwd(), "test-fixtures", "projects", "scala", "showcase"), lines);
 const config = parseProjectConfig(
   join(process.cwd(), "test-fixtures", "projects", "scala", "playish")
 );

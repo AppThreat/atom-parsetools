@@ -31,7 +31,7 @@ function recordedLines(version) {
 }
 
 function recordedFacts(version) {
-  return parseFacts("/src/showcase", recordedLines(version));
+  return parseFacts(join(process.cwd(), "test-fixtures", "projects", "scala", "showcase"), recordedLines(version));
 }
 
 const versions = readdirSync(join(projects, "inspector"))
@@ -81,6 +81,14 @@ for (const version of versions) {
     `${version}: inline constant argument`
   );
 }
+
+// Code inlined from a library carries the library's source positions; those are not project files.
+const inlined = parseFacts(join(projects, "showcase"), [
+  '{"kind":"call","file":"library/src/scala/quoted/Expr.scala","line":3,"column":1,"caller":"x","owner":"y","name":"z"}',
+  '{"kind":"call","file":"/home/runner/work/utest/utest/src-3/utest/TestBuilder.scala","line":3,"column":1,"caller":"x","owner":"y","name":"z"}',
+  '{"kind":"call","file":"src/main/scala/showcase/Sample.scala","line":12,"column":1,"caller":"x","owner":"y","name":"z"}'
+]);
+assert.deepStrictEqual([...inlined.keys()], ["src/main/scala/showcase/Sample.scala"]);
 
 // Reports built from the recordings are deterministic.
 const module = { id: "showcase", platform: "jvm", scalaVersion: "3.3.7" };
