@@ -254,7 +254,8 @@ const occurrence = (line, text, symbol, role = 1) => {
 };
 const shapeFacts = semanticdbFacts(scratch, {
   uri: "src/p/K.scala",
-  symbols: [],
+  // An abstract, sealed and final object: only the flags the schema names are reported.
+  symbols: [{ symbol: "p/K.", kind: 10, properties: 0x4 | 0x8 | 0x10 }],
   synthetics: [],
   occurrences: [
     occurrence(1, "K", "p/K.", 2),
@@ -267,6 +268,10 @@ const shapeFacts = semanticdbFacts(scratch, {
     occurrence(4, 'uri"', "org/http4s/syntax/LiteralsOps#uri().")
   ]
 }).facts;
+assert.deepStrictEqual(
+  shapeFacts.definitions.find((d) => d.name === "K")?.flags,
+  ["final", "module"]
+);
 assert.deepStrictEqual(
   shapeFacts.calls.map((c) => [c.name, c.args]),
   [
