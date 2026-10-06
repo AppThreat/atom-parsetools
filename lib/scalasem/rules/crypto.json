@@ -1,0 +1,310 @@
+{
+  "description": "Crypto API table: which call sites name an algorithm, a protocol or a key store, and where the parameters of the asset come from.",
+  "apis": [
+    {
+      "owner": "javax.crypto.Cipher$",
+      "name": "getInstance",
+      "arg": 0,
+      "primitive": "block-cipher",
+      "kind": "algorithm",
+      "api": "JCA",
+      "provider": "jdk",
+      "parse": "transform"
+    },
+    {
+      "owner": "javax.crypto.Mac$",
+      "name": "getInstance",
+      "arg": 0,
+      "primitive": "mac",
+      "kind": "algorithm",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "java.security.MessageDigest$",
+      "name": "getInstance",
+      "arg": 0,
+      "primitive": "hash",
+      "kind": "algorithm",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "java.security.Signature$",
+      "name": "getInstance",
+      "arg": 0,
+      "primitive": "signature",
+      "kind": "algorithm",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "java.security.KeyPairGenerator$",
+      "name": "getInstance",
+      "arg": 0,
+      "primitive": "pke",
+      "kind": "algorithm",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "javax.crypto.KeyGenerator$",
+      "name": "getInstance",
+      "arg": 0,
+      "primitive": "block-cipher",
+      "kind": "algorithm",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "javax.crypto.SecretKeyFactory$",
+      "name": "getInstance",
+      "arg": 0,
+      "primitive": "kdf",
+      "kind": "algorithm",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "java.security.KeyAgreement$",
+      "name": "getInstance",
+      "arg": 0,
+      "primitive": "key-agree",
+      "kind": "algorithm",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "java.security.KeyFactory$",
+      "name": "getInstance",
+      "arg": 0,
+      "primitive": "pke",
+      "kind": "algorithm",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "javax.net.ssl.SSLContext$",
+      "name": "getInstance",
+      "arg": 0,
+      "kind": "protocol",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "java.security.KeyStore$",
+      "name": "getInstance",
+      "arg": 0,
+      "kind": "keystore",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "java.security.SecureRandom$",
+      "name": "getInstanceStrong",
+      "algorithm": "DRBG",
+      "kind": "rng",
+      "api": "JCA",
+      "provider": "jdk"
+    },
+    {
+      "owner": "org.bouncycastle.crypto.digests.SHA3Digest",
+      "name": "<init>",
+      "arg": 0,
+      "prefix": "SHA3-",
+      "primitive": "hash",
+      "kind": "algorithm",
+      "api": "BouncyCastle",
+      "provider": "bcprov"
+    },
+    {
+      "owner": "org.bouncycastle.crypto.params.Argon2Parameters$.Builder",
+      "name": "<init>",
+      "arg": 0,
+      "identPrefix": "ARGON2_",
+      "canonicalPrefix": "Argon2",
+      "primitive": "kdf",
+      "kind": "algorithm",
+      "api": "BouncyCastle",
+      "provider": "bcprov"
+    },
+    {
+      "owner": "at.favre.lib.crypto.bcrypt.BCrypt$",
+      "nameIn": [
+        "withDefaults",
+        "hashToString",
+        "verify",
+        "hash"
+      ],
+      "algorithm": "bcrypt",
+      "primitive": "kdf",
+      "kind": "algorithm",
+      "api": "bcrypt",
+      "provider": "at.favre.lib:bcrypt"
+    },
+    {
+      "owner": "org.scalajs.dom.SubtleCrypto",
+      "name": "digest",
+      "arg": 0,
+      "primitive": "hash",
+      "kind": "algorithm",
+      "api": "WebCrypto",
+      "provider": "org.scala-js:scalajs-dom"
+    },
+    {
+      "owner": "org.scalajs.dom.SubtleCrypto",
+      "nameIn": [
+        "encrypt",
+        "decrypt",
+        "sign",
+        "generateKey",
+        "importKey"
+      ],
+      "arg": 0,
+      "primitive": "ae",
+      "kind": "algorithm",
+      "api": "WebCrypto",
+      "provider": "org.scala-js:scalajs-dom",
+      "parse": "object-literal"
+    }
+  ],
+  "algorithmRefs": [
+    {
+      "symbolPrefix": "pdi.jwt.JwtAlgorithm$.",
+      "api": "jwt-scala",
+      "provider": "com.github.jwt-scala:jwt-core",
+      "kind": "algorithm",
+      "primitive": "mac",
+      "algorithmSuffixIsName": true,
+      "apiPrefix": "pdi.jwt.Jwt"
+    }
+  ],
+  "enrichments": [
+    {
+      "ownerPrefix": "java.security.KeyPairGenerator",
+      "name": "initialize",
+      "arg": 0,
+      "field": "keySize"
+    },
+    {
+      "ownerPrefix": "javax.crypto.KeyGenerator",
+      "name": "init",
+      "arg": 0,
+      "field": "keySize"
+    },
+    {
+      "ownerPrefix": "java.security.spec.ECGenParameterSpec",
+      "name": "<init>",
+      "arg": 0,
+      "field": "curve",
+      "family": "EC"
+    },
+    {
+      "ownerPrefix": "javax.crypto.spec.PBEKeySpec",
+      "name": "<init>",
+      "arg": 3,
+      "field": "keySize",
+      "primitive": "kdf"
+    },
+    {
+      "ownerPrefix": "javax.crypto.spec.GCMParameterSpec",
+      "name": "<init>",
+      "arg": 0,
+      "field": "bits",
+      "mode": "gcm",
+      "family": "AES"
+    }
+  ],
+  "externObjects": {
+    "linkAnnotation": "scala.scalanative.unsafe.link",
+    "externAnnotation": "scala.scalanative.unsafe.package$.extern",
+    "algorithmMethods": {
+      "EVP_sha256": {
+        "algorithm": "SHA-256",
+        "primitive": "hash"
+      },
+      "EVP_sha384": {
+        "algorithm": "SHA-384",
+        "primitive": "hash"
+      },
+      "EVP_sha512": {
+        "algorithm": "SHA-512",
+        "primitive": "hash"
+      },
+      "EVP_sha3_256": {
+        "algorithm": "SHA3-256",
+        "primitive": "hash"
+      },
+      "EVP_md5": {
+        "algorithm": "MD5",
+        "primitive": "hash",
+        "weak": true
+      },
+      "EVP_md4": {
+        "algorithm": "MD4",
+        "primitive": "hash",
+        "weak": true
+      },
+      "EVP_sha1": {
+        "algorithm": "SHA-1",
+        "primitive": "hash",
+        "weak": true
+      },
+      "EVP_des_ede3_cbc": {
+        "algorithm": "DESede/CBC/NoPadding",
+        "primitive": "block-cipher",
+        "weak": true
+      },
+      "EVP_aes_128_gcm": {
+        "algorithm": "AES-128-GCM",
+        "primitive": "ae"
+      },
+      "EVP_aes_256_gcm": {
+        "algorithm": "AES-256-GCM",
+        "primitive": "ae"
+      },
+      "EVP_chacha20_poly1305": {
+        "algorithm": "ChaCha20-Poly1305",
+        "primitive": "ae"
+      },
+      "SHA256": {
+        "algorithm": "SHA-256",
+        "primitive": "hash"
+      },
+      "SHA512": {
+        "algorithm": "SHA-512",
+        "primitive": "hash"
+      },
+      "MD5": {
+        "algorithm": "MD5",
+        "primitive": "hash",
+        "weak": true
+      },
+      "SHA1": {
+        "algorithm": "SHA-1",
+        "primitive": "hash",
+        "weak": true
+      }
+    }
+  },
+  "weakAlgorithms": [
+    "MD2",
+    "MD4",
+    "MD5",
+    "SHA-1",
+    "SHA1",
+    "DES",
+    "DESede",
+    "3DES",
+    "RC2",
+    "RC4",
+    "BLOWFISH"
+  ],
+  "weakModes": [
+    "ECB"
+  ],
+  "keySizeFloor": {
+    "RSA": 2048,
+    "DSA": 2048
+  }
+}

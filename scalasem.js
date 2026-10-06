@@ -14,6 +14,7 @@ import { inspectModule } from "./lib/scalasem/inspect.js";
 import { buildFileEntry } from "./lib/scalasem/facts.js";
 import { parseProjectConfig } from "./lib/scalasem/config.js";
 import { buildReport, reportCaps, writeReport } from "./lib/scalasem/schema.js";
+import { deriveContext, deriveEvidence } from "./lib/scalasem/derive.js";
 
 function parseArgs(argv) {
   const positional = [];
@@ -74,7 +75,8 @@ async function main(argv) {
   const detected = await inventory(projectDir, opts);
   const diagnostics = [...detected.diagnostics];
   const toolchains = [];
-  const fileEntries = {};
+  const rawFiles = new Map();
+  const moduleOf = new Map();
   const modulesWithOutput = [];
   let tastyTotal = 0;
   let readTotal = 0;
@@ -86,11 +88,14 @@ async function main(argv) {
     tastyTotal += inspected.tastyFiles;
     readTotal += inspected.readFiles;
     for (const [file, facts] of inspected.files) {
-      const entry = buildFileEntry(facts, module, file, { caps: reportCaps() });
-      if (fileEntries[file]) {
-        mergeEntries(fileEntries[file], entry);
+      const existing = rawFiles.get(file);
+      if (existing) {
+        for (const key of ["definitions", "calls", "patterns", "references", "constants"]) {
+          existing[key].push(...(facts[key] || []));
+        }
       } else {
-        fileEntries[file] = entry;
+        rawFiles.set(file, facts);
+        moduleOf.set(file, module);
       }
     }
     if (inspected.files.size || module.classpath.length) {
@@ -98,6 +103,18 @@ async function main(argv) {
     }
   }
   const config = parseProjectConfig(projectDir);
+  const evidence = deriveEvidence(
+    deriveContext(rawFiles, {
+      routes: config.routes,
+      values: config.values
+    })
+  );
+  const fileEntries = {};
+  for (const [file, facts] of rawFiles) {
+    fileEntries[file] = buildFileEntry(facts, moduleOf.get(file), file, {
+      caps: reportCaps()
+    });
+  }
   const report = buildReport(
     {
       projectDir,
@@ -112,7 +129,8 @@ async function main(argv) {
           }
         : { routes: [] },
       diagnostics: mergeDiagnostics(diagnostics),
-      toolchains
+      toolchains,
+      evidence
     },
     reportCaps()
   );
@@ -125,16 +143,6 @@ async function main(argv) {
     console.log("Empty slices file created.");
   }
   return true;
-}
-
-function mergeEntries(target, source) {
-  // The same source file can be compiled into more than one module of a cross build; the
-  // entry keeps one fact set with the module of the first writer.
-  for (const key of ["definitions", "calls", "references", "constants"]) {
-    if (source[key]?.length && !target[key]?.length) {
-      target[key] = source[key];
-    }
-  }
 }
 
 function mergeDiagnostics(diagnostics) {
