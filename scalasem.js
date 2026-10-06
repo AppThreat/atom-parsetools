@@ -54,7 +54,9 @@ function parseArgs(argv) {
 async function main(argv) {
   const { positional, opts } = parseArgs(argv);
   if (positional.length < 1) {
-    console.error("usage: scalasem <dir> <outFile> [--no-build] [--no-compile]");
+    console.error(
+      "usage: scalasem <dir> <outFile> [--no-build] [--no-compile]"
+    );
     return false;
   }
   const requested = resolve(positional[0]);
@@ -66,7 +68,9 @@ async function main(argv) {
   // the relative paths of the report to line up.
   const projectDir = realpathSync(requested);
   const outFile =
-    positional.length > 1 ? resolve(positional[1]) : resolve(projectDir, "slices.json");
+    positional.length > 1
+      ? resolve(positional[1])
+      : resolve(projectDir, "slices.json");
   const detected = await inventory(projectDir, opts);
   const diagnostics = [...detected.diagnostics];
   const toolchains = [];
@@ -102,7 +106,10 @@ async function main(argv) {
       modules: modulesWithOutput,
       fileEntries,
       config: config.routes.length
-        ? { routes: config.routes, ...(config.values.length ? { values: config.values } : {}) }
+        ? {
+            routes: config.routes,
+            ...(config.values.length ? { values: config.values } : {})
+          }
         : { routes: [] },
       diagnostics: mergeDiagnostics(diagnostics),
       toolchains
