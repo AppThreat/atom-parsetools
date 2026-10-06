@@ -200,6 +200,17 @@ final class FactCollector extends Inspector:
             case _ => ()
         case _ => ()
 
+    /** The parameter names of a method, every parameter list flattened in declaration order. */
+    def paramNamesOf(sym: Symbol): Seq[String] =
+      try
+        sym.paramSymss.flatten.map(_.name.toString)
+      catch case _ => Nil
+
+    /** The symbols of a method's parameters, matching `paramNamesOf` element for element. */
+    def paramSymbolsOf(sym: Symbol): Seq[Symbol] =
+      try sym.paramSymss.flatten
+      catch case _ => Nil
+
     def callSymbol(fun: Tree): Symbol = fun match
       case apply: Apply => callSymbol(apply.fun)
       case typeApply: TypeApply => callSymbol(typeApply.fun)
@@ -207,14 +218,36 @@ final class FactCollector extends Inspector:
       case ident: Ident => ident.symbol
       case _ => Symbol.noSymbol
 
-    /** Argument facts: string and number literals, references to constant vals, and the spread
-      * of a repeated argument. Each fact carries the position of the parameter it is passed to;
-      * the elements of a repeated argument share the position of the repeated parameter.
+    /** The enclosing method a tree belongs to once anonymous functions fold away: the first
+      * method or value definition on the owner chain that is not a lambda.
       */
-    def argumentFacts(arg: Tree, index: Int): List[String] = arg match
-      case NamedArg(_, inner) => argumentFacts(inner, index)
-      case Typed(inner, _) => argumentFacts(inner, index)
-      case Repeated(elems, _) => elems.flatMap(argumentFacts(_, index))
+    def enclosingMethodOf(owner: Symbol): Symbol =
+      var sym = owner
+      var guard = 0
+      while sym.exists && guard < 64 do
+        guard += 1
+        if sym.isDefDef || sym.isValDef then
+          if !sym.name.startsWith("$anonfun") && !sym.flags.is(Flags.Synthetic) then return sym
+        sym = sym.maybeOwner
+      Symbol.noSymbol
+
+    /** True when a symbol is one of the parameters of the method that encloses a call. */
+    def paramIndexOf(argSym: Symbol, enclosing: Symbol): Option[Int] =
+      if !argSym.exists || !enclosing.exists then return None
+      val params = paramSymbolsOf(enclosing)
+      val found = params.indexOf(argSym)
+      if found >= 0 then Some(found) else None
+
+    /** Argument facts: string and number literals, references to constant vals, the position a
+      * parameter of the enclosing method is passed at, identifiers that are neither, the literal
+      * parts of interpolations, and calls whose own arguments are literals. Each fact carries the
+      * position of the parameter it is passed to; the elements of a repeated argument share the
+      * position of the repeated parameter.
+      */
+    def argumentFacts(arg: Tree, index: Int, enclosing: Symbol): List[String] = arg match
+      case NamedArg(_, inner) => argumentFacts(inner, index, enclosing)
+      case Typed(inner, _) => argumentFacts(inner, index, enclosing)
+      case Repeated(elems, _) => elems.flatMap(argumentFacts(_, index, enclosing))
       case Literal(constant) =>
         constant.value match
           case s: String => List(s"""{"index":$index,"string":${ScalasemInspector.jsonStr(s)}}""")
@@ -223,16 +256,133 @@ final class FactCollector extends Inspector:
           case v: Boolean => List(s"""{"index":$index,"boolean":$v}""")
           case _ => Nil
       case ident: Ident =>
-        constantValue(ident.symbol) match
+        val sym = ident.symbol
+        if !sym.exists then return Nil
+        constantValue(sym) match
           case Some(s: String) =>
             List(
-              s"""{"index":$index,"const":${ScalasemInspector.jsonStr(s)},"sym":${ScalasemInspector.jsonStr(ident.symbol.fullName)}}"""
+              s"""{"index":$index,"const":${ScalasemInspector.jsonStr(s)},"sym":${ScalasemInspector.jsonStr(sym.fullName)}}"""
             )
           case Some(v: Int) =>
             List(
-              s"""{"index":$index,"const":$v,"sym":${ScalasemInspector.jsonStr(ident.symbol.fullName)}}"""
+              s"""{"index":$index,"const":$v,"sym":${ScalasemInspector.jsonStr(sym.fullName)}}"""
             )
-          case _ => Nil
+          case _ => referenceArgFact(sym, index, enclosing)
+      case select: Select =>
+        val sym = select.symbol
+        if !sym.exists || sym.isPackageDef then return Nil
+        constantValue(sym) match
+          case Some(s: String) =>
+            List(
+              s"""{"index":$index,"const":${ScalasemInspector.jsonStr(s)},"sym":${ScalasemInspector.jsonStr(sym.fullName)}}"""
+            )
+          case Some(v: Int) =>
+            List(
+              s"""{"index":$index,"const":$v,"sym":${ScalasemInspector.jsonStr(sym.fullName)}}"""
+            )
+          case _ => referenceArgFact(sym, index, enclosing)
+      case _ => interpolatedParts(arg, index, enclosing)
+
+    /** An argument that names a value: a parameter of the enclosing method carries its position,
+      * any other value its identifier and symbol.
+      */
+    def referenceArgFact(sym: Symbol, index: Int, enclosing: Symbol): List[String] =
+      paramIndexOf(sym, enclosing) match
+        case Some(k) =>
+          List(
+            s"""{"index":$index,"param":${ScalasemInspector.jsonStr(sym.name.toString)},"paramIndex":$k}"""
+          )
+        case None =>
+          List(
+            s"""{"index":$index,"ident":${ScalasemInspector.jsonStr(sym.name.toString)},"sym":${ScalasemInspector.jsonStr(sym.fullName)}}"""
+          )
+
+    /** The literal and hole pieces of a string interpolation passed as an argument, for example
+      * `uri"https://host/$path"`. A hole that is a constant or a parameter keeps its resolution.
+      */
+    def interpolatedParts(arg: Tree, index: Int, enclosing: Symbol): List[String] =
+      var isInterpolation = false
+      object Detect extends TreeTraverser:
+        override def traverseTree(tree: Tree)(owner: Symbol): Unit =
+          tree match
+            case select: Select =>
+              val ownerName = try select.symbol.maybeOwner.fullName catch case _ => ""
+              if ownerName == "scala.StringContext" || ownerName == "scala.StringContext$" then
+                isInterpolation = true
+            case _ => ()
+          super.traverseTree(tree)(owner)
+      Detect.traverseTree(arg)(Symbol.spliceOwner)
+      if !isInterpolation then return callArgFact(arg, index)
+      var parts: List[String] = Nil
+      object Parts extends TreeTraverser:
+        override def traverseTree(tree: Tree)(owner: Symbol): Unit =
+          if parts.isEmpty then
+            tree match
+              case seq: Repeated =>
+                val literals = seq.elems.collect { case Literal(constant) =>
+                  constant.value match
+                    case s: String => ScalasemInspector.jsonStr(s)
+                    case v: Int => v.toString
+                    case v: Long => v.toString
+                    case v: Boolean => v.toString
+                    case _ => null
+                }
+                if literals.nonEmpty && !literals.contains(null) then parts = literals.toList
+                else super.traverseTree(tree)(owner)
+              case _ => super.traverseTree(tree)(owner)
+      Parts.traverseTree(arg)(Symbol.spliceOwner)
+      if parts.isEmpty then return callArgFact(arg, index)
+      // The holes are the arguments of the outermost call, the extension method on the
+      // StringContext value.
+      val holes = arg match
+        case apply: Apply => apply.args
+        case _ => Nil
+      val holeFacts = mutable.ArrayBuffer.empty[String]
+      for hole <- holes do hole match
+        case ident: Ident =>
+          val sym = ident.symbol
+          if sym.exists && !sym.isPackageDef then
+            constantValue(sym) match
+              case Some(s: String) =>
+                holeFacts += s"""{"const":${ScalasemInspector.jsonStr(s)},"sym":${ScalasemInspector.jsonStr(sym.fullName)}}"""
+              case Some(v: Int) =>
+                holeFacts += s"""{"const":$v,"sym":${ScalasemInspector.jsonStr(sym.fullName)}}"""
+              case _ =>
+                paramIndexOf(sym, enclosing) match
+                  case Some(k) =>
+                    holeFacts += s"""{"param":${ScalasemInspector.jsonStr(sym.name.toString)},"paramIndex":$k}"""
+                  case None =>
+                    holeFacts += s"""{"ident":${ScalasemInspector.jsonStr(sym.name.toString)}}"""
+          else holeFacts += "\"\""
+        case Literal(constant) =>
+          constant.value match
+            case s: String => holeFacts += ScalasemInspector.jsonStr(s)
+            case v: Int => holeFacts += v.toString
+            case _ => holeFacts += "\"\""
+        case _ => holeFacts += "\"\""
+      val pieces = mutable.ArrayBuffer.empty[String]
+      for (literal, i) <- parts.zipWithIndex do
+        pieces += literal
+        if i < holeFacts.length then pieces += holeFacts(i)
+      List(s"""{"index":$index,"parts":[${pieces.mkString(",")}]}""")
+
+    /** A call argument that is itself a call with literal string arguments, for example
+      * `toCString("jdbc:...")`: the literal arguments survive, the rest does not.
+      */
+    def callArgFact(arg: Tree, index: Int): List[String] = arg match
+      case apply: Apply =>
+        val sym = callSymbol(apply.fun)
+        if !sym.exists then return Nil
+        val literals = apply.args.collect {
+          case Literal(constant) if constant.value.isInstanceOf[String] =>
+            ScalasemInspector.jsonStr(constant.value.asInstanceOf[String])
+        }
+        if literals.isEmpty then Nil
+        else
+          List(
+            s"""{"index":$index,"call":${ScalasemInspector.jsonStr(s"${sym.owner.fullName}.${sym.name}")},"args":[${literals.mkString(",")}]}}"""
+          )
+      case typeApply: TypeApply => callArgFact(typeApply.fun, index)
       case _ => Nil
 
     def constantValue(sym: Symbol): Option[Any] =
@@ -252,6 +402,7 @@ final class FactCollector extends Inspector:
       position(tree) match
         case None => ()
         case Some(p) =>
+          val enclosing = enclosingMethodOf(owner)
           val fields = mutable.ArrayBuffer.empty[String]
           fields += "\"kind\":\"call\""
           fields += s"\"file\":${ScalasemInspector.jsonStr(p.sourceFile.path)}"
@@ -263,7 +414,19 @@ final class FactCollector extends Inspector:
           val signature = signatureOf(sym)
           if signature.nonEmpty then
             fields += s"\"signature\":${ScalasemInspector.jsonStr(signature)}"
-          val argFacts = args.zipWithIndex.flatMap((arg, index) => argumentFacts(arg, index))
+          // A call on a local value or parameter names its receiver, which is how dynamic
+          // member access and builder receivers are followed.
+          fun match
+            case select: Select =>
+              select.qualifier match
+                case ident: Ident if ident.symbol.exists && !ident.symbol.isPackageDef =>
+                  fields += s"""\"recv\":{""" +
+                    s""""ident":${ScalasemInspector.jsonStr(ident.symbol.name.toString)},""" +
+                    s""""sym":${ScalasemInspector.jsonStr(ident.symbol.fullName)}}"""
+                case _ => ()
+            case _ => ()
+          val argFacts =
+            args.zipWithIndex.flatMap((arg, index) => argumentFacts(arg, index, enclosing))
           if argFacts.nonEmpty then fields += s"\"args\":[${argFacts.mkString(",")}]"
           addFact(fields.toSeq*)
 
@@ -325,6 +488,47 @@ final class FactCollector extends Inspector:
             selectorPosition(r).foreach(p => recordReference(p, memberName(r.fromName), base.fullName, "import"))
           case _ => ()
 
+    /** One extractor application in a pattern, with the literal and identifier patterns it
+      * names. Route DSLs build their paths in patterns, so the literals are the path segments.
+      */
+    def emitPattern(unapply: Unapply): Unit =
+      val sym = unapply.fun match
+        case select: Select => select.symbol
+        case typeApply: TypeApply =>
+          typeApply.fun match
+            case select: Select => select.symbol
+            case _ => Symbol.noSymbol
+        case _ => Symbol.noSymbol
+      position(unapply) match
+        case None => ()
+        case Some(p) =>
+          val literals = mutable.ArrayBuffer.empty[String]
+          val idents = mutable.ArrayBuffer.empty[String]
+          for pattern <- unapply.patterns do pattern match
+            case Literal(constant) =>
+              constant.value match
+                case s: String => literals += ScalasemInspector.jsonStr(s)
+                case v: Int => literals += v.toString
+                case v: Long => literals += v.toString
+                case v: Boolean => literals += v.toString
+                case _ => ()
+            case ident: Ident =>
+              val target = ident.symbol
+              if target.exists && !target.isPackageDef then
+                idents += ScalasemInspector.jsonStr(target.name.toString)
+            case _ => ()
+          val fields = mutable.ArrayBuffer.empty[String]
+          fields += "\"kind\":\"pattern\""
+          fields += s"\"file\":${ScalasemInspector.jsonStr(p.sourceFile.path)}"
+          fields += s"\"line\":${p.startLine + 1}"
+          fields += s"\"column\":${p.startColumn + 1}"
+          if sym.exists then
+            fields += s"\"owner\":${ScalasemInspector.jsonStr(sym.owner.fullName)}"
+            fields += s"\"name\":${ScalasemInspector.jsonStr(sym.name)}"
+          if literals.nonEmpty then fields += s"\"args\":[${literals.mkString(",")}]"
+          if idents.nonEmpty then fields += s"\"idents\":[${idents.mkString(",")}]"
+          addFact(fields.toSeq*)
+
     object Walker extends TreeTraverser:
       override def traverseTree(tree: Tree)(owner: Symbol): Unit = tree match
         case apply: Apply =>
@@ -356,10 +560,20 @@ final class FactCollector extends Inspector:
           super.traverseTree(tree)(owner)
         case defDef: DefDef =>
           // The bodies the compiler generates (case class equality, enum lookups) hold no
-          // source calls, only runtime helpers placed at the declaration's line.
-          if !defDef.symbol.flags.is(Flags.Synthetic) then
-            if !defDef.name.startsWith("$anonfun") then
-              emitDefinition(defDef.symbol, "def", position(defDef), extra = _ => ())
+          // source calls, only runtime helpers placed at the declaration's line. Anonymous
+          // function bodies are source code: their calls fold up to the enclosing method.
+          if defDef.name.startsWith("$anonfun") then
+            super.traverseTree(tree)(owner)
+          else if !defDef.symbol.flags.is(Flags.Synthetic) then
+            emitDefinition(
+              defDef.symbol,
+              "def",
+              position(defDef),
+              extra = fields =>
+                val names = paramNamesOf(defDef.symbol)
+                if names.nonEmpty then
+                  fields += s"\"params\":[${names.map(ScalasemInspector.jsonStr).mkString(",")}]"
+            )
             super.traverseTree(tree)(owner)
         case valDef: ValDef =>
           if !valDef.name.startsWith("$anonfun") then
@@ -378,6 +592,7 @@ final class FactCollector extends Inspector:
             case ident: Ident => emitReference(ident, "term")
             case select: Select => emitReference(select, "term")
             case typeTree: TypeTree => emitReference(typeTree, "type")
+            case unapply: Unapply => emitPattern(unapply)
             case _ => ()
           super.traverseTree(tree)(owner)
 

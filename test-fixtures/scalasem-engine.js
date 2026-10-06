@@ -64,7 +64,7 @@ assert.ok(
 
 for (const version of versions) {
   const facts = recordedFacts(version);
-  assert.ok(facts.size === 1, `${version}: expected the sources of one file`);
+  assert.ok(facts.size === 2, `${version}: expected the sources of two files`);
   const entry = facts.get("src/main/scala/showcase/Sample.scala");
   assert.ok(entry.calls.length > 20, `${version}: expected call facts`);
   assert.ok(
@@ -128,6 +128,85 @@ for (const version of versions) {
   assert.ok(
     digestCall.args.some((arg) => arg.const === "SHA-256"),
     `${version}: inline constant argument`
+  );
+
+  // The argument shapes of the second source: parameters, local values, receivers,
+  // interpolation parts and the arguments of nested calls.
+  const shapes = facts.get("src/main/scala/showcase/Shapes.scala");
+  assert.ok(shapes, `${version}: shapes source read`);
+  const helperArgs = shapes.calls
+    .filter(
+      (call) => call.owner === "showcase.Shapes$" && call.name === "digestWith"
+    )
+    .map(
+      (call) =>
+        call.args?.find((arg) => arg.index === 0 && !arg.args && !arg.parts)
+    );
+  assert.ok(
+    helperArgs.some((arg) => arg?.string === "SHA-1"),
+    `${version}: literal argument of a project call`
+  );
+  assert.ok(
+    helperArgs.some((arg) => arg?.const === "SHA-512"),
+    `${version}: constant argument of a project call`
+  );
+  assert.ok(
+    helperArgs.every(
+      (arg) => arg === undefined || arg.string || arg.const || arg.param
+    ),
+    `${version}: first arguments of a project call carry a shape`
+  );
+  const apiCall = shapes.calls.find(
+    (call) =>
+      call.owner === "java.security.MessageDigest$" &&
+      call.name === "getInstance" &&
+      call.caller === "showcase.Shapes$.digestWith"
+  );
+  assert.deepStrictEqual(apiCall?.args, [
+    { index: 0, param: "algorithm", paramIndex: 0 }
+  ]);
+  const receiverCall = shapes.calls.find(
+    (call) =>
+      call.owner === "java.security.MessageDigest" &&
+      call.name === "digest" &&
+      call.caller === "showcase.Shapes$.receiver"
+  );
+  assert.deepStrictEqual(receiverCall?.recv, {
+    ident: "digest",
+    sym: "showcase.Shapes$._$digest"
+  });
+  const interpolated = entry.calls.find((call) => call.name === "println");
+  assert.ok(
+    interpolated?.args?.some(
+      (arg) =>
+        Array.isArray(arg.parts) &&
+        arg.parts.includes("encrypted ") &&
+        arg.parts.includes(" bytes")
+    ),
+    `${version}: interpolation parts`
+  );
+  // The body of a lambda belongs to the method around it.
+  assert.ok(
+    shapes.calls.some(
+      (call) =>
+        call.owner === "java.lang.String" &&
+        call.name === "length" &&
+        call.caller === "showcase.Shapes$.lambdaBody"
+    ),
+    `${version}: lambda body calls fold to the enclosing method`
+  );
+  // Extractor patterns carry their literal patterns.
+  assert.ok(
+    shapes.patterns.some(
+      (p) => (p.name === "unapply" || p.name === "unapplySeq") && p.args?.length
+    ),
+    `${version}: pattern facts`
+  );
+  assert.ok(
+    shapes.definitions.some(
+      (d) => d.name === "digestWith" && d.params?.join(",") === "algorithm,data"
+    ),
+    `${version}: parameter names of a method`
   );
 }
 

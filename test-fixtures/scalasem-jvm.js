@@ -9,7 +9,7 @@ import {
   readdirSync,
   rmSync
 } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { tmpdir } from "node:os";
 import process from "node:process";
 
@@ -45,8 +45,9 @@ const classDir = join(project, "target", "scala-3.3.7", "classes");
 const tastyFiles = readdirSync(join(classDir, "showcase"))
   .filter((f) => f.endsWith(".tasty"))
   .map((f) => join(classDir, "showcase", f));
-assert.ok(
-  tastyFiles.length === 3,
+assert.deepStrictEqual(
+  tastyFiles.map((f) => basename(f)).sort(),
+  ["Color.tasty", "Envelope.tasty", "Sample.tasty", "Shapes.tasty"],
   "expected the compiled TASTy files of the fixture"
 );
 

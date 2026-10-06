@@ -4,77 +4,172 @@
   "description": "Schema version 2 of the scalasem report. Every source file entry keeps the version 1 keys, so consumers written against them keep working. Facts that phases after the engine add, such as crypto findings and call stacks, are empty until those phases run.",
   "type": "object",
   "properties": {
-    "_meta": { "$ref": "#/definitions/meta" },
-    "config": { "$ref": "#/definitions/config" },
-    "modules": { "type": "array", "items": { "$ref": "#/definitions/module" } },
-    "entryPoints": { "type": "array", "items": { "$ref": "#/definitions/entryPoint" } },
-    "callGraph": { "$ref": "#/definitions/callGraph" },
-    "callStacks": { "type": "array", "items": { "$ref": "#/definitions/callStack" } },
-    "crypto": { "type": "array", "items": { "$ref": "#/definitions/crypto" } },
-    "endpoints": { "type": "array", "items": { "$ref": "#/definitions/endpoint" } },
-    "services": { "type": "array", "items": { "$ref": "#/definitions/service" } }
+    "_meta": {
+      "$ref": "#/definitions/meta"
+    },
+    "config": {
+      "$ref": "#/definitions/config"
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/module"
+      }
+    },
+    "entryPoints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/entryPoint"
+      }
+    },
+    "callGraph": {
+      "$ref": "#/definitions/callGraph"
+    },
+    "callStacks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/callStack"
+      }
+    },
+    "crypto": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/crypto"
+      }
+    },
+    "endpoints": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/endpoint"
+      }
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/service"
+      }
+    }
   },
-  "required": ["_meta", "config", "modules"],
+  "required": [
+    "_meta",
+    "config",
+    "modules"
+  ],
   "patternProperties": {
-    "^.+\\.(scala|sc|java)$": { "$ref": "#/definitions/fileEntry" }
+    "^.+\\.(scala|sc|java)$": {
+      "$ref": "#/definitions/fileEntry"
+    }
   },
   "additionalProperties": false,
   "definitions": {
     "meta": {
       "type": "object",
       "properties": {
-        "schemaVersion": { "const": "scalasem/2" },
-        "tool": { "const": "scalasem" },
-        "toolVersion": { "type": "string" },
-        "projectPath": { "type": "string" },
+        "schemaVersion": {
+          "const": "scalasem/2"
+        },
+        "tool": {
+          "const": "scalasem"
+        },
+        "toolVersion": {
+          "type": "string"
+        },
+        "projectPath": {
+          "type": "string"
+        },
         "generatedFrom": {
           "type": "array",
-          "items": { "type": "string", "enum": ["tasty", "semanticdb"] }
+          "items": {
+            "type": "string",
+            "enum": [
+              "tasty",
+              "semanticdb"
+            ]
+          }
         },
         "build": {
           "type": "object",
           "properties": {
             "tool": {
               "type": "string",
-              "enum": ["sbt", "mill", "maven", "scala-cli", "none"]
+              "enum": [
+                "sbt",
+                "mill",
+                "maven",
+                "scala-cli",
+                "none"
+              ]
             },
-            "version": { "type": "string" }
+            "version": {
+              "type": "string"
+            }
           },
-          "required": ["tool"],
+          "required": [
+            "tool"
+          ],
           "additionalProperties": false
         },
         "compilers": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["version", "source"],
+            "required": [
+              "version",
+              "source"
+            ],
             "properties": {
-              "version": { "type": "string" },
-              "source": { "type": "string" }
+              "version": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              }
             },
             "additionalProperties": false
           }
         },
         "platforms": {
           "type": "array",
-          "items": { "type": "string", "enum": ["jvm", "js", "native"] }
+          "items": {
+            "type": "string",
+            "enum": [
+              "jvm",
+              "js",
+              "native"
+            ]
+          }
         },
-        "counts": { "type": "object" },
+        "counts": {
+          "type": "object"
+        },
         "diagnostics": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["code"],
+            "required": [
+              "code"
+            ],
             "properties": {
-              "code": { "type": "string" },
-              "module": { "type": "string" },
-              "detail": { "type": "string" },
-              "count": { "type": "integer", "minimum": 1 }
+              "code": {
+                "type": "string"
+              },
+              "module": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1
+              }
             },
             "additionalProperties": false
           }
         },
-        "truncated": { "type": "boolean" }
+        "truncated": {
+          "type": "boolean"
+        }
       },
       "required": [
         "schemaVersion",
@@ -98,17 +193,42 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["method", "pattern", "controllerMethod", "file", "line"],
+            "required": [
+              "method",
+              "pattern",
+              "controllerMethod",
+              "file",
+              "line"
+            ],
             "properties": {
               "method": {
                 "type": "string",
-                "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+                "enum": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "PATCH",
+                  "DELETE",
+                  "HEAD",
+                  "OPTIONS"
+                ]
               },
-              "pattern": { "type": "string" },
-              "controllerMethod": { "type": "string" },
-              "file": { "type": "string" },
-              "line": { "type": "integer", "minimum": 1 },
-              "router": { "type": "string" }
+              "pattern": {
+                "type": "string"
+              },
+              "controllerMethod": {
+                "type": "string"
+              },
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "router": {
+                "type": "string"
+              }
             },
             "additionalProperties": false
           }
@@ -117,39 +237,94 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["key", "value", "file", "line"],
+            "required": [
+              "key",
+              "value",
+              "file",
+              "line"
+            ],
             "properties": {
-              "key": { "type": "string" },
-              "value": { "type": "string" },
-              "file": { "type": "string" },
-              "line": { "type": "integer", "minimum": 1 }
+              "key": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              }
             },
             "additionalProperties": false
           }
         }
       },
-      "required": ["routes"],
+      "required": [
+        "routes"
+      ],
       "additionalProperties": false
     },
     "module": {
       "type": "object",
-      "required": ["id", "platform", "classDirs", "sourceRoots", "classpath"],
+      "required": [
+        "id",
+        "platform",
+        "classDirs",
+        "sourceRoots",
+        "classpath"
+      ],
       "properties": {
-        "id": { "type": "string" },
-        "platform": { "type": "string", "enum": ["jvm", "js", "native"] },
-        "scalaVersion": { "type": "string" },
-        "classDirs": { "type": "array", "items": { "type": "string" } },
-        "sourceRoots": { "type": "array", "items": { "type": "string" } },
+        "id": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "jvm",
+            "js",
+            "native"
+          ]
+        },
+        "scalaVersion": {
+          "type": "string"
+        },
+        "classDirs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sourceRoots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "classpath": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["group", "artifact", "version"],
+            "required": [
+              "group",
+              "artifact",
+              "version"
+            ],
             "properties": {
-              "path": { "type": "string" },
-              "group": { "type": "string" },
-              "artifact": { "type": "string" },
-              "version": { "type": "string" }
+              "path": {
+                "type": "string"
+              },
+              "group": {
+                "type": "string"
+              },
+              "artifact": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              }
             },
             "additionalProperties": false
           }
@@ -160,36 +335,126 @@
     "fileEntry": {
       "type": "object",
       "properties": {
-        "sourceFile": { "type": "string" },
-        "tags": { "type": "array", "items": { "type": "string" } },
-        "usedTypes": { "type": "array", "items": { "type": "string" } },
-        "literals": { "type": "array", "items": { "type": "string" } },
-        "module": { "type": "string" },
-        "platform": { "type": "string", "enum": ["jvm", "js", "native"] },
-        "scope": { "type": "string", "enum": ["main", "test", "generated"] },
-        "definitions": { "type": "array", "items": { "$ref": "#/definitions/definition" } },
-        "calls": { "type": "array", "items": { "$ref": "#/definitions/call" } },
-        "references": { "type": "array", "items": { "$ref": "#/definitions/reference" } },
-        "constants": { "type": "array", "items": { "$ref": "#/definitions/constant" } },
-        "truncated": { "type": "boolean" }
+        "sourceFile": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "usedTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "literals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "module": {
+          "type": "string"
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "jvm",
+            "js",
+            "native"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "main",
+            "test",
+            "generated"
+          ]
+        },
+        "definitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/definition"
+          }
+        },
+        "calls": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/call"
+          }
+        },
+        "references": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/reference"
+          }
+        },
+        "constants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/constant"
+          }
+        },
+        "truncated": {
+          "type": "boolean"
+        }
       },
-      "required": ["sourceFile", "tags", "usedTypes", "literals", "calls", "references"],
+      "required": [
+        "sourceFile",
+        "tags",
+        "usedTypes",
+        "literals",
+        "calls",
+        "references"
+      ],
       "additionalProperties": false
     },
     "definition": {
       "type": "object",
-      "required": ["id", "kind", "name", "owner", "line"],
+      "required": [
+        "id",
+        "kind",
+        "name",
+        "owner",
+        "line"
+      ],
       "properties": {
-        "id": { "type": "string" },
+        "id": {
+          "type": "string"
+        },
         "kind": {
           "type": "string",
-          "enum": ["class", "trait", "object", "def", "val", "type"]
+          "enum": [
+            "class",
+            "trait",
+            "object",
+            "def",
+            "val",
+            "type"
+          ]
         },
-        "name": { "type": "string" },
-        "owner": { "type": "string" },
-        "line": { "type": "integer", "minimum": 1 },
-        "endLine": { "type": "integer", "minimum": 1 },
-        "column": { "type": "integer", "minimum": 1 },
+        "name": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endLine": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
         "flags": {
           "type": "array",
           "items": {
@@ -209,109 +474,294 @@
             ]
           }
         },
-        "parents": { "type": "array", "items": { "type": "string" } },
+        "parents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "annotations": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["name"],
+            "required": [
+              "name"
+            ],
             "properties": {
-              "name": { "type": "string" },
+              "name": {
+                "type": "string"
+              },
               "args": {
                 "type": "array",
                 "items": {
-                  "type": ["string", "integer", "boolean", "null"]
+                  "type": [
+                    "string",
+                    "integer",
+                    "boolean",
+                    "null"
+                  ]
                 }
               }
             },
             "additionalProperties": false
           }
         },
-        "signature": { "type": "string" }
+        "signature": {
+          "type": "string"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
       "additionalProperties": false
     },
     "call": {
       "type": "object",
-      "required": ["line", "column", "caller", "owner", "name"],
+      "required": [
+        "line",
+        "column",
+        "caller",
+        "owner",
+        "name"
+      ],
       "properties": {
-        "line": { "type": "integer", "minimum": 1 },
-        "column": { "type": "integer", "minimum": 1 },
-        "caller": { "type": "string" },
-        "owner": { "type": "string" },
-        "name": { "type": "string" },
-        "signature": { "type": "string" },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "caller": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "signature": {
+          "type": "string"
+        },
         "args": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "string": { "type": "string" },
-              "int": { "type": "integer" },
-              "long": { "type": "integer" },
-              "boolean": { "type": "boolean" },
-              "const": { "type": ["string", "integer"] },
-              "sym": { "type": "string" },
-              "index": { "type": "integer", "minimum": 0 },
-              "redacted": { "type": "string", "enum": ["string", "const"] }
+              "string": {
+                "type": "string"
+              },
+              "int": {
+                "type": "integer"
+              },
+              "long": {
+                "type": "integer"
+              },
+              "boolean": {
+                "type": "boolean"
+              },
+              "const": {
+                "type": [
+                  "string",
+                  "integer"
+                ]
+              },
+              "sym": {
+                "type": "string"
+              },
+              "index": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "redacted": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "const"
+                ]
+              },
+              "param": {
+                "type": "string"
+              },
+              "paramIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ident": {
+                "type": "string"
+              },
+              "parts": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "object",
+                    "null"
+                  ]
+                }
+              },
+              "call": {
+                "type": "string"
+              }
             },
             "additionalProperties": false,
             "minProperties": 1
           }
+        },
+        "recv": {
+          "type": "object",
+          "required": [
+            "ident"
+          ],
+          "properties": {
+            "ident": {
+              "type": "string"
+            },
+            "sym": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
     },
     "reference": {
       "type": "object",
-      "required": ["line", "column", "symbol", "owner", "kind"],
+      "required": [
+        "line",
+        "column",
+        "symbol",
+        "owner",
+        "kind"
+      ],
       "properties": {
-        "line": { "type": "integer", "minimum": 1 },
-        "column": { "type": "integer", "minimum": 1 },
-        "symbol": { "type": "string" },
-        "owner": { "type": "string" },
-        "kind": { "type": "string", "enum": ["type", "term", "import"] }
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "type",
+            "term",
+            "import"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "constant": {
       "type": "object",
-      "required": ["sym", "tpe", "line"],
+      "required": [
+        "sym",
+        "tpe",
+        "line"
+      ],
       "properties": {
-        "sym": { "type": "string" },
-        "value": { "type": ["string", "integer"] },
-        "redacted": { "type": "boolean" },
-        "tpe": { "type": "string", "enum": ["string", "int"] },
-        "line": { "type": "integer", "minimum": 1 }
+        "sym": {
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "redacted": {
+          "type": "boolean"
+        },
+        "tpe": {
+          "type": "string",
+          "enum": [
+            "string",
+            "int"
+          ]
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
       "additionalProperties": false
     },
     "entryPoint": {
       "type": "object",
-      "required": ["id", "kind", "file", "line"],
+      "required": [
+        "id",
+        "kind",
+        "file",
+        "line"
+      ],
       "properties": {
-        "id": { "type": "string" },
-        "kind": { "type": "string" },
-        "file": { "type": "string" },
-        "line": { "type": "integer", "minimum": 1 }
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
       "additionalProperties": false
     },
     "callGraph": {
       "type": "object",
-      "required": ["edges"],
+      "required": [
+        "edges"
+      ],
       "properties": {
         "edges": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["from", "to", "file", "line"],
+            "required": [
+              "from",
+              "to",
+              "file",
+              "line"
+            ],
             "properties": {
-              "from": { "type": "string" },
-              "to": { "type": "string" },
-              "file": { "type": "string" },
-              "line": { "type": "integer", "minimum": 1 },
-              "confidence": { "type": "string", "enum": ["exact", "approximate"] }
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "exact",
+                  "approximate"
+                ]
+              }
             },
             "additionalProperties": false
           }
@@ -321,16 +771,33 @@
     },
     "callStack": {
       "type": "object",
-      "required": ["sink", "frames"],
+      "required": [
+        "sink",
+        "frames"
+      ],
       "properties": {
         "sink": {
           "type": "object",
-          "required": ["owner", "name", "file", "line"],
+          "required": [
+            "owner",
+            "name",
+            "file",
+            "line"
+          ],
           "properties": {
-            "owner": { "type": "string" },
-            "name": { "type": "string" },
-            "file": { "type": "string" },
-            "line": { "type": "integer", "minimum": 1 }
+            "owner": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "file": {
+              "type": "string"
+            },
+            "line": {
+              "type": "integer",
+              "minimum": 1
+            }
           },
           "additionalProperties": false
         },
@@ -338,12 +805,26 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["function", "file", "line"],
+            "required": [
+              "function",
+              "file",
+              "line"
+            ],
             "properties": {
-              "function": { "type": "string" },
-              "file": { "type": "string" },
-              "line": { "type": "integer", "minimum": 1 },
-              "column": { "type": "integer", "minimum": 1 }
+              "function": {
+                "type": "string"
+              },
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "column": {
+                "type": "integer",
+                "minimum": 1
+              }
             },
             "additionalProperties": false
           }
@@ -353,67 +834,150 @@
     },
     "crypto": {
       "type": "object",
-      "required": ["kind", "file", "line"],
+      "required": [
+        "kind",
+        "file",
+        "line"
+      ],
       "properties": {
-        "algorithm": { "type": "string" },
-        "primitive": { "type": "string" },
-        "mode": { "type": "string" },
-        "padding": { "type": "string" },
-        "keySize": { "type": "integer" },
-        "curve": { "type": "string" },
+        "algorithm": {
+          "type": "string"
+        },
+        "primitive": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "padding": {
+          "type": "string"
+        },
+        "keySize": {
+          "type": "integer"
+        },
+        "curve": {
+          "type": "string"
+        },
         "kind": {
           "type": "string",
-          "enum": ["algorithm", "protocol", "keystore", "native-binding"]
+          "enum": [
+            "algorithm",
+            "protocol",
+            "keystore",
+            "native-binding"
+          ]
         },
-        "api": { "type": "string" },
-        "provider": { "type": "string" },
+        "api": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
         "resolution": {
           "type": "string",
-          "enum": ["literal", "constant", "argument", "inline", "unresolved"]
+          "enum": [
+            "literal",
+            "constant",
+            "argument",
+            "inline",
+            "unresolved"
+          ]
         },
         "via": {
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["file", "line"],
+            "required": [
+              "file",
+              "line"
+            ],
             "properties": {
-              "file": { "type": "string" },
-              "line": { "type": "integer", "minimum": 1 }
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              }
             },
             "additionalProperties": false
           }
         },
-        "file": { "type": "string" },
-        "line": { "type": "integer", "minimum": 1 }
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
       "additionalProperties": false
     },
     "endpoint": {
       "type": "object",
-      "required": ["framework", "method", "path", "file", "line"],
+      "required": [
+        "framework",
+        "method",
+        "path",
+        "file",
+        "line"
+      ],
       "properties": {
-        "framework": { "type": "string" },
-        "method": { "type": "string" },
-        "path": { "type": "string" },
-        "handler": { "type": "string" },
-        "authenticated": { "type": "boolean" },
-        "file": { "type": "string" },
-        "line": { "type": "integer", "minimum": 1 }
+        "framework": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "handler": {
+          "type": "string"
+        },
+        "authenticated": {
+          "type": "boolean"
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
       "additionalProperties": false
     },
     "service": {
       "type": "object",
-      "required": ["kind", "file", "line"],
+      "required": [
+        "kind",
+        "file",
+        "line"
+      ],
       "properties": {
         "kind": {
           "type": "string",
-          "enum": ["http-client", "websocket", "datastore", "messaging", "cloud"]
+          "enum": [
+            "http-client",
+            "websocket",
+            "datastore",
+            "messaging",
+            "cloud"
+          ]
         },
-        "client": { "type": "string" },
-        "url": { "type": "string" },
-        "host": { "type": "string" },
-        "topic": { "type": "string" },
+        "client": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "topic": {
+          "type": "string"
+        },
         "resolution": {
           "type": "string",
           "enum": [
@@ -429,16 +993,29 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["file", "line"],
+            "required": [
+              "file",
+              "line"
+            ],
             "properties": {
-              "file": { "type": "string" },
-              "line": { "type": "integer", "minimum": 1 }
+              "file": {
+                "type": "string"
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              }
             },
             "additionalProperties": false
           }
         },
-        "file": { "type": "string" },
-        "line": { "type": "integer", "minimum": 1 }
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
       "additionalProperties": false
     }

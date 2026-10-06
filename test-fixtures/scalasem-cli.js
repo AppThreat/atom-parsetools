@@ -81,7 +81,7 @@ assert.ok(
 );
 assert.ok(Array.isArray(report.modules), "modules present");
 const fileKeys = Object.keys(report).filter((k) => k.endsWith(".scala"));
-assert.ok(fileKeys.length === 1, "one source file entry");
+assert.ok(fileKeys.length === 2, "the source file entries of the fixture");
 for (const key of fileKeys) {
   const entry = report[key];
   assert.ok(typeof entry.sourceFile === "string");
