@@ -1,0 +1,22 @@
+test-fixtures/scalasem-semanticdb.js
+  s_5e2537d4d8b695::t_ec923439b3b322 233,263-264
+lib/scalasem/semanticdb.js
+  s_5e2537d4d8b695::t_ec923439b3b322 805-808,854-864
+  s_5e2537d4d8b695::t_dc8e2d05fda24c 865-866
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8b9bfeba82891382e3ff8957e5742eeb6721c00c",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
