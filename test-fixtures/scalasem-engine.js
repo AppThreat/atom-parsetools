@@ -25,7 +25,10 @@ import {
 import { parseFacts } from "../lib/scalasem/inspect.js";
 import { buildFileEntry } from "../lib/scalasem/facts.js";
 import { parseProjectConfig } from "../lib/scalasem/config.js";
-import { readTastyHeader } from "../lib/scalasem/compiler.js";
+import {
+  readTastyHeader,
+  semanticdbPluginVersion
+} from "../lib/scalasem/compiler.js";
 import { sortKeysDeep } from "../lib/scalasem/schema.js";
 import {
   looksSecret,
@@ -910,6 +913,36 @@ require("node:fs").appendFileSync(${JSON.stringify(mvnLog)}, JSON.stringify(proc
     legacy.diagnostics.some((d) => d.code === "semanticdb-missing"),
     "a compile that wrote nothing is reported"
   );
+}
+
+// The plugin release is looked up once per Scala version, and a Maven Central that cannot be
+// reached is not asked again for the next version.
+{
+  const { createServer } = await import("node:http");
+  let requests = 0;
+  const server = createServer((req, res) => {
+    requests += 1;
+    if (req.url.includes("_2.13.97/")) {
+      res.end(
+        "<metadata><versioning><release>4.99.1</release></versioning></metadata>"
+      );
+    } else {
+      req.socket.destroy();
+    }
+  });
+  await new Promise((done) => server.listen(0, "127.0.0.1", done));
+  process.env.MAVEN_CENTRAL_URL = `http://127.0.0.1:${server.address().port}/maven2`;
+  const lookups = await Promise.all([
+    semanticdbPluginVersion("2.13.97"),
+    semanticdbPluginVersion("2.13.97")
+  ]);
+  assert.deepStrictEqual(lookups, ["4.99.1", "4.99.1"]);
+  assert.strictEqual(requests, 1, "one request per Scala version");
+  assert.strictEqual(await semanticdbPluginVersion("2.13.98"), undefined);
+  assert.strictEqual(await semanticdbPluginVersion("2.13.99"), undefined);
+  assert.strictEqual(requests, 2, "an unreachable Maven Central is asked once");
+  delete process.env.MAVEN_CENTRAL_URL;
+  server.close();
 }
 
 const sbt2Left = join("sbt2-left");
