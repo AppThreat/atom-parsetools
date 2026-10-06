@@ -1,0 +1,48 @@
+test-fixtures/projects/scala/inspector/showcase-3.3.7.jsonl
+  s_5e2537d4d8b695::t_13c893911fa4c2 25-30,46,61,69,85,107-151,180-185,268-308
+test-fixtures/projects/scala/inspector/showcase-3.9.0.jsonl
+  s_5e2537d4d8b695::t_13c893911fa4c2 25-30,46,61,69,85,107-151,180-185,268-308
+test-fixtures/scalasem-engine.js
+  s_5e2537d4d8b695::t_1abd3a699c99bf 198-279
+test-fixtures/projects/scala/showcase/src/main/scala/showcase/Shapes.scala
+  s_5e2537d4d8b695::t_0231c5c43afcb1 32-67
+test-fixtures/projects/scala/inspector/showcase-3.5.2.jsonl
+  s_5e2537d4d8b695::t_13c893911fa4c2 25-30,46,61,69,85,107-151,180-185,268-308
+lib/scalasem/inspector/ScalasemInspector.scala
+  s_5e2537d4d8b695::t_8de61ff1604892 346-401,403-404,407-415,421-459,461,463
+  s_5e2537d4d8b695::t_51e73c304b07f4 177-184,186,233-239,246-248,273-275,300-306,310,314,508,518-523,555-557,559
+test-fixtures/projects/scala/inspector/showcase-3.8.4.jsonl
+  s_5e2537d4d8b695::t_13c893911fa4c2 25-30,46,61,69,85,107-151,180-185,268-308
+lib/scalasem/derive/services.js
+  s_5e2537d4d8b695::t_5b95c313603210 1-276
+lib/scalasem/derive/context.js
+  s_5e2537d4d8b695::t_5b95c313603210 1-171
+scalasem.js
+  s_5e2537d4d8b695::t_5b95c313603210 17
+lib/scalasem/derive/graph.js
+  s_5e2537d4d8b695::t_5b95c313603210 1-451
+lib/scalasem/derive/values.js
+  s_5e2537d4d8b695::t_5b95c313603210 1-214
+lib/scalasem/derive/crypto.js
+  s_5e2537d4d8b695::t_5b95c313603210 1-579
+lib/scalasem/derive/index.js
+  s_5e2537d4d8b695::t_5b95c313603210 1-95
+lib/scalasem/derive/endpoints.js
+  s_5e2537d4d8b695::t_5b95c313603210 1-886
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a91d773d50046f63f3fdf77dbc8818d604edc656",
+  "prompts": {},
+  "sessions": {
+    "s_5e2537d4d8b695": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6f7efc66-79d8-4800-a24c-ed735a57590d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
