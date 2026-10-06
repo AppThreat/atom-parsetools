@@ -10,7 +10,7 @@ import process from "node:process";
 
 import { exitWithSupervisor } from "./supervise.js";
 import { inventory } from "./lib/scalasem/build.js";
-import { inspectModule } from "./lib/scalasem/inspect.js";
+import { collectFacts } from "./lib/scalasem/collect.js";
 import { buildFileEntry } from "./lib/scalasem/facts.js";
 import { parseProjectConfig } from "./lib/scalasem/config.js";
 import { buildReport, reportCaps, writeReport } from "./lib/scalasem/schema.js";
@@ -75,51 +75,18 @@ async function main(argv) {
       ? resolve(positional[1])
       : resolve(projectDir, "slices.json");
   const detected = await inventory(projectDir, opts);
-  const diagnostics = [...detected.diagnostics];
-  const toolchains = [];
-  const factsSources = new Set();
-  const rawFiles = new Map();
-  const moduleOf = new Map();
-  const platformsOf = new Map();
-  const modulesWithOutput = [];
-  let tastyTotal = 0;
-  let readTotal = 0;
-  for (const module of detected.modules) {
-    module.projectDir = projectDir;
-    const inspected = inspectModule(projectDir, module, opts);
-    diagnostics.push(...inspected.diagnostics);
-    toolchains.push(...inspected.toolchains);
-    tastyTotal += inspected.tastyFiles;
-    readTotal += inspected.readFiles;
-    if (inspected.factsSource) {
-      factsSources.add(inspected.factsSource);
-    }
-    for (const [file, facts] of inspected.files) {
-      const existing = rawFiles.get(file);
-      if (existing) {
-        for (const key of [
-          "definitions",
-          "calls",
-          "patterns",
-          "references",
-          "constants"
-        ]) {
-          existing[key].push(...(facts[key] || []));
-        }
-      } else {
-        rawFiles.set(file, facts);
-        moduleOf.set(file, module);
-      }
-      if (module.platform) {
-        const platforms = platformsOf.get(file) || new Set();
-        platforms.add(module.platform);
-        platformsOf.set(file, platforms);
-      }
-    }
-    if (inspected.files.size || module.classpath.length) {
-      modulesWithOutput.push(module);
-    }
-  }
+  const collected = collectFacts(projectDir, detected.modules, opts);
+  const diagnostics = [...detected.diagnostics, ...collected.diagnostics];
+  const {
+    files: rawFiles,
+    moduleOf,
+    platformsOf,
+    toolchains,
+    factsSources,
+    modulesWithOutput
+  } = collected;
+  const tastyTotal = collected.tastyFiles;
+  const readTotal = collected.readFiles;
   const config = parseProjectConfig(projectDir);
   const evidence = deriveEvidence(
     deriveContext(rawFiles, {

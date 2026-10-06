@@ -138,9 +138,8 @@ for (const version of versions) {
     .filter(
       (call) => call.owner === "showcase.Shapes$" && call.name === "digestWith"
     )
-    .map(
-      (call) =>
-        call.args?.find((arg) => arg.index === 0 && !arg.args && !arg.parts)
+    .map((call) =>
+      call.args?.find((arg) => arg.index === 0 && !arg.args && !arg.parts)
     );
   assert.ok(
     helperArgs.some((arg) => arg?.string === "SHA-1"),
@@ -676,6 +675,49 @@ write(
   join(mill, "out/util/jvm/3.3.4/allSourceFiles.json"),
   millValue([`ref:v0:8c609c5a:${join(scratch, mill, "util/src/util/U.scala")}`])
 );
+// A source compiled for several platforms keeps each fact once.
+const { mergeFacts } = await import("../lib/scalasem/collect.js");
+const mergedFiles = new Map();
+const mergeSeen = new Map();
+const sharedFacts = () => ({
+  definitions: [
+    { kind: "def", owner: "a.B$", name: "run", line: 3, column: 7 }
+  ],
+  calls: [
+    {
+      line: 4,
+      column: 5,
+      owner: "a.C$",
+      name: "go",
+      args: [{ index: 0, string: "x" }]
+    }
+  ],
+  references: [{ line: 1, column: 8, symbol: "a.C", refKind: "import" }],
+  constants: [{ sym: "a.B$.Name", line: 2, value: "n", tpe: "string" }],
+  patterns: []
+});
+mergeFacts(mergedFiles, mergeSeen, "Shared.scala", sharedFacts());
+const jsFacts = sharedFacts();
+jsFacts.calls.push({
+  line: 5,
+  column: 5,
+  owner: "a.D$",
+  name: "only",
+  args: []
+});
+mergeFacts(mergedFiles, mergeSeen, "Shared.scala", jsFacts);
+const merged = mergedFiles.get("Shared.scala");
+assert.deepStrictEqual(
+  [
+    merged.definitions.length,
+    merged.calls.length,
+    merged.references.length,
+    merged.constants.length
+  ],
+  [1, 2, 1, 1],
+  "facts shared by two compilations are kept once, the platform specific ones added"
+);
+
 const { inventory } = await import("../lib/scalasem/build.js");
 const millModules = (await inventory(join(scratch, mill), { noBuild: true }))
   .modules;
@@ -973,13 +1015,20 @@ for (const command of commands) {
     .find((line) => line.includes("semanticdbEnabled"));
   assert.ok(semanticdbRun, "a SemanticDB compile runs for the Scala 2 modules");
   assert.ok(
-    semanticdbRun.includes('set LocalProject("util-lib") / semanticdbVersion := "4.9.9"') &&
-      semanticdbRun.includes('set LocalProject("legacy") / semanticdbVersion := "4.9.9"'),
+    semanticdbRun.includes(
+      'set LocalProject("util-lib") / semanticdbVersion := "4.9.9"'
+    ) &&
+      semanticdbRun.includes(
+        'set LocalProject("legacy") / semanticdbVersion := "4.9.9"'
+      ),
     `plugin pinned per module: ${semanticdbRun}`
   );
   assert.ok(
     semanticdbRun.includes(
-      `set LocalProject("legacy") / target := file(${JSON.stringify(join(scratch, "scalasem-cache", "semanticdb"))}`.slice(0, -1)
+      `set LocalProject("legacy") / target := file(${JSON.stringify(join(scratch, "scalasem-cache", "semanticdb"))}`.slice(
+        0,
+        -1
+      )
     ),
     "compiled into the scalasem cache"
   );
