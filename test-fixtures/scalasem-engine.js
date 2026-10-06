@@ -1,7 +1,7 @@
 // Tests for the scalasem engine over recorded outputs: the inspector JSON lines of several
 // compiler releases and a recorded report. No JVM is needed.
 import { strict as assert } from "node:assert";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import process from "node:process";
@@ -330,6 +330,46 @@ assert.deepStrictEqual(
 assert.ok(crossDiag.some((d) => d.code === "no-build-scala-version" && d.detail === "3.5.2"), "choice recorded");
 assert.deepStrictEqual(crossModules[0].sourceRoots, [join(scratch, cross)]);
 crossDiagnostics.length = 0;
+
+// sbt stops a joined session at the first failing command; the projects after it are queried
+// again and the failing one is reported. A stub stands in for sbt.
+if (process.platform !== "win32") {
+  const stubBuild = "stub-build";
+  write(join(stubBuild, "build.sbt"));
+  write(join(stubBuild, "project", "build.properties"), "sbt.version=1.10.11\n");
+  write(join(stubBuild, "target", "scala-3.3.7", "classes", "a", "A.tasty"));
+  const stub = join(scratch, "sbt-stub.js");
+  write(
+    "sbt-stub.js",
+    `#!${process.execPath}
+const commands = process.argv.slice(2).filter((a) => !a.startsWith("-")).join(" ").split("; ");
+if (commands[0] === "projects") {
+  console.log("[info] In file:/build/\\n[info] \\t * a\\n[info] \\t   bad\\n[info] \\t   c");
+  process.exit(0);
+}
+for (const command of commands) {
+  const mark = /^eval println\\("(.+)"\\)$/.exec(command);
+  if (mark) { console.log(mark[1]); continue; }
+  const [verb, key] = command.split(" ");
+  const project = (key || "").split("/")[0];
+  if (project === "bad" && key.endsWith("dependencyClasspath")) {
+    console.log("[error] unresolved dependency");
+    process.exit(1);
+  }
+  if (key?.endsWith("scalaInstance")) console.log("Scala instance { version label 3.3.7, actual version 3.3.7, library jars: , compiler jars: , other jars: }");
+  if (key?.endsWith("classDirectory")) console.log(\`/build/\${project}/target/scala-3.3.7/classes\`);
+}
+`
+  );
+  chmodSync(stub, 0o755);
+  const stubbed = await inventory(join(scratch, stubBuild), { sbtCommand: stub, noCompile: true });
+  const stubbedIds = stubbed.modules.map((m) => m.id);
+  assert.ok(stubbedIds.includes("a") && stubbedIds.includes("c"), `projects around the failure: ${stubbedIds}`);
+  assert.ok(
+    stubbed.diagnostics.some((d) => d.code === "sbt-project-failed" && d.module === "bad"),
+    "the failing project is reported"
+  );
+}
 rmSync(scratch, { recursive: true, force: true });
 
 console.log(`scalasem-engine: ${versions.length} compiler recordings, ${entry.calls.length} calls checked`);
