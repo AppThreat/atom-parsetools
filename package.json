@@ -5,7 +5,7 @@
   "main": "./index.js",
   "type": "module",
   "scripts": {
-    "pretty": "prettier --write *.js --trailing-comma=none",
+    "pretty": "prettier --write *.js lib/**/*.{js,mjs} --trailing-comma=none",
     "test": "node test-fixtures/supervise-regression.js && node test-fixtures/astgen-type-regression.js && node test-fixtures/astgen-json-regression.js && node test-fixtures/astgen-vue-regression.js && node test-fixtures/astgen-svelte-regression.js && node test-fixtures/astgen-shape-snapshot.js && node test-fixtures/evaluate-astgen.js",
     "test:evaluate": "node test-fixtures/evaluate-astgen.js",
     "test:ruby": "node test-fixtures/rbastgen-regression.js",
@@ -21,7 +21,8 @@
     "test:fixtures": "node test-fixtures/test-suite.js",
     "test:vue": "node test-fixtures/astgen-vue-regression.js",
     "test:svelte": "node test-fixtures/astgen-svelte-regression.js",
-    "test:supervise": "node test-fixtures/supervise-regression.js"
+    "test:supervise": "node test-fixtures/supervise-regression.js",
+    "test:scala": "node test-fixtures/scalasem-engine.js && node test-fixtures/scalasem-report-schema.js && node test-fixtures/scalasem-jvm.js && node test-fixtures/scalasem-cli.js"
   },
   "dependencies": {
     "@appthreat/atom-common": "^1.1.0",
@@ -61,6 +62,7 @@
     "*.js",
     "phpbatch.php",
     "plugins/",
-    "LICENSE"
+    "LICENSE",
+    "lib/"
   ]
 }

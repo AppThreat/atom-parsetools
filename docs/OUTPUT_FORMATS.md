@@ -92,21 +92,33 @@ Calls carry `call_operator` and `has_parentheses`; percent arrays and regexps ca
 
 ## scalasem
 
-A single JSON document, keyed by source file with a reserved `config` entry:
+A single JSON document, keyed by source file with a reserved `config` entry. The first four
+keys of a file entry are the version 1 keys; the rest are the version 2 facts:
 
 ```json
 {
+  "_meta": { "schemaVersion": "scalasem/2" },
   "config": { "routes": [] },
+  "modules": [],
   "app/User.scala": {
     "sourceFile": "app/User.scala",
     "tags": ["framework"],
     "usedTypes": ["play.api.mvc.Request"],
-    "literals": ["id", "name"]
+    "literals": ["id", "name"],
+    "module": "root",
+    "platform": "jvm",
+    "scope": "main",
+    "definitions": [],
+    "calls": [
+      { "line": 8, "column": 20, "caller": "controllers.User$.show", "owner": "play.api.mvc.Action$", "name": "apply" }
+    ],
+    "references": []
   }
 }
 ```
 
-See [scalasem](SCALASEM.md) for how tags and routes are derived.
+The shape is defined by `lib/scalasem/scalasem-v2.schema.json`. See
+[scalasem](SCALASEM.md) for how the facts, tags and routes are derived.
 
 ## Version and provenance fields
 
