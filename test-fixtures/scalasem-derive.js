@@ -500,6 +500,57 @@ assert.ok(
   "a Scala 2 call stack from the route through Store.find to slick"
 );
 
+// Call stacks: the shortest route first, no dispatch through a library supertype, and no
+// test as an entry.
+const graphFacts = (extra = {}) =>
+  fromFacts({
+    "src/main/scala/p/App.scala": {
+      definitions: [
+        { kind: "object", owner: "p", name: "App", line: 1, endLine: 30 },
+        { kind: "def", owner: "p.App$", name: "main", line: 2, endLine: 4 },
+        { kind: "def", owner: "p.App$", name: "a", line: 5, endLine: 8 },
+        { kind: "def", owner: "p.App$", name: "b", line: 9, endLine: 10 },
+        { kind: "def", owner: "p.App$", name: "t", line: 11, endLine: 12 },
+        {
+          kind: "object",
+          owner: "p",
+          name: "Purge",
+          line: 20,
+          endLine: 22,
+          parents: ["scala.Function1"]
+        },
+        { kind: "def", owner: "p.Purge$", name: "apply", line: 21, endLine: 22 }
+      ],
+      calls: [
+        call(3, "p.App$.main", "p.App$", "a"),
+        call(6, "p.App$.a", "p.App$", "t"),
+        call(7, "p.App$.a", "p.App$", "b"),
+        call(10, "p.App$.b", "p.App$", "t"),
+        call(12, "p.App$.t", "okhttp3.OkHttpClient", "newCall"),
+        call(4, "p.App$.main", "scala.Function1", "apply"),
+        call(
+          22,
+          "p.Purge$.apply",
+          "org.apache.commons.io.FileUtils$",
+          "deleteDirectory"
+        )
+      ],
+      ...extra
+    }
+  }).callStacks;
+const stackLines = graphFacts().map((st) =>
+  st.frames.map((f) => f.line).join(">")
+);
+assert.deepStrictEqual(
+  stackLines[0],
+  "2>3>6>12",
+  "the shortest route comes first"
+);
+assert.ok(
+  !graphFacts().some((st) => st.sink.name === "deleteDirectory"),
+  "a library function type does not dispatch to a project object"
+);
+
 // Normalized paths.
 const { normalizePath } = await import("../lib/scalasem/derive/endpoints.js");
 assert.deepStrictEqual(
