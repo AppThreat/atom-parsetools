@@ -3,14 +3,19 @@
 // The no build form runs the same way without starting a build tool.
 import { strict as assert } from "node:assert";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 
 const scalasem = join(process.cwd(), "scalasem.js");
-const project = join(process.cwd(), "test-fixtures", "projects", "scala", "showcase");
 const out = mkdtempSync(join(tmpdir(), "scalasem-cli-"));
+// The fixture is copied so the build tool runs of the flag free form cannot rewrite the
+// files the repository keeps.
+const project = join(out, "project");
+cpSync(join(process.cwd(), "test-fixtures", "projects", "scala", "showcase"), project, {
+  recursive: true
+});
 
 function runScalasem(args) {
   return spawnSync(process.execPath, [scalasem, ...args], { encoding: "utf-8" });
@@ -52,5 +57,9 @@ result = runScalasem([join(out, "no-such-directory"), join(out, "none.json")]);
 assert.notStrictEqual(result.status, 0, "missing directory must fail");
 assert.ok(!existsSync(join(out, "none.json")));
 
-rmSync(out, { recursive: true, force: true });
+cleanup();
 console.log(`scalasem-cli: atom command line and no build form checked, ${fileKeys.length} entries`);
+
+function cleanup() {
+  rmSync(out, { recursive: true, force: true });
+}

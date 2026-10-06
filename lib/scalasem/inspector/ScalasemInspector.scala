@@ -134,6 +134,7 @@ final class FactCollector extends Inspector:
         case Some(p) =>
           val fields = mutable.ArrayBuffer.empty[String]
           fields += "\"kind\":\"def\""
+          fields += s"\"defKind\":${ScalasemInspector.jsonStr(kind)}"
           fields += s"\"file\":${ScalasemInspector.jsonStr(p.sourceFile.path)}"
           fields += s"\"line\":${p.startLine + 1}"
           fields += s"\"column\":${p.startColumn + 1}"
