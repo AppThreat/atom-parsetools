@@ -48,6 +48,18 @@
       "items": {
         "$ref": "#/definitions/service"
       }
+    },
+    "jsModules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/jsModule"
+      }
+    },
+    "nativeBindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/nativeBinding"
+      }
     }
   },
   "required": [
@@ -415,6 +427,18 @@
             "tasty",
             "semanticdb"
           ]
+        },
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "jvm",
+              "js",
+              "native"
+            ]
+          },
+          "minItems": 2
         }
       },
       "required": [
@@ -1030,6 +1054,59 @@
             },
             "additionalProperties": false
           }
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "jsModule": {
+      "type": "object",
+      "required": [
+        "module",
+        "owner",
+        "file",
+        "line"
+      ],
+      "properties": {
+        "module": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "nativeBinding": {
+      "type": "object",
+      "required": [
+        "symbol",
+        "owner",
+        "file",
+        "line"
+      ],
+      "properties": {
+        "library": {
+          "type": "string"
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
         },
         "file": {
           "type": "string"

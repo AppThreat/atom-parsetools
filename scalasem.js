@@ -80,6 +80,7 @@ async function main(argv) {
   const factsSources = new Set();
   const rawFiles = new Map();
   const moduleOf = new Map();
+  const platformsOf = new Map();
   const modulesWithOutput = [];
   let tastyTotal = 0;
   let readTotal = 0;
@@ -103,6 +104,11 @@ async function main(argv) {
         rawFiles.set(file, facts);
         moduleOf.set(file, module);
       }
+      if (module.platform) {
+        const platforms = platformsOf.get(file) || new Set();
+        platforms.add(module.platform);
+        platformsOf.set(file, platforms);
+      }
     }
     if (inspected.files.size || module.classpath.length) {
       modulesWithOutput.push(module);
@@ -123,6 +129,11 @@ async function main(argv) {
     const derived = evidence.tagsByFile?.get(file);
     if (derived?.size) {
       entry.tags = [...new Set([...entry.tags, ...derived])].sort();
+    }
+    // A source compiled into several modules of a cross build belongs to every platform.
+    const platforms = [...(platformsOf.get(file) || new Set())].sort();
+    if (platforms.length > 1) {
+      entry.platforms = platforms;
     }
     fileEntries[file] = entry;
   }
