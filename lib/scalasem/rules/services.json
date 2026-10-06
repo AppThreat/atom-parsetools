@@ -62,14 +62,11 @@
       "client": "okhttp"
     },
     {
-      "ownerPrefix": "com.raquo.laminar",
-      "nameIn": [
-        "href",
-        "src",
-        "action"
-      ],
+      "ownerPrefix": "com.raquo.laminar.keys.HtmlAttr",
       "arg": 0,
-      "client": "laminar"
+      "client": "laminar",
+      "name": "apply",
+      "urlOnly": true
     }
   ],
   "httpClients": [

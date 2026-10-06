@@ -295,6 +295,62 @@
         "algorithm": "SHA-1",
         "primitive": "hash",
         "weak": true
+      },
+      "EVP_Digest": {
+        "algorithm": "EVP_Digest",
+        "primitive": "hash"
+      },
+      "EVP_MD_fetch": {
+        "algorithm": "EVP_MD_fetch",
+        "primitive": "hash"
+      },
+      "EVP_MAC": {
+        "algorithm": "EVP_MAC",
+        "primitive": "mac"
+      },
+      "EVP_MAC_fetch": {
+        "algorithm": "EVP_MAC_fetch",
+        "primitive": "mac"
+      },
+      "EVP_DigestInit_ex": {
+        "algorithm": "EVP_Digest",
+        "primitive": "hash"
+      },
+      "EVP_DigestUpdate": {
+        "algorithm": "EVP_Digest",
+        "primitive": "hash"
+      },
+      "EVP_DigestFinal_ex": {
+        "algorithm": "EVP_Digest",
+        "primitive": "hash"
+      },
+      "EVP_MAC_CTX_new": {
+        "algorithm": "EVP_MAC",
+        "primitive": "mac"
+      },
+      "EVP_MAC_CTX_free": {
+        "algorithm": "EVP_MAC",
+        "primitive": "mac"
+      },
+      "EVP_MAC_init": {
+        "algorithm": "EVP_MAC",
+        "primitive": "mac"
+      },
+      "EVP_MAC_update": {
+        "algorithm": "EVP_MAC",
+        "primitive": "mac"
+      },
+      "EVP_MAC_final": {
+        "algorithm": "EVP_MAC",
+        "primitive": "mac"
+      },
+      "EVP_MAC_get_params": {
+        "algorithm": "EVP_MAC",
+        "primitive": "mac"
+      },
+      "EVP_get_digestbyname": {
+        "algorithm": "EVP_get_digestbyname",
+        "primitive": "hash"
       }
     }
   },
