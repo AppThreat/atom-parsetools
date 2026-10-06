@@ -607,6 +607,37 @@ assert.ok(
 assert.deepStrictEqual(crossModules[0].sourceRoots, [join(scratch, cross)]);
 crossDiagnostics.length = 0;
 
+// Scala.js and Scala Native write their IR inside the package directories; a module without
+// IR files is placed by the libraries it linked.
+const platforms = join("platforms-left");
+write(join(platforms, "build.sbt"));
+write(join(platforms, "js/target/scala-3.3.7/classes/app/web/A.tasty"));
+write(join(platforms, "js/target/scala-3.3.7/classes/app/web/A.sjsir"));
+write(join(platforms, "native/target/scala-3.3.7/classes/app/cli/B.tasty"));
+write(join(platforms, "native/target/scala-3.3.7/classes/app/cli/B.nir"));
+write(join(platforms, "linked/target/scala-3.3.7/classes/app/C.tasty"));
+const nativelib = join(scratch, platforms, "lib", "nativelib_native0.5_3-0.5.8.jar");
+write(join(platforms, "lib", "nativelib_native0.5_3-0.5.8.jar"));
+write(
+  join(
+    platforms,
+    "linked/target/streams/compile/dependencyClasspath/_global/streams/export"
+  ),
+  nativelib
+);
+const platformModules = (
+  await inventory(join(scratch, platforms), { noBuild: true })
+).modules;
+assert.deepStrictEqual(
+  platformModules.map((m) => [m.id, m.platform]),
+  [
+    ["js", "js"],
+    ["linked", "native"],
+    ["native", "native"]
+  ],
+  "leftover platforms from IR files and linked libraries"
+);
+
 // sbt stops a joined session at the first failing command; the projects after it are queried
 // again and the failing one is reported. A stub stands in for sbt.
 if (process.platform !== "win32") {
