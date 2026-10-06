@@ -690,6 +690,34 @@ assert.deepStrictEqual(
   ["3 Argon2 literal", "5 Argon2 constant"]
 );
 
+// A jwt-scala algorithm passed to any call is chosen there; one only matched on is not.
+assert.deepStrictEqual(
+  fromFacts({
+    "J.scala": {
+      calls: [
+        call(7, "p.J$.alg", "scala.Option", "getOrElse", [
+          { index: 0, ident: "HS256", sym: "pdi.jwt.JwtAlgorithm$.HS256" }
+        ])
+      ],
+      references: [
+        {
+          line: 7,
+          column: 30,
+          symbol: "pdi.jwt.JwtAlgorithm$.HS256",
+          kind: "term"
+        },
+        {
+          line: 9,
+          column: 10,
+          symbol: "pdi.jwt.JwtAlgorithm$.RS256",
+          kind: "term"
+        }
+      ]
+    }
+  }).crypto.map((f) => `${f.line} ${f.algorithm}`),
+  ["7 HS256"]
+);
+
 console.log(
   `scalasem-derive: ${crypto.length} crypto findings, ${services.length} services, ${endpoints.length} endpoints, ${CANONICAL_ALGORITHMS.length} canonical names`
 );
