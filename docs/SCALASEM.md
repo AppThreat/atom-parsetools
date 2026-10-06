@@ -60,8 +60,13 @@ because the SemanticDB based reader for them ships in a later release.
 
 - **sbt.** The project list comes from sbt itself. One further session per build asks every
   project for its compiler instance, class directory, source roots and dependency classpath,
-  with the commands joined into a single argument, the only form sbt 2 parses correctly. sbt 2
-  also leaves a server running after batch commands, which scalasem shuts down.
+  with the commands joined into a single argument, the only form sbt 2 parses correctly. A
+  project that sbt cannot describe, for example one with an unresolvable dependency, is
+  reported as `sbt-project-failed`. The class directories its last build left are read
+  instead. sbt 2 runs in-process (`--server`), because its default thin client prints nothing
+  when a server, an IDE's for example, is already running for the build. That server is left
+  alone. On Windows, where `sbt.bat` has no such option, a server started by the inventory is
+  shut down afterwards.
 - **Mill.** The wrapper script is preferred over a mill on the PATH, `__.compile` is the
   compile target, and the module data comes from the files under `out/`, including cross
   build directories such as `out/cask/3.3.4` and the classes of upstream modules. The build
