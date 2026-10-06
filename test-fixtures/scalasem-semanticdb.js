@@ -125,7 +125,7 @@ assert.ok(
 );
 assert.ok(
   routesFacts.references.some(
-    (r) => r.refKind === "import" && r.symbol === "java.security.MessageDigest"
+    (r) => r.kind === "import" && r.symbol === "java.security.MessageDigest"
   ),
   "imports are references, not calls"
 );

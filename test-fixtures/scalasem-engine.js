@@ -771,7 +771,7 @@ const sharedFacts = () => ({
       args: [{ index: 0, string: "x" }]
     }
   ],
-  references: [{ line: 1, column: 8, symbol: "a.C", refKind: "import" }],
+  references: [{ line: 1, column: 8, symbol: "a.C", kind: "import" }],
   constants: [{ sym: "a.B$.Name", line: 2, value: "n", tpe: "string" }],
   patterns: []
 });

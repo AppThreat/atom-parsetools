@@ -267,19 +267,19 @@ const jwt = fromFacts({
         line: 1,
         column: 1,
         symbol: "pdi.jwt.JwtAlgorithm$.HS256",
-        refKind: "import"
+        kind: "import"
       },
       {
         line: 5,
         column: 30,
         symbol: "pdi.jwt.JwtAlgorithm$.RS512",
-        refKind: "term"
+        kind: "term"
       },
       {
         line: 5,
         column: 40,
         symbol: "pdi.jwt.JwtAlgorithm$.allHmac",
-        refKind: "term"
+        kind: "term"
       }
     ]
   }

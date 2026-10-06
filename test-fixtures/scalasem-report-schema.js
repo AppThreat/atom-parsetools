@@ -9,6 +9,8 @@ import { buildReport } from "../lib/scalasem/schema.js";
 import { parseFacts } from "../lib/scalasem/inspect.js";
 import { buildFileEntry } from "../lib/scalasem/facts.js";
 import { parseProjectConfig } from "../lib/scalasem/config.js";
+import { semanticdbModuleFacts } from "../lib/scalasem/semanticdb.js";
+import { deriveContext, deriveEvidence } from "../lib/scalasem/derive/index.js";
 
 const schema = JSON.parse(
   readFileSync(
@@ -194,6 +196,50 @@ assert.deepStrictEqual(
   report._meta.compilers,
   [{ source: "sbt", version: "3.3.7" }],
   "one compiler entry for modules that share it"
+);
+
+// A Scala 2 report, read from recorded SemanticDB, with its derived evidence and the
+// diagnostics a build tool reports.
+const legacyDir = join(
+  process.cwd(),
+  "test-fixtures",
+  "projects",
+  "scala",
+  "semanticdb"
+);
+const legacyFacts = semanticdbModuleFacts(legacyDir, {
+  semanticdbDirs: [join(legacyDir, "meta")]
+});
+const legacyModule = { id: "legacy", platform: "jvm", scalaVersion: "2.12.20" };
+const legacyEntries = {};
+for (const [file, raw] of legacyFacts) {
+  legacyEntries[file] = buildFileEntry(raw, legacyModule, file, {});
+}
+const legacyReport = buildReport({
+  projectDir: "/src/legacy",
+  tool: "sbt",
+  modules: [{ ...legacyModule, classDirs: [], sourceRoots: [], classpath: [] }],
+  fileEntries: legacyEntries,
+  config: { routes: [], values: [], routerMounts: [] },
+  diagnostics: [
+    { code: "sbt-project-failed", module: "other", tool: "sbt" },
+    { code: "semanticdb-missing", module: "legacy", tool: "maven" }
+  ],
+  toolchains: [],
+  factsSources: new Set(["semanticdb"]),
+  evidence: deriveEvidence(
+    deriveContext(legacyFacts, {}, { projectDir: legacyDir })
+  )
+});
+violations = validate(legacyReport, schema, "$");
+assert.deepStrictEqual(
+  violations,
+  [],
+  `SemanticDB report violates the schema:\n${violations.join("\n")}`
+);
+assert.ok(
+  legacyReport.endpoints.length && legacyReport.callGraph.edges.length,
+  "the Scala 2 report carries derived evidence"
 );
 
 // Sorting: two builds of the same parts produce the same bytes.
