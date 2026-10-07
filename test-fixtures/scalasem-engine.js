@@ -31,8 +31,10 @@ import {
 } from "../lib/scalasem/compiler.js";
 import { sortKeysDeep } from "../lib/scalasem/schema.js";
 import {
+  commandInvocation,
   looksSecret,
   quotableLiteral,
+  quoteWindowsArgument,
   sanitizeUrl,
   jarCoordinate
 } from "../lib/scalasem/util.js";
@@ -1277,6 +1279,47 @@ for (const command of commands) {
   );
 }
 rmSync(scratch, { recursive: true, force: true });
+
+// On Windows the build tools are batch files, which start only through cmd.exe: the
+// command line quotes every argument the way cmd.exe and the MSVC runtime read it back,
+// and an executable still starts directly.
+assert.deepStrictEqual(
+  commandInvocation(
+    "sbt",
+    [
+      "-batch",
+      "-Dsbt.global.base=C:\\Users\\a b\\global",
+      "export app/Compile/fullClasspath"
+    ],
+    "win32"
+  ),
+  {
+    file: 'sbt -batch "-Dsbt.global.base=C:\\Users\\a b\\global" "export app/Compile/fullClasspath"',
+    args: [],
+    shell: true
+  }
+);
+assert.deepStrictEqual(
+  commandInvocation("C:\\jdk\\bin\\java.exe", ["-cp", "a b"], "win32"),
+  { file: "C:\\jdk\\bin\\java.exe", args: ["-cp", "a b"], shell: false }
+);
+assert.deepStrictEqual(commandInvocation("sbt", ["a b"], "linux"), {
+  file: "sbt",
+  args: ["a b"],
+  shell: false
+});
+assert.ok(
+  commandInvocation("sbt", ["%PATH%"], "win32").error,
+  "cmd.exe would expand a percent sign even inside quotes"
+);
+assert.strictEqual(quoteWindowsArgument(""), '""');
+assert.strictEqual(quoteWindowsArgument("plain"), "plain");
+assert.strictEqual(quoteWindowsArgument('say "hi"'), '"say \\"hi\\""');
+assert.strictEqual(
+  quoteWindowsArgument("C:\\Program Files\\x\\"),
+  '"C:\\Program Files\\x\\\\"'
+);
+assert.strictEqual(quoteWindowsArgument("a&b"), '"a&b"');
 
 console.log(
   `scalasem-engine: ${versions.length} compiler recordings, ${entry.calls.length} calls checked`
