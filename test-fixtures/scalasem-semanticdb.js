@@ -226,6 +226,33 @@ assert.ok(
   "no fallback when SemanticDB is turned off"
 );
 
+// An aggregate project with no sources of its own yields no facts, and nothing is missing;
+// a module with sources and no SemanticDB is reported.
+const scala2Module = (id, sourceRoots) => ({
+  id,
+  scalaVersion: "2.13.18",
+  classDirs: [],
+  sourceRoots,
+  semanticdbDirs: [],
+  classpath: []
+});
+assert.deepStrictEqual(
+  inspectModule(
+    project,
+    scala2Module("root", [join(scratch, "no-such-sources")]),
+    { installDeps: false }
+  ).diagnostics,
+  []
+);
+mkdirSync(join(scratch, "app-src"), { recursive: true });
+writeFileSync(join(scratch, "app-src", "App.scala"), "object App");
+assert.deepStrictEqual(
+  inspectModule(project, scala2Module("app", [join(scratch, "app-src")]), {
+    installDeps: false
+  }).diagnostics.map((d) => d.code),
+  ["scala2-unsupported"]
+);
+
 // Scala 2 places the constructor of `new C[T](...)` on its argument list, and an interpolator
 // such as `uri"..."` takes the interpolation as its argument.
 const shapes = [
