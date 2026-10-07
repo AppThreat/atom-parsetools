@@ -1,0 +1,13 @@
+//| mill-version: 1.0.6
+// Mill ground-truth fixture: cask routes and the requests HTTP client, Scala 3.
+package build
+
+import mill.*, scalalib.*
+
+object app extends ScalaModule {
+  def scalaVersion = "3.3.7"
+  def mvnDeps = Seq(
+    mvn"com.lihaoyi::cask:0.11.3",
+    mvn"com.lihaoyi::requests:0.9.3"
+  )
+}

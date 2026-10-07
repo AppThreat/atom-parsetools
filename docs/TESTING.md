@@ -11,6 +11,8 @@ npm run test:svelte     # astgen: Svelte offset/template/typemap regression
 npm run test:php        # phpastgen: CLI, parser-info, discovery, provenance,
                         # framework facts, legacy, concurrency, regression,
                         # contract snapshot, property-based tests
+npm run test:scala     # scalasem: engine over recorded inspector output, plus a
+                       # JVM run when a JDK and a cached compiler are available
 npm run test:ruby       # rbastgen: end-to-end against test-fixtures/projects/ruby-parsing
 bash build.sh --ruby-only && npm run test:ruby   # full local Ruby workflow
 ```

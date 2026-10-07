@@ -1,0 +1,7 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+GET     /                           controllers.HomeController.index()
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET     /accounts/:id               controllers.AccountController.show(id: Long)
+POST    /accounts                   controllers.AccountController.create()
+->      /admin                      admin.Routes

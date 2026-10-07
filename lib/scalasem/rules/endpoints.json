@@ -1,0 +1,94 @@
+{
+  "description": "Route DSLs. Every reader parses the route structure from the source tokens; the symbol prefixes confirm that a token is the framework's own.",
+  "directives": {
+    "ownerPrefixes": [
+      "akka.http.scaladsl.server.directives.",
+      "org.apache.pekko.http.scaladsl.server.directives."
+    ],
+    "directives": [
+      "path",
+      "pathPrefix",
+      "rawPathPrefix",
+      "pathEnd",
+      "pathEndOrSingleSlash",
+      "pathSingleSlash",
+      "get",
+      "post",
+      "put",
+      "patch",
+      "delete",
+      "head",
+      "options"
+    ],
+    "prefixes": ["pathPrefix", "rawPathPrefix"],
+    "terminals": ["path", "pathEnd", "pathEndOrSingleSlash", "pathSingleSlash"],
+    "captures": [
+      "Segment",
+      "Segments",
+      "IntNumber",
+      "LongNumber",
+      "DoubleNumber",
+      "HexIntNumber",
+      "HexLongNumber",
+      "JavaUUID",
+      "Remaining",
+      "RemainingPath"
+    ]
+  },
+  "patterns": {
+    "verbPrefixes": ["org.http4s.", "zio.http."],
+    "router": "org.http4s.server.Router"
+  },
+  "tapir": {
+    "prefix": "sttp.tapir.",
+    "pathConversion": "stringToPath",
+    "captures": ["path", "paths"],
+    "inputs": [
+      "query",
+      "header",
+      "headers",
+      "cookie",
+      "cookies",
+      "jsonBody",
+      "stringBody",
+      "formBody",
+      "multipartBody",
+      "byteArrayBody",
+      "auth",
+      "extractFromRequest"
+    ]
+  },
+  "zio": {
+    "prefix": "zio.http.",
+    "captures": ["int", "long", "string", "uuid", "boolean", "anyString"]
+  },
+  "cask": {
+    "endpoints": {
+      "get": ["GET"],
+      "getJson": ["GET"],
+      "post": ["POST"],
+      "postJson": ["POST"],
+      "postForm": ["POST"],
+      "put": ["PUT"],
+      "patch": ["PATCH"],
+      "delete": ["DELETE"],
+      "options": ["OPTIONS"],
+      "websocket": ["GET"],
+      "staticFiles": ["GET"],
+      "staticResources": ["GET"],
+      "route": ["GET"]
+    }
+  },
+  "scalatra": {
+    "verbs": ["get", "post", "put", "delete", "patch", "head", "options"],
+    "ancestors": [
+      "org.scalatra.ScalatraBase",
+      "org.scalatra.ScalatraServlet",
+      "org.scalatra.ScalatraFilter",
+      "org.scalatra.CoreDsl"
+    ]
+  },
+  "sird": {
+    "prefix": "play.api.routing.sird"
+  }
+}

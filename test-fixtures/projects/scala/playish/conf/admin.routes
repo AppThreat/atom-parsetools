@@ -1,0 +1,2 @@
+GET     /stats                      controllers.admin.StatsController.stats()
+POST    /users                      controllers.admin.UserController.create()

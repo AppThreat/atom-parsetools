@@ -1,376 +1,191 @@
 #!/usr/bin/env node
-// Usage: scalasem $(pwd) slices.json
-import { tmpdir } from "node:os";
-import { basename, dirname, join, relative } from "node:path";
-import { spawnSync } from "node:child_process";
-import { detectScala, detectScalac, getAllFiles } from "@appthreat/atom-common";
+// Usage: scalasem <dir> <outFile> [--no-build] [--no-compile] [--build auto|sbt|mill|maven|scala-cli|none]
+//
+// Produces the scalasem report of a Scala project: compiler facts with file and line for every
+// TASTy file the build produced, plus the routes and configuration values. The build tool
+// supplies the module inventory and the compiler; no compiler from the PATH is ever run.
+import { existsSync, realpathSync } from "node:fs";
+import { resolve } from "node:path";
 import process from "node:process";
-import {
-  existsSync,
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync
-} from "node:fs";
-import { exitWithSupervisor } from "./supervise.js";
 
-// `timeout` must be a number: spawnSync throws ERR_INVALID_ARG_TYPE on the raw string an
-// environment variable gives us. Unset or unparseable means no timeout.
-function spawnTimeout() {
-  const timeout = Number.parseInt(
-    process.env.ATOM_TIMEOUT || process.env.ASTGEN_TIMEOUT,
-    10
-  );
-  return Number.isNaN(timeout) ? undefined : timeout;
+import { exitWithSupervisor, timeLimitReached } from "./supervise.js";
+import { inventory } from "./lib/scalasem/build.js";
+import { collectFacts } from "./lib/scalasem/collect.js";
+import { buildFileEntry } from "./lib/scalasem/facts.js";
+import { parseProjectConfig } from "./lib/scalasem/config.js";
+import { buildReport, reportCaps, writeReport } from "./lib/scalasem/schema.js";
+import { deriveContext, deriveEvidence } from "./lib/scalasem/derive/index.js";
+
+function parseArgs(argv) {
+  const positional = [];
+  const opts = {
+    noBuild: ["true", "1"].includes(process.env.SCALASEM_NO_BUILD),
+    noCompile: ["true", "1"].includes(process.env.SCALASEM_NO_COMPILE),
+    build: "auto",
+    installDeps: !["true", "1"].includes(process.env.SCALASEM_NO_INSTALL),
+    includeTests: ["true", "1"].includes(process.env.SCALASEM_INCLUDE_TESTS),
+    scalaVersion: process.env.SCALA_VERSION,
+    semanticdb: process.env.SCALASEM_SEMANTICDB || "auto",
+    pretty: false
+  };
+  // `--build sbt` is accepted as well as `--build=sbt`.
+  const args = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (
+      ["--build", "--semanticdb"].includes(argv[i]) &&
+      argv[i + 1] !== undefined &&
+      !argv[i + 1].startsWith("--")
+    ) {
+      args.push(`${argv[i]}=${argv[i + 1]}`);
+      i += 1;
+    } else {
+      args.push(argv[i]);
+    }
+  }
+  for (const arg of args) {
+    if (arg === "--no-build") {
+      opts.noBuild = true;
+    } else if (arg === "--no-compile") {
+      opts.noCompile = true;
+    } else if (arg === "--include-tests") {
+      opts.includeTests = true;
+    } else if (arg === "--pretty") {
+      opts.pretty = true;
+    } else if (arg.startsWith("--build=")) {
+      opts.build = arg.slice("--build=".length);
+    } else if (arg.startsWith("--semanticdb=")) {
+      opts.semanticdb = arg.slice("--semanticdb=".length);
+    } else if (arg.startsWith("--max-")) {
+      const [name, value] = arg.slice("--max-".length).split("=");
+      const envName = `SCALASEM_MAX_${name.replace(/-/g, "_").toUpperCase()}`;
+      process.env[envName] = value;
+    } else if (!arg.startsWith("--")) {
+      positional.push(arg);
+    }
+  }
+  return { positional, opts };
 }
-function main(argvs) {
-  if (!detectScala() && !detectScalac()) {
-    console.warn("Scala is not installed!");
+
+async function main(argv) {
+  const { positional, opts } = parseArgs(argv);
+  if (positional.length < 1) {
+    console.error(
+      "usage: scalasem <dir> <outFile> [--no-build] [--no-compile]"
+    );
     return false;
   }
-  let configFiles = getAllFiles(argvs[0], "routes");
-  configFiles = configFiles.concat(getAllFiles(argvs[0], ".conf"));
-  let tastyFiles = getAllFiles(argvs[0], ".tasty");
-  if (!tastyFiles.length) {
-    let buildTool = "sbt";
-    const millFiles = getAllFiles(argvs[0], "build.mill");
-    if (millFiles.length) {
-      buildTool = "mill";
-    }
-    const cwd = process.env.ATOM_CWD || process.cwd();
-    let compileCommand =
-      process?.env[`${buildTool.toUpperCase()}_COMPILE_COMMAND`] || "compile";
-    if (process.env.SCALA_VERSION && buildTool === "sbt") {
-      compileCommand = `++${process.env.SCALA_VERSION} ${compileCommand}`;
-    } else {
-      // Detect crossScalaVersions
-      const scalaVersion = findScalaVersion(cwd);
-      if (scalaVersion) {
-        compileCommand = `++${scalaVersion} ${compileCommand}`;
-      }
-    }
-    console.log(`Executing '${buildTool} ${compileCommand}' in ${argvs[0]}`);
-    const result = spawnSync(buildTool, compileCommand.split(" "), {
-      encoding: "utf-8",
-      cwd,
-      stdio: "ignore",
-      stderr: "inherit",
-      env: process.env,
-      timeout: spawnTimeout()
-    });
-    if (result.error || result.status !== 0) {
-      if (result.stderr) {
-        console.log(result.stderr);
-      }
-      return false;
-    }
-    tastyFiles = getAllFiles(argvs[0], ".tasty");
-    console.log(`Obtained ${tastyFiles.length} IR files after compilation.`);
+  const requested = resolve(positional[0]);
+  if (!existsSync(requested)) {
+    console.error(`No such directory: ${requested}`);
+    return false;
   }
-  const slicesFile =
-    argvs.length > 1 ? argvs[1] : join(argvs[0], "slices.json");
-  createSemanticSlices(tastyFiles, configFiles, slicesFile);
-}
-exitWithSupervisor();
-main(process.argv.slice(2));
-
-function findScalaVersion(cwd) {
-  let scalaVersion;
-  const buildSbtFile = join(cwd, "build.sbt");
-  if (existsSync(buildSbtFile)) {
-    const buildData = readFileSync(buildSbtFile, "utf-8");
-    for (let line of buildData.split("\n")) {
-      if (line.trim().includes("val ") && line.includes("scala")) {
-        const match = line.match(/"(3\.[^"]+)"/);
-        if (match) {
-          return match[1];
-        }
-      }
-      if (line.trim().includes("crossScalaVersions")) {
-        const crossVersions = line.split("crossScalaVersions").pop().trim();
-        if (crossVersions.includes("3.")) {
-          const match = crossVersions.match(/"(3\.[^"]+)"/);
-          if (match) {
-            return match[1];
-          }
-        }
-      }
-    }
-  }
-  return scalaVersion;
-}
-
-function createSemanticSlices(tastyFiles, configFiles, slicesFile) {
-  const outDir = mkdtempSync(join(tmpdir(), "scalasem-"));
-  const MAX_BUFFER =
-    Number.parseInt(process.env.ATOM_MAX_BUFFER) || 100 * 1024 * 1024;
-  const cwd = process.env.ATOM_CWD || process.cwd();
-  const slices = {};
-  slices.config = parseConfigFiles(configFiles);
-  for (const af of tastyFiles) {
-    const result = spawnSync(
-      process.env.SCALAC_CMD || "scalac",
-      ["-color:never", "-print-tasty", af],
+  // Build tools report resolved paths, so the project directory has to be resolved too for
+  // the relative paths of the report to line up.
+  const projectDir = realpathSync(requested);
+  const outFile =
+    positional.length > 1
+      ? resolve(positional[1])
+      : resolve(projectDir, "slices.json");
+  const detected = await inventory(projectDir, opts);
+  const collected = collectFacts(projectDir, detected.modules, opts);
+  const diagnostics = [...detected.diagnostics, ...collected.diagnostics];
+  const {
+    files: rawFiles,
+    moduleOf,
+    platformsOf,
+    toolchains,
+    factsSources,
+    modulesWithOutput
+  } = collected;
+  const tastyTotal = collected.tastyFiles;
+  const readTotal = collected.readFiles;
+  const config = parseProjectConfig(projectDir);
+  const evidence = deriveEvidence(
+    deriveContext(
+      rawFiles,
       {
-        encoding: "utf-8",
-        cwd,
-        env: process.env,
-        maxBuffer: MAX_BUFFER,
-        timeout: spawnTimeout()
-      }
-    );
-    if (result.error || result.status !== 0) {
-      if (result.stderr) {
-        console.log(result.stderr);
-      }
+        routes: config.routes,
+        values: config.values,
+        routerMounts: config.routerMounts
+      },
+      { projectDir }
+    )
+  );
+  const fileEntries = {};
+  for (const [file, facts] of rawFiles) {
+    const entry = buildFileEntry(facts, moduleOf.get(file), file, {
+      caps: reportCaps()
+    });
+    const derived = evidence.tagsByFile?.get(file);
+    if (derived?.size) {
+      entry.tags = [...new Set([...entry.tags, ...derived])].sort();
     }
-    if (result.stdout) {
-      let fileOutDir = join(outDir, relative(cwd, dirname(af)));
-      const scalaDir = relative(cwd, dirname(af)).replace(
-        new RegExp("target/scala-(.)*/classes"),
-        ""
-      );
-      if (fileOutDir.includes("classes")) {
-        fileOutDir = fileOutDir.replace(
-          new RegExp("target/scala-(.)*/classes"),
-          ""
-        );
-      }
-      mkdirSync(fileOutDir, { recursive: true });
-      const astFile = join(
-        fileOutDir,
-        basename(af).replace(".tasty", ".scala.ast")
-      );
-      const scalaFile = join(
-        scalaDir,
-        basename(af).replace(".tasty", ".scala")
-      );
-      writeFileSync(astFile, Buffer.from(result.stdout).toString());
-      const usages = parseTasty(astFile);
-      slices[usages.sourceFile || scalaFile] = usages;
-      rmSync(astFile);
+    // A source compiled into several modules of a cross build belongs to every platform.
+    const platforms = [...(platformsOf.get(file) || new Set())].sort();
+    if (platforms.length > 1) {
+      entry.platforms = platforms;
     }
+    fileEntries[file] = entry;
   }
-  const slicesJson = JSON.stringify(slices, null, null);
-  writeFileSync(slicesFile, slicesJson);
-  if (!Object.keys(slices).length) {
+  const report = buildReport(
+    {
+      projectDir,
+      tool: detected.tool,
+      version: detected.version,
+      modules: modulesWithOutput,
+      fileEntries,
+      config,
+      diagnostics: mergeDiagnostics(diagnostics),
+      toolchains,
+      factsSources,
+      evidence
+    },
+    reportCaps()
+  );
+  // The watchdog may have started stopping this run while the facts were collected, for
+  // example when a build tool hung past the handed-down limit and was stopped. What the
+  // run gathered from then on is a fraction of the evidence, and must not pass for a
+  // complete report.
+  if (timeLimitReached()) {
+    console.error(
+      "The time limit was reached or the supervising process is gone; no report was written."
+    );
+    return false;
+  }
+  writeReport(outFile, report, opts.pretty);
+  const files = report._meta.counts.files;
+  console.log(
+    `Slices file ${outFile} created with ${files} entries (${tastyTotal} TASTy files read into ${readTotal} sources).`
+  );
+  if (!files && !config.routes.length) {
     console.log("Empty slices file created.");
-  } else {
-    console.log(
-      `Slices file ${slicesFile} created successfully with ${
-        Object.keys(slices).length
-      } entries.`
-    );
   }
-  if (outDir?.startsWith(tmpdir())) {
-    rmSync(outDir, { recursive: true });
-  }
+  return true;
 }
 
-function parseTasty(tastyAstFile) {
-  const astData = readFileSync(tastyAstFile, "utf-8");
-  let namesMode = false;
-  let treesMode = false;
-  let sourcePathsMode = false;
-  const literals = new Set();
-  const usedTypes = new Set();
-  const tags = new Set();
-  let sourceFile;
-  for (let line of astData.split("\n")) {
-    line = line.replace("\r", "").trim();
-    if (!line.length || line.startsWith("---")) {
-      continue;
-    }
-    if (line.startsWith("Names ") || line.startsWith("Names:")) {
-      namesMode = true;
-    }
-    if (line.startsWith("Trees ") || line.startsWith("Trees:")) {
-      namesMode = false;
-      treesMode = true;
-    }
-    if (line.startsWith("Positions ") || line.startsWith("positions:")) {
-      namesMode = false;
-      treesMode = false;
-    }
-    if (namesMode) {
-      // 3: api
-      if (line.includes(": ")) {
-        const literal = line.split(": ").pop().trim();
-        if (literal.length > 1) {
-          literals.add(literal);
-        }
-      }
-    }
-    if (treesMode && line.includes(" Signature(")) {
-      // 139:         SELECTin(12) 38 [<init>[Signed Signature(List(play.api.mvc.MessagesControllerComponents),play.api.mvc.MessagesAbstractController) @<init>]]
-      const signatureTypes = line
-        .split(" Signature(")
-        .pop()
-        .split(") ")[0]
-        .replaceAll("List(", "")
-        .replaceAll(")", "")
-        .split(",");
-      for (let sig of signatureTypes) {
-        sig = sig.trim();
-        if (
-          sig.length > 3 &&
-          !sig.startsWith("scala.") &&
-          !sig.startsWith("java.") &&
-          !sig.startsWith("javax.inject.")
-        ) {
-          usedTypes.add(sig);
-          if (sig.startsWith("play.api.")) {
-            tags.add("framework");
-          }
-          if (
-            sig.startsWith("play.api.data.Form") ||
-            sig.startsWith("play.api.mvc.Request") ||
-            sig.startsWith("play.twirl.api")
-          ) {
-            tags.add("framework-input");
-          }
-          if (
-            sig.startsWith("play.twirl.api.Html") ||
-            sig.startsWith("play.api.mvc.Result") ||
-            sig.startsWith("play.api.mvc.Action")
-          ) {
-            tags.add("framework-output");
-          }
-          if (
-            sig.startsWith("play.api.routing.") ||
-            sig.startsWith("play.core.routing") ||
-            sig.startsWith("router.RoutesPrefix")
-          ) {
-            tags.add("framework-route");
-          }
-          if (
-            sig.startsWith("slick.sql.") ||
-            sig.startsWith("play.db.") ||
-            sig.startsWith("slick.jdbc.")
-          ) {
-            tags.add("database");
-          }
-        }
-      }
-    }
-    if (line.includes("source paths:")) {
-      sourcePathsMode = true;
-    }
-    if (sourcePathsMode) {
-      if (line.includes(" [") && line.endsWith("]")) {
-        sourceFile = line.split(" [").pop().replace(/]/g, "");
-        sourcePathsMode = false;
-      } else if (line.includes(".scala") && line.includes(": ")) {
-        sourceFile = line.split(": ").pop().trim();
-        sourcePathsMode = false;
-      }
-    }
-    if (!namesMode && !treesMode && !sourcePathsMode) {
-      continue;
+function mergeDiagnostics(diagnostics) {
+  const merged = new Map();
+  for (const diagnostic of diagnostics) {
+    const key = `${diagnostic.code}:${diagnostic.module || ""}`;
+    const existing = merged.get(key);
+    if (existing) {
+      existing.count = (existing.count || 1) + (diagnostic.count || 1);
+    } else {
+      merged.set(key, { ...diagnostic, count: diagnostic.count || 1 });
     }
   }
-  if (sourceFile?.includes("target")) {
-    tags.add("generated");
-  }
-  return {
-    sourceFile,
-    tags: Array.from(tags).sort(),
-    usedTypes: Array.from(usedTypes).sort(),
-    literals: Array.from(literals)
-  };
+  return [...merged.values()].sort((a, b) => a.code.localeCompare(b.code));
 }
 
-function parseConfigFiles(configFiles) {
-  const configMetadata = { routes: [] };
-  for (const aconfig of configFiles) {
-    if (aconfig.endsWith("routes")) {
-      const routes = parseRoutes(aconfig);
-      if (routes?.length) {
-        for (const aroute of routes) {
-          let duplicate = false;
-          for (const exisRoute of configMetadata.routes) {
-            if (
-              exisRoute.method === aroute.method &&
-              exisRoute.pattern === aroute.pattern
-            ) {
-              if (
-                exisRoute.controllerMethod &&
-                exisRoute.controllerMethod === aroute.controllerMethod
-              ) {
-                duplicate = true;
-                continue;
-              }
-            }
-          }
-          if (!duplicate) {
-            configMetadata["routes"].push(aroute);
-          }
-        }
-      }
-    }
-  }
-  if (configMetadata.routes.length) {
-    console.log("Found", configMetadata.routes.length, "routes.");
-  }
-  return configMetadata;
+// SCALASEM_TIMEOUT (milliseconds) bounds the whole run, the builds it starts included: a caller
+// that stopped scalasem on its own timeout would leave those running.
+exitWithSupervisor(process.env, {
+  timeoutMs: Number.parseInt(process.env.SCALASEM_TIMEOUT || "", 10)
+});
+let ok = false;
+try {
+  ok = await main(process.argv.slice(2));
+} catch (err) {
+  console.error(`scalasem failed: ${err?.stack || err}`);
 }
-
-function parseRoutes(routesFile) {
-  const routes = [];
-  const routesData = readFileSync(routesFile, "utf-8");
-  for (let aline of routesData.split("\n")) {
-    aline = aline.replace("\r", "").trim();
-    if (aline.startsWith("#") || aline.startsWith("+")) {
-      continue;
-    }
-    const tmpA = aline.split(/\s+/);
-    if (tmpA.length < 2) {
-      continue;
-    }
-    // Ignore static assets
-    if (["/webjars"].includes(tmpA[1])) {
-      continue;
-    }
-    if (
-      [
-        "GET",
-        "PATCH",
-        "POST",
-        "OPTIONS",
-        "HEAD",
-        "DELETE",
-        "PUT",
-        "->"
-      ].includes(tmpA[0].toUpperCase())
-    ) {
-      let controllerMethod = tmpA.length > 2 ? tmpA[2] : undefined;
-      if (controllerMethod.includes("(")) {
-        controllerMethod = controllerMethod.split("(")[0];
-      }
-      // Exclude webjars
-      if (controllerMethod.startsWith("webjars.")) {
-        continue;
-      }
-      // Handle wildcards
-      if (tmpA[0] === "->") {
-        // We now need to parse a method called "routes" in the controllerMethod to identify the list of http methods
-        // Let's keep things simple for now
-        for (const m of ["GET", "PATCH", "POST", "DELETE", "PUT"]) {
-          routes.push({
-            method: m,
-            pattern: tmpA[1],
-            controllerMethod
-          });
-        }
-      } else {
-        routes.push({
-          method: tmpA[0],
-          pattern: tmpA[1],
-          controllerMethod
-        });
-      }
-    }
-  }
-  return routes;
-}
+process.exit(ok ? 0 : 1);

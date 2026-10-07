@@ -1,0 +1,8 @@
+[info] welcome to sbt 1.10.11 (Eclipse Adoptium Java 21.0.7)
+[info] loading settings for project global-plugins from plugins.sbt...
+[info] loading global plugins from /home/user/.sbt/1.0/plugins
+[info] loading project definition from /src/crypto-jvm/project
+[info] loading settings for project root from build.sbt...
+[info] set current project to crypto-jvm (in build file:/src/crypto-jvm/)
+[info] In file:/src/crypto-jvm/
+[info] 	 * root

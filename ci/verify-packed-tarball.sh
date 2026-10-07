@@ -59,6 +59,27 @@ log "Installing $(basename "$TARBALL") into $CONSUMER"
 RBASTGEN="$CONSUMER/node_modules/.bin/rbastgen"
 [ -x "$RBASTGEN" ] || die "rbastgen was not installed by the tarball"
 
+# scalasem and its engine must travel with the package: the engine lives under lib/, which is
+# only shipped when package.json files lists it.
+SCALASEM="$CONSUMER/node_modules/.bin/scalasem"
+[ -x "$SCALASEM" ] || die "scalasem was not installed by the tarball"
+for expected in lib/scalasem/scalasem-v2.schema.json \
+  lib/scalasem/inspector/ScalasemInspector.scala \
+  lib/scalasem/rules/crypto.json \
+  lib/scalasem/rules/endpoints.json \
+  lib/scalasem/rules/services.json; do
+  [ -f "$CONSUMER/node_modules/@appthreat/atom-parsetools/$expected" ] ||
+    die "the packed tarball carries no $expected"
+done
+"$SCALASEM" /no-such-scala-project "$CONSUMER/none.json" >/dev/null 2>&1 &&
+  die "scalasem accepted a directory that does not exist"
+# An empty project loads every module and rule table of the engine and still writes a report.
+mkdir -p "$CONSUMER/empty-scala-project"
+"$SCALASEM" "$CONSUMER/empty-scala-project" "$CONSUMER/empty.json" --no-build >/dev/null ||
+  die "the installed scalasem failed on an empty project"
+grep -q '"schemaVersion":"scalasem/2"' "$CONSUMER/empty.json" ||
+  die "the installed scalasem wrote no version 2 report"
+
 log "Parser capabilities as the installed package sees them"
 "$RBASTGEN" --parser-info | sed 's/^/    /'
 

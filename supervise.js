@@ -65,7 +65,7 @@ const WATCHDOG = `
 const { spawnSync } = require("node:child_process");
 const { readdirSync, readFileSync, writeSync } = require("node:fs");
 const { workerData } = require("node:worker_threads");
-const { pid, initialParent, isWin, pollMs, graceMs } = workerData;
+const { pid, initialParent, isWin, pollMs, graceMs, deadline, timeLimitState } = workerData;
 ${processPairsFromPs.toString()}
 ${parentPidFromProcStat.toString()}
 ${descendantsOf.toString()}
@@ -82,8 +82,10 @@ const isAlive = (p) => {
 // Gone when the supervisor has exited, or when this process's own parent has: on POSIX an orphan
 // is adopted, so its parent pid changes. Windows does not reparent, so the parent is probed.
 const isGone = () =>
-  !isAlive(pid) ||
-  (isWin ? initialParent !== pid && !isAlive(initialParent) : process.ppid !== initialParent);
+  pid > 0 &&
+  (!isAlive(pid) ||
+    (isWin ? initialParent !== pid && !isAlive(initialParent) : process.ppid !== initialParent));
+const isLate = () => deadline > 0 && Date.now() >= deadline;
 
 // The process table, from ps or, where ps is missing (minimal and distroless images), from /proc.
 function processPairs() {
@@ -134,26 +136,39 @@ const report = (message) => {
 const pause = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
 const timer = setInterval(() => {
-  if (!isGone()) {
+  const gone = isGone();
+  if (!gone && !isLate()) {
     return;
   }
   clearInterval(timer);
-  report("atom-parsetools: supervising process " + pid + " is gone; stopping.\\n");
+  Atomics.store(timeLimitState, 0, 1);
+  report(
+    gone
+      ? "atom-parsetools: supervising process " + pid + " is gone; stopping.\\n"
+      : "atom-parsetools: the time limit is reached; stopping.\\n"
+  );
   if (isWin) {
     // Stops this process and everything it started.
     spawnSync("taskkill", ["/T", "/F", "/PID", String(process.pid)]);
     return;
   }
-  const pairs = processPairs();
-  if (!pairs) {
+  if (!processPairs()) {
     report("atom-parsetools: cannot list processes (no ps or /proc); processes this tool started may keep running.\\n");
   }
-  const helpers = pairs ? descendantsOf(pairs, process.pid) : [];
-  helpers.forEach((p) => signal(p, "SIGTERM"));
-  if (helpers.length) {
+  // The main thread may start another helper while the ones of this round are being
+  // stopped, so the table is read and swept again until one round finds nothing new,
+  // and only then this process itself is stopped.
+  for (let round = 0; round < 10; round++) {
+    const pairs = processPairs();
+    const helpers = pairs ? descendantsOf(pairs, process.pid) : [];
+    if (!helpers.length) {
+      break;
+    }
+    helpers.forEach((p) => signal(p, "SIGTERM"));
     pause(graceMs);
+    helpers.forEach((p) => signal(p, "SIGKILL"));
+    pause(pollMs);
   }
-  helpers.forEach((p) => signal(p, "SIGKILL"));
   // SIGTERM first, so a handler the tool installed still runs; then make sure.
   signal(process.pid, "SIGTERM");
   pause(graceMs);
@@ -162,31 +177,57 @@ const timer = setInterval(() => {
 `;
 
 /**
- * Stop this tool, and the processes it started, once the process that supervises it is gone.
+ * Stop this tool, and the processes it started, once the process that supervises it is gone or
+ * a time limit is reached.
  *
  * atom runs these tools as helpers. Its environment carries ATOM_PARENT_PID, naming the process
  * that supervises atom; when atom itself is killed outright, this tool would otherwise run on for
- * nobody, still holding its memory and its own children (ruby, php, sbt). A no-op when
- * ATOM_PARENT_PID is not set, as when a tool is run by hand.
+ * nobody, still holding its memory and its own children (ruby, php, sbt). A caller that stops the
+ * tool on a timeout of its own would leave those children running too, so it can hand the tool
+ * the limit instead: the tool then stops its children and itself when the time is up. A no-op
+ * when neither is given, as when a tool is run by hand.
  *
  * @param {Object} [env] Environment to read ATOM_PARENT_PID from
+ * @param {Object} [limits] Run limits
+ * @param {number} [limits.timeoutMs] Milliseconds from now after which the tool stops
  * @returns {Worker|undefined} The watchdog thread, which never keeps the process alive
  */
-export function exitWithSupervisor(env = process.env) {
+export function exitWithSupervisor(env = process.env, { timeoutMs } = {}) {
   const pid = Number.parseInt(env.ATOM_PARENT_PID, 10);
-  if (!(pid > 0)) {
+  const limit = Number(timeoutMs) > 0 ? Number(timeoutMs) : 0;
+  if (!(pid > 0) && !limit) {
     return undefined;
   }
+  const state = new Int32Array(new SharedArrayBuffer(4));
+  timeLimitState = state;
   const worker = new Worker(WATCHDOG, {
     eval: true,
     workerData: {
-      pid,
+      pid: pid > 0 ? pid : 0,
       initialParent: process.ppid,
       isWin: process.platform === "win32",
-      pollMs: 1000,
-      graceMs: 1000
+      pollMs: limit
+        ? Math.min(1000, Math.max(100, Math.floor(limit / 10)))
+        : 1000,
+      graceMs: 1000,
+      deadline: limit ? Date.now() + limit : 0,
+      timeLimitState: state
     }
   });
   worker.unref();
   return worker;
+}
+
+// Set by the watchdog, which runs on its own thread, the moment the supervisor is gone or the
+// time limit is up: work the main thread finishes from then on must not pass for success.
+let timeLimitState = new Int32Array(new SharedArrayBuffer(4));
+
+/**
+ * Whether the watchdog has started stopping this tool, because the supervisor that
+ * started it is gone or the handed-down time limit is up.
+ *
+ * @returns {boolean}
+ */
+export function timeLimitReached() {
+  return Atomics.load(timeLimitState, 0) === 1;
 }
