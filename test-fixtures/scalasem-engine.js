@@ -36,6 +36,7 @@ import {
   quotableLiteral,
   quoteWindowsArgument,
   sanitizeUrl,
+  sbtLauncherCommand,
   jarCoordinate
 } from "../lib/scalasem/util.js";
 
@@ -1322,6 +1323,38 @@ assert.strictEqual(
   '"C:\\Program Files\\x\\\\"'
 );
 assert.strictEqual(quoteWindowsArgument("a&b"), '"a&b"');
+// On Windows sbt starts from its launcher jar, so a command keeps its quotes and the options
+// sbt.bat would have handled become what it makes of them.
+assert.deepStrictEqual(
+  sbtLauncherCommand(
+    [
+      "--server",
+      "-batch",
+      "-no-colors",
+      "-Dsbt.global.base=C:\\g",
+      "-addPluginSbtFile=C:\\p.sbt",
+      'eval println("scalasem-section:instance:root")'
+    ],
+    "C:\\sbt\\bin\\sbt-launch.jar",
+    undefined,
+    { JAVA_HOME: "C:\\jdk", SBT_OPTS: "-Xmx2g" }
+  ),
+  {
+    cmd: join("C:\\jdk", "bin", "java.exe"),
+    args: [
+      "-Dfile.encoding=UTF-8",
+      "-Xss4m",
+      "-Dsbt.supershell=false",
+      "-Xmx2g",
+      "-Dsbt.log.noformat=true",
+      "-Dsbt.global.base=C:\\g",
+      "-jar",
+      "C:\\sbt\\bin\\sbt-launch.jar",
+      "--addPluginSbtFile=C:\\p.sbt",
+      'eval println("scalasem-section:instance:root")'
+    ]
+  }
+);
 
 console.log(
   `scalasem-engine: ${versions.length} compiler recordings, ${entry.calls.length} calls checked`
