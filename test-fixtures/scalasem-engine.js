@@ -26,6 +26,7 @@ import { parseFacts } from "../lib/scalasem/inspect.js";
 import { buildFileEntry } from "../lib/scalasem/facts.js";
 import { parseProjectConfig } from "../lib/scalasem/config.js";
 import {
+  mavenCentralBase,
   readTastyHeader,
   semanticdbPluginVersion
 } from "../lib/scalasem/compiler.js";
@@ -966,7 +967,7 @@ require("node:fs").appendFileSync(${JSON.stringify(mvnLog)}, JSON.stringify(proc
   let requests = 0;
   const server = createServer((req, res) => {
     requests += 1;
-    if (req.url.includes("_2.13.97/")) {
+    if (req.url.includes("_2.13.97/") || req.url.includes("_2.13.96/")) {
       res.end(
         "<metadata><versioning><release>4.99.1</release></versioning></metadata>"
       );
@@ -986,6 +987,50 @@ require("node:fs").appendFileSync(${JSON.stringify(mvnLog)}, JSON.stringify(proc
   assert.strictEqual(await semanticdbPluginVersion("2.13.99"), undefined);
   assert.strictEqual(requests, 2, "an unreachable Maven Central is asked once");
   delete process.env.MAVEN_CENTRAL_URL;
+
+  // Without MAVEN_CENTRAL_URL, the lookup goes where a Coursier mirror file sends Central, as
+  // sbt and Mill do. A mirror of another repository, or a comma list Coursier ignores, does not
+  // count.
+  const mirrors = join(scratch, "mirror.properties");
+  const mirrorUrl = `http://127.0.0.1:${server.address().port}/mirror/maven2`;
+  writeFileSync(
+    mirrors,
+    `# mirrors\nother.from=https://example.test/repo\nother.to=http://127.0.0.1:9/never\ncentral.from=https://repo1.maven.org/maven2;https://repo.maven.apache.org/maven2/\ncentral.to=${mirrorUrl}\n`
+  );
+  assert.strictEqual(
+    mavenCentralBase({ COURSIER_MIRRORS: mirrors }),
+    `${mirrorUrl}/`
+  );
+  assert.strictEqual(
+    mavenCentralBase({
+      COURSIER_MIRRORS: mirrors,
+      MAVEN_CENTRAL_URL: "https://central.example.test/maven2"
+    }),
+    "https://central.example.test/maven2/",
+    "MAVEN_CENTRAL_URL wins"
+  );
+  const commaList = join(scratch, "mirror-comma.properties");
+  writeFileSync(
+    commaList,
+    `central.from=https://repo1.maven.org/maven2,https://repo.maven.apache.org/maven2\ncentral.to=${mirrorUrl}\n`
+  );
+  assert.strictEqual(
+    mavenCentralBase({ COURSIER_MIRRORS: commaList }),
+    "https://repo1.maven.org/maven2/"
+  );
+  assert.strictEqual(
+    mavenCentralBase({ COURSIER_MIRRORS: join(scratch, "missing.properties") }),
+    "https://repo1.maven.org/maven2/"
+  );
+  // The Central found unreachable above does not stop the lookup through the mirror.
+  process.env.COURSIER_MIRRORS = mirrors;
+  const seen = [];
+  server.on("request", (req) => seen.push(req.url));
+  assert.strictEqual(await semanticdbPluginVersion("2.13.96"), "4.99.1");
+  assert.deepStrictEqual(seen, [
+    "/mirror/maven2/org/scalameta/semanticdb-scalac_2.13.96/maven-metadata.xml"
+  ]);
+  delete process.env.COURSIER_MIRRORS;
   server.close();
 }
 

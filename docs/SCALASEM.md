@@ -77,7 +77,8 @@ project's own output:
   `addScalacArgs`. The class files it writes are the ones the normal build writes.
 
 The plugin release comes from the local caches or, when installs are allowed, from Maven
-Central. A module whose Scala version has no plugin release in reach reports
+Central: `MAVEN_CENTRAL_URL` when set, otherwise the mirror the Coursier mirror file named by
+`COURSIER_MIRRORS` gives Central, which is also where sbt and Mill fetch the plugin. A module whose Scala version has no plugin release in reach reports
 `semanticdb-unavailable`, and one that compiled without SemanticDB reports
 `semanticdb-missing`. Without a build tool run, the SemanticDB a previous build left is read
 from the places the build tools write it: sbt's `meta` and `test-meta` directories, Mill's
@@ -378,6 +379,8 @@ of it.
 | `SCALASEM_CACHE_DIR`              | `~/.cache/scalasem` | Where the compiled helper and the SemanticDB targets are kept.                                                                                                                                           |
 | `SCALASEM_TIMEOUT`                | unset               | Milliseconds the whole run may take, the builds it starts included. When the time is up, scalasem stops them, then itself, and writes no report.                                                         |
 | `SCALASEM_MAX_*`                  | see the purpose     | Writer caps: `SCALASEM_MAX_CALLS_PER_FILE`, `SCALASEM_MAX_REFERENCES_PER_FILE` and `SCALASEM_MAX_DEFINITIONS_PER_FILE` (2000 each), `SCALASEM_MAX_LITERALS_PER_FILE` (100), `SCALASEM_MAX_FILES` (5000). |
+| `MAVEN_CENTRAL_URL`               | Maven Central       | Repository the SemanticDB plugin release is looked up in.                                                                                                                                                |
+| `COURSIER_MIRRORS`                | unset               | Coursier mirror file. Without `MAVEN_CENTRAL_URL`, its mirror for Central is used for that lookup too.                                                                                                   |
 | `JAVA_HOME`                       | unset               | The JVM the helper runs with.                                                                                                                                                                            |
 | `ATOM_CWD`                        | `process.cwd()`     | Working directory for the build tool invocations.                                                                                                                                                        |
 | `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout)  | Milliseconds before a subprocess is killed.                                                                                                                                                              |
