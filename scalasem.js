@@ -8,7 +8,7 @@ import { existsSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
 
-import { exitWithSupervisor } from "./supervise.js";
+import { exitWithSupervisor, timeLimitReached } from "./supervise.js";
 import { inventory } from "./lib/scalasem/build.js";
 import { collectFacts } from "./lib/scalasem/collect.js";
 import { buildFileEntry } from "./lib/scalasem/facts.js";
@@ -142,6 +142,16 @@ async function main(argv) {
     },
     reportCaps()
   );
+  // The watchdog may have started stopping this run while the facts were collected, for
+  // example when a build tool hung past the handed-down limit and was stopped. What the
+  // run gathered from then on is a fraction of the evidence, and must not pass for a
+  // complete report.
+  if (timeLimitReached()) {
+    console.error(
+      "The time limit was reached or the supervising process is gone; no report was written."
+    );
+    return false;
+  }
   writeReport(outFile, report, opts.pretty);
   const files = report._meta.counts.files;
   console.log(

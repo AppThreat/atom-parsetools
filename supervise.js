@@ -65,7 +65,7 @@ const WATCHDOG = `
 const { spawnSync } = require("node:child_process");
 const { readdirSync, readFileSync, writeSync } = require("node:fs");
 const { workerData } = require("node:worker_threads");
-const { pid, initialParent, isWin, pollMs, graceMs, deadline } = workerData;
+const { pid, initialParent, isWin, pollMs, graceMs, deadline, timeLimitState } = workerData;
 ${processPairsFromPs.toString()}
 ${parentPidFromProcStat.toString()}
 ${descendantsOf.toString()}
@@ -141,6 +141,7 @@ const timer = setInterval(() => {
     return;
   }
   clearInterval(timer);
+  Atomics.store(timeLimitState, 0, 1);
   report(
     gone
       ? "atom-parsetools: supervising process " + pid + " is gone; stopping.\\n"
@@ -151,16 +152,23 @@ const timer = setInterval(() => {
     spawnSync("taskkill", ["/T", "/F", "/PID", String(process.pid)]);
     return;
   }
-  const pairs = processPairs();
-  if (!pairs) {
+  if (!processPairs()) {
     report("atom-parsetools: cannot list processes (no ps or /proc); processes this tool started may keep running.\\n");
   }
-  const helpers = pairs ? descendantsOf(pairs, process.pid) : [];
-  helpers.forEach((p) => signal(p, "SIGTERM"));
-  if (helpers.length) {
+  // The main thread may start another helper while the ones of this round are being
+  // stopped, so the table is read and swept again until one round finds nothing new,
+  // and only then this process itself is stopped.
+  for (let round = 0; round < 10; round++) {
+    const pairs = processPairs();
+    const helpers = pairs ? descendantsOf(pairs, process.pid) : [];
+    if (!helpers.length) {
+      break;
+    }
+    helpers.forEach((p) => signal(p, "SIGTERM"));
     pause(graceMs);
+    helpers.forEach((p) => signal(p, "SIGKILL"));
+    pause(pollMs);
   }
-  helpers.forEach((p) => signal(p, "SIGKILL"));
   // SIGTERM first, so a handler the tool installed still runs; then make sure.
   signal(process.pid, "SIGTERM");
   pause(graceMs);
@@ -190,6 +198,8 @@ export function exitWithSupervisor(env = process.env, { timeoutMs } = {}) {
   if (!(pid > 0) && !limit) {
     return undefined;
   }
+  const state = new Int32Array(new SharedArrayBuffer(4));
+  timeLimitState = state;
   const worker = new Worker(WATCHDOG, {
     eval: true,
     workerData: {
@@ -200,9 +210,24 @@ export function exitWithSupervisor(env = process.env, { timeoutMs } = {}) {
         ? Math.min(1000, Math.max(100, Math.floor(limit / 10)))
         : 1000,
       graceMs: 1000,
-      deadline: limit ? Date.now() + limit : 0
+      deadline: limit ? Date.now() + limit : 0,
+      timeLimitState: state
     }
   });
   worker.unref();
   return worker;
+}
+
+// Set by the watchdog, which runs on its own thread, the moment the supervisor is gone or the
+// time limit is up: work the main thread finishes from then on must not pass for success.
+let timeLimitState = new Int32Array(new SharedArrayBuffer(4));
+
+/**
+ * Whether the watchdog has started stopping this tool, because the supervisor that
+ * started it is gone or the handed-down time limit is up.
+ *
+ * @returns {boolean}
+ */
+export function timeLimitReached() {
+  return Atomics.load(timeLimitState, 0) === 1;
 }

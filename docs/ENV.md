@@ -50,7 +50,7 @@ Every knob these tools expose beyond the command line, in one table per tool. Th
 | `SCALASEM_SEMANTICDB`             | `auto`              | Same as `--semanticdb`.                                                                                                               |
 | `SCALASEM_COMPILER`               | unset               | `none` reads SemanticDB for every module instead of TASTy, and produces it when the build may compile.                                |
 | `SCALASEM_CACHE_DIR`              | `~/.cache/scalasem` | Where the compiled helper and the SemanticDB targets are kept.                                                                        |
-| `SCALASEM_TIMEOUT`                | unset               | Milliseconds the whole run may take, the builds it starts included. When the time is up, scalasem stops those builds and then itself. |
+| `SCALASEM_TIMEOUT`                | unset               | Milliseconds the whole run may take, builds included. When the time is up, scalasem stops them, then itself, and writes no report.    |
 | `SCALASEM_MAX_*`                  | see the guide       | Writer caps, for example `SCALASEM_MAX_CALLS_PER_FILE`.                                                                               |
 | `JAVA_HOME`                       | unset               | The JVM the helper runs with.                                                                                                         |
 | `ATOM_CWD`                        | `process.cwd()`     | Working directory for the build tool invocations.                                                                                     |
