@@ -11,7 +11,7 @@ import {
   writeFileSync
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, normalize } from "node:path";
 import process from "node:process";
 
 import {
@@ -693,8 +693,10 @@ assert.ok(
 assert.ok(
   byId.docker.classpath.some(
     (c) =>
-      c.path ===
-      "/src/bootzooka/target/out/jvm/scala-3.9.0/backend/backend_3-893fceb.jar"
+      normalize(c.path) ===
+      normalize(
+        "/src/bootzooka/target/out/jvm/scala-3.9.0/backend/backend_3-893fceb.jar"
+      )
   ),
   "sbt 2 output jars of sibling modules expand to real paths"
 );

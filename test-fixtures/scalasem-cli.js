@@ -74,6 +74,12 @@ if (result.status !== 0 || !existsSync(join(out, "slices.json"))) {
   process.exit(0);
 }
 const report = JSON.parse(readFileSync(join(out, "slices.json"), "utf-8"));
+if (report._meta.diagnostics?.some((d) => d.code === "compiler-unavailable")) {
+  // The fixture's compiler is not in the local caches, and --no-build fetches none.
+  console.log("scalasem-cli: skipped, the 3.3.7 compiler is not cached");
+  rmSync(out, { recursive: true, force: true });
+  process.exit(0);
+}
 
 // The version 1 keys and the version 2 contract.
 assert.strictEqual(report._meta.schemaVersion, "scalasem/2");

@@ -26,9 +26,9 @@ const java = process.env.JAVA_HOME
       process.platform === "win32" ? "java.exe" : "java"
     )
   : "java";
-const probe = process.platform === "win32" ? { shell: true } : {};
 import { spawnSync } from "node:child_process";
-const javaCheck = spawnSync(java, ["-version"], probe);
+// java.exe starts without a shell, which would split a JAVA_HOME with spaces.
+const javaCheck = spawnSync(java, ["-version"]);
 if (javaCheck.status !== 0) {
   console.log("scalasem-jvm: skipped, no JDK on PATH or JAVA_HOME");
   process.exit(0);

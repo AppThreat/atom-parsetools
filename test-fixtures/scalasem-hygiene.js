@@ -250,8 +250,14 @@ try {
     [join(process.cwd(), "scalasem.js"), project, out, "--no-build"],
     { encoding: "utf-8" }
   );
-  if (run.status === 0 && existsSync(out)) {
-    const report = JSON.parse(readFileSync(out, "utf-8"));
+  const report =
+    run.status === 0 && existsSync(out)
+      ? JSON.parse(readFileSync(out, "utf-8"))
+      : undefined;
+  const compiled = !report?._meta.diagnostics?.some(
+    (d) => d.code === "compiler-unavailable"
+  );
+  if (report && compiled) {
     assert.ok(
       Object.keys(report).some((key) => key.endsWith(".scala")),
       "the fresh report has file entries to walk"
@@ -261,7 +267,7 @@ try {
     // Without a JDK or a cached compiler there is no analysis to walk, as in
     // the command line test.
     console.log(
-      `scalasem-hygiene: fresh report skipped, analysis unavailable (${(run.stderr || "").split("\n")[0]})`
+      `scalasem-hygiene: fresh report skipped, analysis unavailable (${report ? "the compiler is not cached" : (run.stderr || "").split("\n")[0]})`
     );
   }
 } finally {
