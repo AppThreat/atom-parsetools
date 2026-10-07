@@ -318,10 +318,16 @@ const located = (s) =>
   `${s.file.split("/").pop()}:${s.line} ${s.kind} ${s.client} ${s.url || s.host || s.topic}`;
 for (const want of [
   "DataStores.scala:11 datastore jdbc jdbc:postgresql://db.internal:5432/orders",
-  "DataStores.scala:15 messaging kafka kafka.internal:9092",
-  "DataStores.scala:19 messaging kafka order-events",
+  // The address with an embedded password, sanitized.
+  "DataStores.scala:15 datastore jdbc jdbc:postgresql://db.internal:5432/reports",
+  "DataStores.scala:19 messaging kafka kafka.internal:9092",
+  "DataStores.scala:23 messaging kafka order-events",
   "Http4sClients.scala:9 http-client http4s https://payments.example.com/v2/charges",
   "OutboundClients.scala:14 http-client java.net.uri https://auth.example.com/oauth/token",
+  "OutboundClients.scala:15 http-client java.net.http https://auth.example.com/oauth/token",
+  // The URL with credentials, query and fragment, sanitized.
+  "OutboundClients.scala:23 http-client java.net.uri https://host/x",
+  "OutboundClients.scala:24 http-client java.net.http https://host/x",
   "OutboundClients.scala:19 http-client pekko-http https://inventory.example.com/api/stock",
   "SttpClients.scala:10 http-client sttp https://api.github.com/repos/scala/scala3",
   "SttpClients.scala:15 http-client sttp https://config.example.com/v1/settings"
