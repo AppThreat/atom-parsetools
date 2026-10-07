@@ -798,6 +798,35 @@ assert.deepStrictEqual(
 );
 
 const { inventory } = await import("../lib/scalasem/build.js");
+
+// scala-cli keeps a build directory per project hash. Without a build run, the build whose
+// Bloop project lists a classpath is read, with that classpath, and the other is left alone.
+{
+  const cli = join(scratch, "scala-cli-builds");
+  mkdirSync(cli, { recursive: true });
+  writeFileSync(join(cli, "App.scala"), "//> using scala 3.3.7\nobject App\n");
+  for (const id of ["app_aaaaaaaaaa", "app_bbbbbbbbbb"]) {
+    mkdirSync(join(cli, ".scala-build", id, "classes", "main"), {
+      recursive: true
+    });
+  }
+  const jar = join(scratch, "lib_3-1.0.0.jar");
+  writeFileSync(jar, "");
+  mkdirSync(join(cli, ".scala-build", ".bloop"), { recursive: true });
+  writeFileSync(
+    join(cli, ".scala-build", ".bloop", "app_aaaaaaaaaa.json"),
+    JSON.stringify({ project: { classpath: [jar] } })
+  );
+  const [module] = (await inventory(cli, { noBuild: true })).modules;
+  assert.strictEqual(module.id, "app_aaaaaaaaaa");
+  assert.deepStrictEqual(module.classDirs, [
+    join(cli, ".scala-build", "app_aaaaaaaaaa", "classes", "main")
+  ]);
+  assert.deepStrictEqual(
+    module.classpath.map((entry) => entry.path),
+    [jar]
+  );
+}
 const millModules = (await inventory(join(scratch, mill), { noBuild: true }))
   .modules;
 assert.deepStrictEqual(

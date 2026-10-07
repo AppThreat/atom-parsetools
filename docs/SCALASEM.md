@@ -112,9 +112,12 @@ source layout rather than the compiler's trees, and every call graph edge they p
 - **Maven.** The pom names the compiler version, `dependency:build-classpath` the classpath,
   and `compile` runs first when `target/classes` holds no TASTy yet. Without a build tool run,
   the classpath is the pom's direct dependencies found in the local Maven repository.
-- **scala-cli.** Outputs under `.scala-build/` are read directly. When runs are allowed, the
-  classpath comes from `compile --server=false --print-class-path`, which leaves no Bloop
-  server behind.
+- **scala-cli.** Outputs under `.scala-build/` are read directly, from one build: scala-cli
+  keeps a directory per project hash, and an older hash leaves the classes of the same
+  sources behind. When runs are allowed, the classpath comes from
+  `compile --server=false --print-class-path`, which leaves no Bloop server behind and names
+  the current build. Without a run, the build whose Bloop project file lists a classpath is
+  read with that classpath.
 - **none.** No build tool runs at all. The class directories the last build left are walked,
   their TASTy headers give the compiler, and each module's classpath comes from the file the
   previous build exported next to it (sbt 1 `<module>/target/streams`, sbt 2
