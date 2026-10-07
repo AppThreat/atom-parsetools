@@ -86,6 +86,11 @@ assert.strictEqual(
   "no supervisor named, no watchdog"
 );
 assert.strictEqual(exitWithSupervisor({ ATOM_PARENT_PID: "x" }), undefined);
+assert.strictEqual(
+  exitWithSupervisor({}, { timeoutMs: Number.NaN }),
+  undefined,
+  "an unparseable limit is no limit"
+);
 
 const dir = mkdtempSync(join(tmpdir(), "parsetools-supervise-"));
 const pidsFile = join(dir, "pids.json");
@@ -96,7 +101,7 @@ writeFileSync(
   tool,
   `import { spawnSync } from "node:child_process";
 import { exitWithSupervisor } from ${JSON.stringify(SUPERVISE)};
-exitWithSupervisor();
+exitWithSupervisor(process.env, { timeoutMs: Number(process.env.TOOL_TIMEOUT) });
 spawnSync(process.execPath, ["-e", ${JSON.stringify(
     `require("node:fs").writeFileSync(${JSON.stringify(pidsFile)}, JSON.stringify({ tool: process.ppid, child: process.pid })); setInterval(() => {}, 1000);`
   )}], { stdio: "ignore" });
@@ -184,7 +189,22 @@ try {
     "the tool outlived a parent that read its output"
   );
 
-  // 4. Without ATOM_PARENT_PID nothing watches: the tool keeps running after its parent dies.
+  // 4. A time limit stops the tool and its child with no supervisor named, so a caller that
+  // gives up on the tool does not leave the processes it started running.
+  const limited = await startTool(
+    { ATOM_PARENT_PID: "", TOOL_TIMEOUT: "1500" },
+    false
+  );
+  assert.ok(
+    await waitFor(() => !isAlive(limited.pids.child)),
+    "the tool's child outlived the time limit"
+  );
+  assert.ok(
+    await waitFor(() => !isAlive(limited.pids.tool)),
+    "the tool outlived the time limit"
+  );
+
+  // 5. Without ATOM_PARENT_PID nothing watches: the tool keeps running after its parent dies.
   const third = await startTool({ ATOM_PARENT_PID: "" }, true);
   third.launcher.kill("SIGKILL");
   await sleep(2500);

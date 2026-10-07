@@ -167,7 +167,11 @@ function mergeDiagnostics(diagnostics) {
   return [...merged.values()].sort((a, b) => a.code.localeCompare(b.code));
 }
 
-exitWithSupervisor();
+// SCALASEM_TIMEOUT (milliseconds) bounds the whole run, the builds it starts included: a caller
+// that stopped scalasem on its own timeout would leave those running.
+exitWithSupervisor(process.env, {
+  timeoutMs: Number.parseInt(process.env.SCALASEM_TIMEOUT || "", 10)
+});
 let ok = false;
 try {
   ok = await main(process.argv.slice(2));

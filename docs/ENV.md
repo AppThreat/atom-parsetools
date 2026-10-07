@@ -35,22 +35,23 @@ Every knob these tools expose beyond the command line, in one table per tool. Th
 
 ## scalasem
 
-| Variable                          | Default             | Purpose                                                                                                |
-| --------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------ |
-| `SCALA_VERSION`                   | unset               | Analyse this Scala version instead of the build default.                                               |
-| `SBT_CMD`                         | `sbt`               | sbt executable.                                                                                        |
-| `MILL_CMD`                        | `mill`              | mill executable when the project has no wrapper.                                                       |
-| `MVN_CMD`                         | `mvn`               | maven executable.                                                                                      |
-| `SBT_COMPILE_COMMAND`             | `compile`           | Compile command when the build tool is sbt.                                                            |
-| `MILL_COMPILE_COMMAND`            | `__.compile`        | Compile command when a `build.mill` selects mill.                                                      |
-| `SCALASEM_NO_BUILD`               | unset               | Same as `--no-build`: never start a build tool.                                                        |
-| `SCALASEM_NO_COMPILE`             | unset               | Same as `--no-compile`: inventory only, no compilation.                                                |
-| `SCALASEM_NO_INSTALL`             | unset               | Never download a missing compiler, tasty inspector or SemanticDB plugin.                               |
-| `SCALASEM_INCLUDE_TESTS`          | unset               | Same as `--include-tests`.                                                                             |
-| `SCALASEM_SEMANTICDB`             | `auto`              | Same as `--semanticdb`.                                                                                |
-| `SCALASEM_COMPILER`               | unset               | `none` reads SemanticDB for every module instead of TASTy, and produces it when the build may compile. |
-| `SCALASEM_CACHE_DIR`              | `~/.cache/scalasem` | Where the compiled helper and the SemanticDB targets are kept.                                         |
-| `SCALASEM_MAX_*`                  | see the guide       | Writer caps, for example `SCALASEM_MAX_CALLS_PER_FILE`.                                                |
-| `JAVA_HOME`                       | unset               | The JVM the helper runs with.                                                                          |
-| `ATOM_CWD`                        | `process.cwd()`     | Working directory for the build tool invocations.                                                      |
-| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout)  | Milliseconds before a subprocess is killed.                                                            |
+| Variable                          | Default             | Purpose                                                                                                                               |
+| --------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `SCALA_VERSION`                   | unset               | Analyse this Scala version instead of the build default.                                                                              |
+| `SBT_CMD`                         | `sbt`               | sbt executable.                                                                                                                       |
+| `MILL_CMD`                        | `mill`              | mill executable when the project has no wrapper.                                                                                      |
+| `MVN_CMD`                         | `mvn`               | maven executable.                                                                                                                     |
+| `SBT_COMPILE_COMMAND`             | `compile`           | Compile command when the build tool is sbt.                                                                                           |
+| `MILL_COMPILE_COMMAND`            | `__.compile`        | Compile command when a `build.mill` selects mill.                                                                                     |
+| `SCALASEM_NO_BUILD`               | unset               | Same as `--no-build`: never start a build tool.                                                                                       |
+| `SCALASEM_NO_COMPILE`             | unset               | Same as `--no-compile`: inventory only, no compilation.                                                                               |
+| `SCALASEM_NO_INSTALL`             | unset               | Never download a missing compiler, tasty inspector or SemanticDB plugin.                                                              |
+| `SCALASEM_INCLUDE_TESTS`          | unset               | Same as `--include-tests`.                                                                                                            |
+| `SCALASEM_SEMANTICDB`             | `auto`              | Same as `--semanticdb`.                                                                                                               |
+| `SCALASEM_COMPILER`               | unset               | `none` reads SemanticDB for every module instead of TASTy, and produces it when the build may compile.                                |
+| `SCALASEM_CACHE_DIR`              | `~/.cache/scalasem` | Where the compiled helper and the SemanticDB targets are kept.                                                                        |
+| `SCALASEM_TIMEOUT`                | unset               | Milliseconds the whole run may take, the builds it starts included. When the time is up, scalasem stops those builds and then itself. |
+| `SCALASEM_MAX_*`                  | see the guide       | Writer caps, for example `SCALASEM_MAX_CALLS_PER_FILE`.                                                                               |
+| `JAVA_HOME`                       | unset               | The JVM the helper runs with.                                                                                                         |
+| `ATOM_CWD`                        | `process.cwd()`     | Working directory for the build tool invocations.                                                                                     |
+| `ATOM_TIMEOUT` / `ASTGEN_TIMEOUT` | unset (no timeout)  | Milliseconds before a subprocess is killed.                                                                                           |
