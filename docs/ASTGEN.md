@@ -95,6 +95,8 @@ Directive attributes carry a JavaScript expression in a quoted string - `v-html=
 
 If the whole-document candidate does not parse, astgen builds progressively simpler candidates, in order: script content concatenated with the masked template, then the masked template alone, then the script content alone. The first candidate that yields a tree wins; the directive-converted variants are tried first, with these plain candidates retained as fallbacks.
 
+Attribute names are made JSX names in place, keeping every offset: a shorthand prefix (`:`, `@`, `.`, `#`) becomes a space and the `.`/`:` of a modifier or argument a dash (`@submit.prevent=` -> ` submit-prevent=`, `:aria-label=` -> ` aria-label=`, `v-on:click.stop=` -> `v-on:click-stop=`). A template whose names are left unparseable fails the whole-file parse, and the fallback that parses the script alone no longer maps onto the file: every node would then carry the wrong line and code.
+
 Type generation over Vue files uses a virtual source: the component code is masked position-preserving, the script content is left intact, and a shim declaring the compiler macros (`defineProps`, `defineEmits`, `defineModel`, `withDefaults`, and a minimal `vue` module) is prepended so the checker sees declarations instead of errors.
 
 ## Svelte
