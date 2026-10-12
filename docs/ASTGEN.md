@@ -151,6 +151,19 @@ A `.html` file is parsed only when its markup carries framework bindings; a plai
 
 Accepted losses: element structure and text are not emitted, only the elements that carry bindings; inline Angular templates (`template:` strings in a component) are not parsed.
 
+## Ember templates
+
+A Glimmer template - a whole `.hbs` file, or a `<template>` block in a `.gjs`/`.gts` file - is no JavaScript, and its semantics are JavaScript's in a different syntax, so `emberAst.js` rewrites the file into TSX and Babel parses that. Every newline stays where it was: line numbers are the original file's, columns inside a template the rewritten text's. The AST JSON carries the rewritten text as `source`, which node offsets index; a consumer slices code from it instead of the file.
+
+- A class body's template becomes the method `__glimmer_template() { return <>...</>; }`, any other one the function expression `(function __glimmer_template() {...})`, an `.hbs` file `export default function __glimmer_template() {...}`.
+- `{{expr}}` is an expression container; `{{{expr}}}`, rendered unescaped, the element `<ember-raw innerHTML={expr} />`.
+- `@name` is `this.args.name`; a helper is a call (`{{format-date @at "short"}}` -> `format_date(this.args.at, "short")`, named arguments one object literal); `if`/`unless` are conditionals, `array`/`hash` literals; an attribute value with mustaches in it a template literal.
+- A component's `@arg={{v}}` is the attribute `arg={v}`; `<Foo::Bar>` is `<Foo.Bar>`.
+- An element modifier `{{innerHtml this.snippet mode="raw"}}` is the spread attribute `{...innerHtml(undefined, [this.snippet], {"mode": "raw"})}`: a modifier function is called with the element, its positional and its named arguments.
+- `{{#if}}`/`{{else if}}`/`{{else}}`/`{{#unless}}` are conditionals, `{{#each xs as |x i|}}` `xs.map((x, i) => ...)`, `{{#let v as |x|}}` a call of `(x) => ...` with `v`, any other block a call with a callback of its block params.
+
+Accepted losses: `{{yield}}`, `{{outlet}}`, named blocks' names, `...attributes`, comments and a template's `<style>`/`<script>` are dropped.
+
 ## Type maps and worker sharding
 
 With `--tsTypes` on (the default), astgen builds a TypeScript program over the project, resolves a checker, and for each file records the inferred type string of interesting nodes, keyed by node start offset:

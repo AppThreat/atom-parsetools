@@ -28,6 +28,7 @@ import { exitWithSupervisor } from "./supervise.js";
 import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
 import { parseAstroFile, parseAstroFrontmatterOnly } from "./astroAst.js";
 import { parseHtmlFile } from "./htmlAst.js";
+import { lowerEmberFile } from "./emberAst.js";
 
 // Printed by `astgen --version`. Downstream frontends (e.g. chen's jssrc2cpg)
 // fold this into their parse-cache fingerprint, so it MUST be bumped whenever
@@ -38,7 +39,9 @@ import { parseHtmlFile } from "./htmlAst.js";
 // expression ASTs) instead of string literals. 4.4.1: `.vue` templates with
 // event modifiers, directive arguments or dashed bound names (`@submit.prevent`,
 // `:aria-label`) parse in place instead of falling back to the script alone.
-const ASTGEN_VERSION = "4.4.1";
+// 4.5.0: Ember templates (`.hbs`, `.gjs`, `.gts`) are rewritten into TSX and
+// parsed; the AST JSON carries the rewritten text as `source`.
+const ASTGEN_VERSION = "4.5.0";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -447,7 +450,7 @@ const shouldIncludeNodeModulesBundles =
  */
 const getAllSrcJSAndTSFiles = (src) => {
   const filePattern =
-    "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|astro|html|xsjs|xsjslib|ejs)$";
+    "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|astro|html|hbs|gjs|gts|xsjs|xsjslib|ejs)$";
   const bundledNodeModulesPattern =
     "node_modules[\\\\/].*[\\\\/](?:.*\\.)?(bundle|dist|index|min|app)\\.(js|cjs|mjs)$";
 
@@ -503,6 +506,9 @@ const fileToJsAst = (file, projectType, tsInstance) => {
   if (file.endsWith(".ejs")) {
     return toEjsAst(file);
   }
+  if (/\.(hbs|gjs|gts)$/.test(file)) {
+    return toEmberAst(file, projectType);
+  }
   return codeToJsAst(file, readFileSync(file, "utf-8"), projectType);
 };
 
@@ -534,6 +540,19 @@ const toSvelteAst = (file) => {
       err?.message
     );
   }
+};
+
+/**
+ * Convert a single Ember template file (`.hbs`, `.gjs`, `.gts`) to AST: the file
+ * is rewritten into TSX with every newline in place (see emberAst.js) and that
+ * text parsed. Node offsets index the rewritten text, which the AST carries as
+ * `loweredSource` for writeAstFile to emit as `source`.
+ */
+const toEmberAst = (file, projectType) => {
+  const lowered = lowerEmberFile(file, readFileSync(file, "utf-8"));
+  const ast = codeToJsAst(file.replace(/\.(hbs|gjs)$/, ".jsx").replace(/\.gts$/, ".tsx"), lowered, projectType);
+  if (ast) ast.loweredSource = lowered;
+  return ast;
 };
 
 /**
@@ -2450,6 +2469,11 @@ const writeAstFile = (file, ast, options) => {
     relativeName: relativePath,
     ast: ast
   };
+  // a file rewritten before parsing: its offsets index the rewritten text
+  if (ast?.loweredSource !== undefined) {
+    data.source = ast.loweredSource;
+    delete ast.loweredSource;
+  }
   mkdirSync(dirname(outAstFile), { recursive: true });
   writeFileSync(
     outAstFile,
