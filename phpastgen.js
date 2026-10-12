@@ -17,7 +17,7 @@ import {
   realpathSync
 } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
-import { tmpdir } from "node:os";
+import { tmpdir, availableParallelism } from "node:os";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { detectPhp } from "@appthreat/atom-common";
@@ -62,12 +62,29 @@ export const DEFAULT_EXCLUDE = "^(tests?|vendor|Tests?)";
 export const DEFAULT_EXCLUDE_WITH_VENDOR = "^(tests?|Tests?)";
 
 /**
- * Default worker-pool size for batch runs (bounded concurrent `php-parse` subprocesses).
+ * Default worker-pool size for batch runs (bounded concurrent `php-parse` subprocesses). The
+ * effective default is capped by the machine's parallelism (see {@link defaultThreadCount}): the
+ * parse is CPU-bound, so running noticeably more interpreters than cores - 10 on a 4-core Windows
+ * runner - measurably slows a tree down rather than speeding it up.
  */
 export const DEFAULT_THREADS = 10;
 
 /**
- * Bounds for `--threads`: values outside this inclusive range fall back to DEFAULT_THREADS.
+ * The default worker-pool size on this machine: {@link DEFAULT_THREADS} bounded by the OS's
+ * available parallelism. An explicit `--threads` is not affected.
+ *
+ * @returns {number}
+ */
+export function defaultThreadCount() {
+  return Math.max(
+    MIN_THREADS,
+    Math.min(DEFAULT_THREADS, availableParallelism())
+  );
+}
+
+/**
+ * Bounds for `--threads`: values outside this inclusive range fall back to the machine-capped
+ * default (see {@link defaultThreadCount}).
  */
 export const MIN_THREADS = 1;
 export const MAX_THREADS = 64;
@@ -241,7 +258,7 @@ export function parseArgs(argv) {
     targetVersion: undefined,
     invalidTargetVersion: undefined,
     maxDepth: DEFAULT_MAX_DEPTH,
-    threads: DEFAULT_THREADS,
+    threads: defaultThreadCount(),
     failOnError: false,
     parserInfo: false,
     showVersion: false,
@@ -333,9 +350,9 @@ export function parseArgs(argv) {
         i++;
         if (Number.isNaN(value) || value < MIN_THREADS || value > MAX_THREADS) {
           console.warn(
-            `Ignoring out-of-range --threads value; falling back to ${DEFAULT_THREADS} (allowed ${MIN_THREADS}-${MAX_THREADS}).`
+            `Ignoring out-of-range --threads value; falling back to ${defaultThreadCount()} (allowed ${MIN_THREADS}-${MAX_THREADS}).`
           );
-          opts.threads = DEFAULT_THREADS;
+          opts.threads = defaultThreadCount();
         } else {
           opts.threads = value;
         }
@@ -395,7 +412,7 @@ export function printUsage() {
       "  -d, --debug                 same as --log debug",
       "      --target-version <x.y>  pin PHP grammar (alias: --parser-target)",
       `      --max-depth <n>         depth cap before truncation (default: ${DEFAULT_MAX_DEPTH})`,
-      `      --threads <n>           worker processes for directory runs (default: ${DEFAULT_THREADS})`,
+      `      --threads <n>           worker processes for directory runs (default: min(${DEFAULT_THREADS}, the machine's cores))`,
       `      --files-per-process <n> files one PHP interpreter parses in a directory run (max ${MAX_FILES_PER_PROCESS}; default: sized to the tree, 1 = one php-parse per file)`,
       "      --include-vendor        also parse vendor/ and node_modules/ (skipped by default)",
       "      --fail-on-error         exit non-zero if any file failed",
@@ -1427,21 +1444,15 @@ export function spawnCapture(command, args, options = {}) {
  * @returns {Promise<{ ok: boolean, ast?: object, truncated?: boolean, scrubbed?: boolean, diagnostic?: object }>}
  */
 export async function parseOneFile(file, opts = {}) {
+  // Created only when the file really needs staging (a non-UTF-8 source): a clean UTF-8 file is
+  // parsed in place and costs no directory at all.
   let tempDir;
   try {
-    tempDir = mkdtempSync(join(tmpdir(), "phpastgen-"));
-  } catch (err) {
-    return {
-      ok: false,
-      diagnostic: buildDiagnostic(
-        file,
-        `Unable to stage file: ${err.message}`,
-        relativeFilePath(file, opts)
-      )
-    };
-  }
-  try {
-    const staged = stageFile(file, opts, tempDir);
+    const staged = stageFile(
+      file,
+      opts,
+      () => (tempDir = mkdtempSync(join(tmpdir(), "phpastgen-")))
+    );
     if (staged.diagnostic) {
       return { ok: false, diagnostic: staged.diagnostic };
     }
@@ -1463,10 +1474,12 @@ export async function parseOneFile(file, opts = {}) {
     );
     return finishParse(file, staged, out, opts);
   } finally {
-    try {
-      rmSync(tempDir, { recursive: true, force: true });
-    } catch {
-      // ignore cleanup failure
+    if (tempDir) {
+      try {
+        rmSync(tempDir, { recursive: true, force: true });
+      } catch {
+        // ignore cleanup failure
+      }
     }
   }
 }
@@ -1493,7 +1506,7 @@ function relativeFilePath(file, opts) {
  * @param {string} tempDir existing directory owned by the caller
  * @returns {{ relFilePath: string, tempFile?: string, scrubbed?: boolean, diagnostic?: object }}
  */
-function stageFile(file, opts, tempDir) {
+function stageFile(file, opts, newTempDir) {
   const relFilePath = relativeFilePath(file, opts);
   let bytes;
   try {
@@ -1509,6 +1522,26 @@ function stageFile(file, opts, tempDir) {
     };
   }
   const { text, scrubbed } = decodeAndScrub(bytes);
+  // Staging exists to hand the parser normalised UTF-8. A file that already is exactly that -
+  // the decoded text re-encodes to the very bytes on disk - is parsed where it lies: writing a
+  // copy anyway costs a write (and a virus scan of it) per file, which on Windows is a large
+  // share of a batch run over a vendored tree.
+  if (!scrubbed && Buffer.from(text, "utf-8").equals(bytes)) {
+    return { relFilePath, tempFile: file, scrubbed };
+  }
+  let tempDir;
+  try {
+    tempDir = newTempDir();
+  } catch (err) {
+    return {
+      relFilePath,
+      diagnostic: buildDiagnostic(
+        file,
+        `Unable to stage file: ${err.message}`,
+        relFilePath
+      )
+    };
+  }
   const tempFile = join(tempDir, basename(file) || "source.php");
   try {
     writeFileSync(tempFile, text, "utf-8");
@@ -1666,22 +1699,14 @@ export async function parseChunk(files, opts = {}) {
     return parseEach();
   }
   try {
-    const staged = files.map((file, i) => {
-      const fileDir = join(chunkDir, String(i));
-      try {
+    const staged = files.map((file, i) =>
+      stageFile(file, opts, () => {
+        // Only reached for files that must be staged; a clean UTF-8 file skips its directory.
+        const fileDir = join(chunkDir, String(i));
         mkdirSync(fileDir);
-      } catch (err) {
-        return {
-          relFilePath: relativeFilePath(file, opts),
-          diagnostic: buildDiagnostic(
-            file,
-            `Unable to stage file: ${err.message}`,
-            relativeFilePath(file, opts)
-          )
-        };
-      }
-      return stageFile(file, opts, fileDir);
-    });
+        return fileDir;
+      })
+    );
     // Manifest index -> file index, for the files that staged.
     const pending = [];
     const pairs = [];
@@ -1934,7 +1959,7 @@ export async function runBatch(opts) {
     counters.failed += 1;
   };
 
-  const threads = opts.threads ?? DEFAULT_THREADS;
+  const threads = opts.threads ?? defaultThreadCount();
   const filesPerProcess = batchDriverAutoload()
     ? (opts.filesPerProcess ??
       Math.min(
@@ -1988,7 +2013,7 @@ export async function runBatch(opts) {
     files_skipped_nonphp: skippedNonPhpCount,
     files_excluded: excludedCount,
     truncated_files: counters.truncatedFiles,
-    threads: opts.threads ?? DEFAULT_THREADS,
+    threads: opts.threads ?? defaultThreadCount(),
     max_depth: opts.maxDepth ?? DEFAULT_MAX_DEPTH
   });
   writeDiagnostics(outputDir, diagnostics);
