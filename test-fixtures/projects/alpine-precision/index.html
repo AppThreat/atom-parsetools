@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Alpine page</title>
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <section x-data="search">
+      <h1 x-text="q"></h1>
+      <p class="highlight" x-html="highlighted"></p>
+      <p class="note" x-html="cleanNote"></p>
+    </section>
+
+    <section x-data="{ fragment: decodeURIComponent(location.hash.slice(1)) }">
+      <div class="anchor-preview" x-html="fragment"></div>
+    </section>
+
+    <nav x-data="{ next: '/' }" x-init="next = new URLSearchParams(location.search).get('next') ?? '/'">
+      <a x-bind:href="next">Continue</a>
+    </nav>
+  </body>
+</html>

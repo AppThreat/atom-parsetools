@@ -27,6 +27,7 @@ import { getAllFiles } from "@appthreat/atom-common";
 import { exitWithSupervisor } from "./supervise.js";
 import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
 import { parseAstroFile, parseAstroFrontmatterOnly } from "./astroAst.js";
+import { parseAlpineFile } from "./alpineAst.js";
 
 // Printed by `astgen --version`. Downstream frontends (e.g. chen's jssrc2cpg)
 // fold this into their parse-cache fingerprint, so it MUST be bumped whenever
@@ -431,7 +432,7 @@ const shouldIncludeNodeModulesBundles =
  */
 const getAllSrcJSAndTSFiles = (src) => {
   const filePattern =
-    "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|astro|xsjs|xsjslib|ejs)$";
+    "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|astro|html|xsjs|xsjslib|ejs)$";
   const bundledNodeModulesPattern =
     "node_modules[\\\\/].*[\\\\/](?:.*\\.)?(bundle|dist|index|min|app)\\.(js|cjs|mjs)$";
 
@@ -481,6 +482,9 @@ const fileToJsAst = (file, projectType, tsInstance) => {
   if (file.endsWith(".astro")) {
     return toAstroAst(file);
   }
+  if (file.endsWith(".html")) {
+    return toAlpineAst(file);
+  }
   if (file.endsWith(".ejs")) {
     return toEjsAst(file);
   }
@@ -515,6 +519,16 @@ const toSvelteAst = (file) => {
       err?.message
     );
   }
+};
+
+/**
+ * Convert a single Alpine `.html` page to AST: the directives become statements
+ * and JSX elements (see alpineAst.js). A page with no Alpine directive stays
+ * unparsed - null here drops the file from the output.
+ */
+const toAlpineAst = (file) => {
+  const code = readFileSync(file, "utf-8");
+  return parseAlpineFile(file, code);
 };
 
 /**
