@@ -255,10 +255,58 @@ function evaluateDirectiveExpressionCandidates() {
   assert.equal(htmlAttrs.length, 2);
 }
 
+// Event modifiers, directive arguments and dashed bound names (`@submit.prevent`,
+// `v-on:click.stop`, `:aria-label`, `@update:model-value`, `#default`) are not
+// JSX attribute names. Unhandled, the whole-file parse fails and astgen falls
+// back to the script alone, whose offsets no longer match the file: every node
+// of the component then points at the wrong text and line.
+function evaluateModifierAttributes() {
+  const root = join(__dirname, "projects", "vue-modifiers");
+  const modifierOutputRoot = join(outputRoot, "modifiers");
+  runAstgen(root, modifierOutputRoot);
+  const fixtureName = "login-form.vue";
+  const { code, ast } = loadFixtureSet(root, modifierOutputRoot, [fixtureName], 1)[
+    fixtureName
+  ];
+  const nodes = [];
+  const walk = (node) => {
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+    if (!node || typeof node !== "object") {
+      return;
+    }
+    if (node.type) {
+      nodes.push(node);
+    }
+    Object.values(node).forEach(walk);
+  };
+  walk(ast);
+  const assign = nodes.find(
+    (n) =>
+      n.type === "CallExpression" &&
+      n.callee?.property?.name === "assign"
+  );
+  assert.ok(assign, "the script's call is in the AST");
+  assert.equal(
+    code.slice(assign.start, assign.end),
+    "window.location.assign(target.value)",
+    "script offsets map onto the .vue file"
+  );
+  const vHtml = nodes.find(
+    (n) => n.type === "JSXAttribute" && n.name?.name === "v-html"
+  );
+  assert.ok(vHtml, "the template is parsed with the script");
+  assert.equal(vHtml.value?.type, "JSXExpressionContainer");
+  assert.equal(code.slice(vHtml.value.expression.start, vHtml.value.expression.end), "notice");
+}
+
 try {
   evaluateBroadCorpus();
   evaluatePrecisionAssertions();
   evaluateDirectiveExpressionCandidates();
+  evaluateModifierAttributes();
 
   console.log("astgen Vue inference regression tests passed");
 } finally {

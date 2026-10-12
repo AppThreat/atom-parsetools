@@ -79,9 +79,11 @@ When `-t flow` is given, the first two Flow-flavored attempts are promoted to th
 
 ## File discovery
 
-Discovery accepts `js`, `jsx`, `cjs`, `mjs`, `ts`, `tsx`, `mts`, `cts`, `vue`, `svelte`, `xsjs`, `xsjslib`, and `ejs`, recursively. Two categories are excluded by default.
+Discovery accepts `js`, `jsx`, `cjs`, `mjs`, `ts`, `tsx`, `mts`, `cts`, `vue`, `svelte`, `astro`, `html`, `xsjs`, `xsjslib`, and `ejs`, recursively. Three categories are excluded by default.
 
 Test files are skipped because they are typically the heaviest, lowest-value input for type generation: each is often a full twin of a source module wrapped in test scaffolding. The pattern covers `*.poku.js`, `*.test.*`, `*.spec.*`, `*.e2e.*`, `*.integration.*`, `*.it.*`, and the `__tests__/` and `__mocks__/` directories. Set `ASTGEN_INCLUDE_TEST_FILES=true` to restore them.
+
+Minified files in the project's own tree (`*.min.js`, `*-min.js`, also `.cjs`/`.mjs`) are skipped: they are vendored libraries, not the project's source, and one line holds the whole library, so every finding inside one lands on that line. Set `ASTGEN_INCLUDE_MINIFIED=true` to restore them.
 
 `node_modules` is skipped entirely. Set `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES=true` to also parse bundled entrypoints inside it, meaning files matching `*.(bundle|dist|index|min|app).(js|cjs|mjs)`. Note the side effect of `ASTGEN_IGNORE_DIRS`: when it is set to a non-empty list that does not contain `node_modules`, those bundle entrypoints are included as well, on the reasoning that a custom ignore list implies you thought about the question.
 
@@ -92,6 +94,8 @@ Test files are skipped because they are typically the heaviest, lowest-value inp
 Directive attributes carry a JavaScript expression in a quoted string - `v-html="rawContent"`, `:src="image.url"`, `@click="save"`. A quoted value parses as a StringLiteral, which would sever the data flow from the script binding into the template (the most security-relevant shape, `v-html`, would have no reference to the binding it renders). Before masking, every directive value inside the root `<template>` block that parses as an expression is therefore converted to a length-preserving JSX expression container: `v-html="rawContent"` becomes `v-html={rawContent}` - same length, so offsets still map onto the original file, and the emitted attribute value is a real expression AST. `v-for` and `v-slot` are skipped by name even though their values may parse (`v-for="item in items"` is a valid relational `in` expression): the expression is meaningless for analysis and would synthesise a read of the loop variable that the script never declares. Other non-expression values keep their string value, and plain attributes (`title="About"`) are untouched. The conversion region runs to the last `</template>` that lies outside any `<script>` block, so a script string containing that literal text cannot extend the rewrite into the script.
 
 If the whole-document candidate does not parse, astgen builds progressively simpler candidates, in order: script content concatenated with the masked template, then the masked template alone, then the script content alone. The first candidate that yields a tree wins; the directive-converted variants are tried first, with these plain candidates retained as fallbacks.
+
+Attribute names are made JSX names in place, keeping every offset: a shorthand prefix (`:`, `@`, `.`, `#`) becomes a space and the `.`/`:` of a modifier or argument a dash (`@submit.prevent=` -> ` submit-prevent=`, `:aria-label=` -> ` aria-label=`, `v-on:click.stop=` -> `v-on:click-stop=`). A template whose names are left unparseable fails the whole-file parse, and the fallback that parses the script alone no longer maps onto the file: every node would then carry the wrong line and code.
 
 Type generation over Vue files uses a virtual source: the component code is masked position-preserving, the script content is left intact, and a shim declaring the compiler macros (`defineProps`, `defineEmits`, `defineModel`, `withDefaults`, and a minimal `vue` module) is prepended so the checker sees declarations instead of errors.
 
@@ -126,6 +130,27 @@ The mapping is deliberately lossy in places; these are documented trade-offs, no
 | template expressions have no typemap entries | type recovery falls back to inference (same gap as Vue) |
 | the two `<script>` blocks flatten into one `Program` | module-vs-instance scope distinction is lost |
 
+## Astro
+
+`.astro` components get the same treatment as Svelte, and the same invariants: absolute offsets into the original file, stock Babel node types only. There is no Astro compiler dependency - `astroAst.js` scans the template itself, which is a small grammar: tags and attributes, `{...}` holding JavaScript (and JSX), comments, raw-text `<script>`/`<style>`.
+
+1. **Frontmatter and client scripts.** The `---`-fenced frontmatter, which runs on the server per request, and the bodies of the template's JavaScript `<script>` blocks are parsed by Babel in one pass over a buffer with everything else blanked to spaces (newlines kept), so their statement offsets are already absolute. They flatten into one `Program`, the frontmatter's statements first.
+2. **Template.** Re-emitted as standard JSX, appended as one `JSXFragment` statement after the scripts: the template renders after the frontmatter ran. Elements and components become `JSXElement` (`Layout.Header` a `JSXMemberExpression` name), text `JSXText`, `{expr}` a `JSXExpressionContainer`. Directives keep their namespaced form - `set:html={x}` is a `JSXAttribute` named by the `JSXNamespacedName` `set:html`, as are `class:list`, `client:load`, `define:vars`. The shorthand `{title}` becomes `title={title}`, `{...rest}` a `JSXSpreadAttribute`, and a backtick attribute value (``href=`/a/${b}` ``) a `TemplateLiteral`. Void elements (`<meta charset="utf-8">`) need no slash, and an element left open is closed by the next unmatched end tag or the end of the file.
+3. **Expressions.** Every expression is sub-parsed by Babel from its own source substring and shifted back into file coordinates. A `{...}` holding JSX whose text has quotes in it (`{ok && <p>Don't</p>}`) cannot be delimited by a string-aware scan alone, so the scan's answer is confirmed by parsing, and the following `}`s are tried in turn when it fails. A failed sub-parse costs that expression - `__astgen_unparsed`, recorded on `File.errors` - never the file.
+
+Synthesized nodes carry an additive `astroKind` key (`Element`, `Component`, `Fragment`, `Expression`, `Template`, ...). If the template scan throws, astgen falls back to the frontmatter alone, recording `{ astroParse: true, message }` on `File.errors`.
+
+Accepted losses: `<style>` blocks and HTML comments are dropped; a `<script>` whose `type` is not JavaScript (JSON-LD, a template) is dropped; the frontmatter (server) and client scripts (browser) share one `Program`; `.astro` files get no typemap entries.
+
+## HTML templates: Alpine and Angular
+
+A `.html` file is parsed only when its markup carries framework bindings; a plain page yields no AST. `htmlAst.js` scans tags and their attributes and re-emits what the bindings compute, with the same invariants as Svelte and Astro: absolute offsets into the original file, stock Babel node types only.
+
+- **Alpine.** An inline `x-data="{ key: expr }"` becomes one `var key = expr;` per property; a named `x-data="search"` becomes `var search_data = search();`, a call the recognizers resolve to the `Alpine.data('search', ...)` callback; `x-init` becomes its statements. An element with `x-html`, `x-bind:<attr>`/`:<attr>` or `x-text` becomes a JSX element whose attributes hold those expressions (`x-html="v"` -> `innerHTML={v}`); a bare name with no inline state reads the nearest named component's state (`search_data.highlighted`).
+- **Angular.** A property binding `[prop]="expr"` becomes a JSX attribute that keeps its bracketed name, `[innerHTML]={expr}`: Angular sanitises every property binding, so downstream tooling must be able to tell it from a raw DOM write. A pipe is a call of the pipe - `caption() | safeHtml` is `safeHtml(caption())`, `x | translate:a:b` is `translate(x, a, b)` - so a pipe that bypasses the sanitiser is reached through its own `transform`. A two-way binding `[(ngModel)]="field"` keeps its raw value, which names the component field the control writes. Interpolations (`{{ x }}`) and event bindings are not emitted.
+
+Accepted losses: element structure and text are not emitted, only the elements that carry bindings; inline Angular templates (`template:` strings in a component) are not parsed.
+
 ## Type maps and worker sharding
 
 With `--tsTypes` on (the default), astgen builds a TypeScript program over the project, resolves a checker, and for each file records the inferred type string of interesting nodes, keyed by node start offset:
@@ -150,6 +175,7 @@ The checker is single-threaded, so parallelism comes from sharding: files are de
 | `ASTGEN_INCLUDE_TEST_FILES`           | `false`   | When `true`, include test files in AST and type generation.                            |
 | `ASTGEN_CONCURRENCY`                  | `10`      | Chunk size for the in-thread file loop; bounds peak memory between `gc()` passes.      |
 | `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES` | `false`   | When `true`, parse bundled entrypoints inside `node_modules`.                          |
+| `ASTGEN_INCLUDE_MINIFIED`             | `false`   | When `true`, parse minified files (`*.min.js`) in the project's own tree.              |
 | `ASTGEN_IGNORE_DIRS`                  | unset     | Directories to ignore; setting it without `node_modules` also enables bundle parsing.  |
 
 ## Output and the version contract

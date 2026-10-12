@@ -1,0 +1,7 @@
+<figure class="embed">
+  <figcaption [innerHTML]="caption() | safeHtml"></figcaption>
+  <p [innerHTML]="note"></p>
+  <a [href]="partner()" [title]=" label  |  translate : { name: who } : 'x' ">Back</a>
+  <span [class.active]="active || fallback">{{ caption() }}</span>
+  <input [(ngModel)]="term" (input)="search(term)" />
+</figure>

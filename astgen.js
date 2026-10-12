@@ -26,6 +26,8 @@ import {
 import { getAllFiles } from "@appthreat/atom-common";
 import { exitWithSupervisor } from "./supervise.js";
 import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
+import { parseAstroFile, parseAstroFrontmatterOnly } from "./astroAst.js";
+import { parseHtmlFile } from "./htmlAst.js";
 
 // Printed by `astgen --version`. Downstream frontends (e.g. chen's jssrc2cpg)
 // fold this into their parse-cache fingerprint, so it MUST be bumped whenever
@@ -33,8 +35,10 @@ import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
 // older astgen are silently reused. Bumped to 4.3.0 for Vue directive
 // expression values: `v-html="x"` / `:prop="x"` / `@event="x"` attribute
 // values in `.vue` templates now emit JSX expression containers (real
-// expression ASTs) instead of string literals.
-const ASTGEN_VERSION = "4.3.0";
+// expression ASTs) instead of string literals. 4.4.1: `.vue` templates with
+// event modifiers, directive arguments or dashed bound names (`@submit.prevent`,
+// `:aria-label`) parse in place instead of falling back to the script alone.
+const ASTGEN_VERSION = "4.4.1";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -416,6 +420,19 @@ const TEST_FILE_PATTERN = new RegExp(
 const isExcludedTestFile = (file) =>
   !shouldIncludeTestFiles && TEST_FILE_PATTERN.test(file);
 
+// A minified file in the project's own tree (`assets/vendor/lib.min.js`) is a
+// vendored library, not the project's source: one line holds the whole library,
+// so every flow through it lands on that line. Skipped unless asked for; the
+// node_modules bundles below are a separate, explicit opt-in.
+const shouldIncludeMinifiedFiles =
+  process.env?.ASTGEN_INCLUDE_MINIFIED === "true";
+const MINIFIED_FILE_PATTERN = /[.-]min\.(js|cjs|mjs)$/i;
+
+const isExcludedMinifiedFile = (file) =>
+  !shouldIncludeMinifiedFiles &&
+  !/node_modules[\\/]/.test(file) &&
+  MINIFIED_FILE_PATTERN.test(file);
+
 const shouldIncludeNodeModulesBundles =
   process.env?.ASTGEN_INCLUDE_NODE_MODULES_BUNDLES === "true" ||
   (process.env?.ASTGEN_IGNORE_DIRS &&
@@ -430,7 +447,7 @@ const shouldIncludeNodeModulesBundles =
  */
 const getAllSrcJSAndTSFiles = (src) => {
   const filePattern =
-    "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|xsjs|xsjslib|ejs)$";
+    "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|astro|html|xsjs|xsjslib|ejs)$";
   const bundledNodeModulesPattern =
     "node_modules[\\\\/].*[\\\\/](?:.*\\.)?(bundle|dist|index|min|app)\\.(js|cjs|mjs)$";
 
@@ -462,7 +479,7 @@ const getAllSrcJSAndTSFiles = (src) => {
   return Promise.all([allFilesPromise, bundledFilesPromise]).then(
     ([allFiles, bundledFiles]) =>
       [...new Set([...allFiles, ...bundledFiles])]
-        .filter((file) => !isExcludedTestFile(file))
+        .filter((file) => !isExcludedTestFile(file) && !isExcludedMinifiedFile(file))
         .sort()
   );
 };
@@ -476,6 +493,12 @@ const fileToJsAst = (file, projectType, tsInstance) => {
   }
   if (file.endsWith(".svelte")) {
     return toSvelteAst(file);
+  }
+  if (file.endsWith(".astro")) {
+    return toAstroAst(file);
+  }
+  if (file.endsWith(".html")) {
+    return toHtmlAst(file);
   }
   if (file.endsWith(".ejs")) {
     return toEjsAst(file);
@@ -510,6 +533,39 @@ const toSvelteAst = (file) => {
       options,
       err?.message
     );
+  }
+};
+
+/**
+ * Convert a single `.html` page to AST: Alpine directives become statements and
+ * JSX elements, Angular bindings JSX attributes (see htmlAst.js). A page with
+ * neither stays unparsed - null here drops the file from the output.
+ */
+const toHtmlAst = (file) => {
+  const code = readFileSync(file, "utf-8");
+  return parseHtmlFile(file, code);
+};
+
+/**
+ * Convert a single Astro component to AST: the frontmatter and client scripts as
+ * statements, the template as JSX (see astroAst.js). Babel options are built for
+ * a `.tsx` file - Astro frontmatter is TypeScript and template expressions may
+ * hold JSX. If the template scan fails, the frontmatter is still parsed and the
+ * failure recorded on the AST's `errors`.
+ */
+const toAstroAst = (file) => {
+  const code = readFileSync(file, "utf-8");
+  const options = makeBabelOptions(babelParserOptions, file.replace(/\.astro$/, ".tsx"), [], {
+    enableJsxSyntax: true
+  });
+  try {
+    return parseAstroFile(file, code, options);
+  } catch (err) {
+    console.error(
+      `Astro parse failed for ${file}, falling back to frontmatter-only parsing:`,
+      err?.message
+    );
+    return parseAstroFrontmatterOnly(file, code, options, err?.message);
   }
 };
 
@@ -593,7 +649,13 @@ const vueCleaningRegex = /<\/*script.*>|<style[\s\S]*style>|<\/*br>/gi;
 const vueTemplateRegex = /(<template.*>)([\s\S]*)(<\/template>)/gi;
 const vueCommentRegex = /<!--[\s\S]*?-->/gi;
 const vueBindRegex = /(:\[)([\s\S]*?)(\])/gi;
-const vuePropRegex = /\s([.:@])([a-zA-Z]*?=)/gi;
+// `:prop=`, `@event=`, `.prop=`, `#slot=` - the shorthand prefix and any modifier or argument
+// (`@submit.prevent=`, `@update:model-value=`, `:aria-label=`) - are no JSX attribute names. The
+// prefix becomes a space and `.`/`:` in the name a dash, which keeps every offset.
+const vuePropRegex = /\s([.:@#])([\w.:-]*?=)/gi;
+// A directive with an argument and modifiers: `v-on:click.stop=`, `v-model.trim=`. JSX allows one
+// `:` in a name (`v-on:click`), never a `.`.
+const vueDirectiveModifierRegex = /(\sv-[\w-]+)((?::[\w-]+)?(?:[.:][\w-]+)+)(=)/gi;
 const vueOpenImgTag = /(<img)((?!>)[\s\S]+?)( [^/]>)/gi;
 const vueScriptTagRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
 
@@ -816,7 +878,11 @@ const cleanVueCodeForParsing = (code, { includeScripts = true } = {}) => {
       return maskNonNewlineChars(grA) + grB + maskNonNewlineChars(grC);
     })
     .replace(vuePropRegex, (match, grA, grB) => {
-      return " " + grA.replace(/[.:@]/g, " ") + grB.replaceAll(".", "-");
+      return " " + grA.replace(/[.:@#]/g, " ") + grB.replace(/[.:]/g, "-");
+    })
+    .replace(vueDirectiveModifierRegex, (match, grA, grB, grC) => {
+      const argument = grB.startsWith(":") ? grB.slice(0, 1) : "";
+      return grA + argument + grB.slice(argument.length).replace(/[.:]/g, "-") + grC;
     })
     .replace(vueOpenImgTag, (match, grA, grB, grC) => {
       return grA + grB + grC.replace(" >", "/>");
