@@ -1,4 +1,6 @@
 name: Node.js CI
+# build is a required status check on main, so this workflow must trigger
+# on merge-group builds too.
 on:
   push:
     branches: [ "main" ]
@@ -6,6 +8,7 @@ on:
     - 'v*'
   pull_request:
     branches: [ "main" ]
+  merge_group:
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
