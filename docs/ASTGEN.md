@@ -79,7 +79,7 @@ When `-t flow` is given, the first two Flow-flavored attempts are promoted to th
 
 ## File discovery
 
-Discovery accepts `js`, `jsx`, `cjs`, `mjs`, `ts`, `tsx`, `mts`, `cts`, `vue`, `svelte`, `xsjs`, `xsjslib`, and `ejs`, recursively. Two categories are excluded by default.
+Discovery accepts `js`, `jsx`, `cjs`, `mjs`, `ts`, `tsx`, `mts`, `cts`, `vue`, `svelte`, `astro`, `xsjs`, `xsjslib`, and `ejs`, recursively. Two categories are excluded by default.
 
 Test files are skipped because they are typically the heaviest, lowest-value input for type generation: each is often a full twin of a source module wrapped in test scaffolding. The pattern covers `*.poku.js`, `*.test.*`, `*.spec.*`, `*.e2e.*`, `*.integration.*`, `*.it.*`, and the `__tests__/` and `__mocks__/` directories. Set `ASTGEN_INCLUDE_TEST_FILES=true` to restore them.
 
@@ -125,6 +125,18 @@ The mapping is deliberately lossy in places; these are documented trade-offs, no
 | `<style>` blocks are dropped | no CSS analysis |
 | template expressions have no typemap entries | type recovery falls back to inference (same gap as Vue) |
 | the two `<script>` blocks flatten into one `Program` | module-vs-instance scope distinction is lost |
+
+## Astro
+
+`.astro` components get the same treatment as Svelte, and the same invariants: absolute offsets into the original file, stock Babel node types only. There is no Astro compiler dependency - `astroAst.js` scans the template itself, which is a small grammar: tags and attributes, `{...}` holding JavaScript (and JSX), comments, raw-text `<script>`/`<style>`.
+
+1. **Frontmatter and client scripts.** The `---`-fenced frontmatter, which runs on the server per request, and the bodies of the template's JavaScript `<script>` blocks are parsed by Babel in one pass over a buffer with everything else blanked to spaces (newlines kept), so their statement offsets are already absolute. They flatten into one `Program`, the frontmatter's statements first.
+2. **Template.** Re-emitted as standard JSX, appended as one `JSXFragment` statement after the scripts: the template renders after the frontmatter ran. Elements and components become `JSXElement` (`Layout.Header` a `JSXMemberExpression` name), text `JSXText`, `{expr}` a `JSXExpressionContainer`. Directives keep their namespaced form - `set:html={x}` is a `JSXAttribute` named by the `JSXNamespacedName` `set:html`, as are `class:list`, `client:load`, `define:vars`. The shorthand `{title}` becomes `title={title}`, `{...rest}` a `JSXSpreadAttribute`, and a backtick attribute value (``href=`/a/${b}` ``) a `TemplateLiteral`. Void elements (`<meta charset="utf-8">`) need no slash, and an element left open is closed by the next unmatched end tag or the end of the file.
+3. **Expressions.** Every expression is sub-parsed by Babel from its own source substring and shifted back into file coordinates. A `{...}` holding JSX whose text has quotes in it (`{ok && <p>Don't</p>}`) cannot be delimited by a string-aware scan alone, so the scan's answer is confirmed by parsing, and the following `}`s are tried in turn when it fails. A failed sub-parse costs that expression - `__astgen_unparsed`, recorded on `File.errors` - never the file.
+
+Synthesized nodes carry an additive `astroKind` key (`Element`, `Component`, `Fragment`, `Expression`, `Template`, ...). If the template scan throws, astgen falls back to the frontmatter alone, recording `{ astroParse: true, message }` on `File.errors`.
+
+Accepted losses: `<style>` blocks and HTML comments are dropped; a `<script>` whose `type` is not JavaScript (JSON-LD, a template) is dropped; the frontmatter (server) and client scripts (browser) share one `Program`; `.astro` files get no typemap entries.
 
 ## Type maps and worker sharding
 

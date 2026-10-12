@@ -1,0 +1,24 @@
+---
+import Card from '../components/Card.astro';
+const q = Astro.url.searchParams.get('q') ?? '';
+const results: string[] = q ? [q, `${q} again`] : [];
+const ok = results.length > 0;
+---
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Search {q}</title>
+  </head>
+  <body>
+    <!-- the query is echoed raw on purpose -->
+    <div class="echo" set:html={q}></div>
+    <a href={`/search?q=${encodeURIComponent(q)}`}>again</a>
+    <ul>
+      {results.map((r) => <li data-r={r}>{r}</li>)}
+    </ul>
+    {ok && <p>Don't panic, {results.length} found</p>}
+    <img src="/logo.png" alt="logo">
+    <Card title={q} />
+  </body>
+</html>

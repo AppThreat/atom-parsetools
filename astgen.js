@@ -26,6 +26,7 @@ import {
 import { getAllFiles } from "@appthreat/atom-common";
 import { exitWithSupervisor } from "./supervise.js";
 import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
+import { parseAstroFile, parseAstroFrontmatterOnly } from "./astroAst.js";
 
 // Printed by `astgen --version`. Downstream frontends (e.g. chen's jssrc2cpg)
 // fold this into their parse-cache fingerprint, so it MUST be bumped whenever
@@ -430,7 +431,7 @@ const shouldIncludeNodeModulesBundles =
  */
 const getAllSrcJSAndTSFiles = (src) => {
   const filePattern =
-    "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|xsjs|xsjslib|ejs)$";
+    "\\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|astro|xsjs|xsjslib|ejs)$";
   const bundledNodeModulesPattern =
     "node_modules[\\\\/].*[\\\\/](?:.*\\.)?(bundle|dist|index|min|app)\\.(js|cjs|mjs)$";
 
@@ -477,6 +478,9 @@ const fileToJsAst = (file, projectType, tsInstance) => {
   if (file.endsWith(".svelte")) {
     return toSvelteAst(file);
   }
+  if (file.endsWith(".astro")) {
+    return toAstroAst(file);
+  }
   if (file.endsWith(".ejs")) {
     return toEjsAst(file);
   }
@@ -510,6 +514,29 @@ const toSvelteAst = (file) => {
       options,
       err?.message
     );
+  }
+};
+
+/**
+ * Convert a single Astro component to AST: the frontmatter and client scripts as
+ * statements, the template as JSX (see astroAst.js). Babel options are built for
+ * a `.tsx` file - Astro frontmatter is TypeScript and template expressions may
+ * hold JSX. If the template scan fails, the frontmatter is still parsed and the
+ * failure recorded on the AST's `errors`.
+ */
+const toAstroAst = (file) => {
+  const code = readFileSync(file, "utf-8");
+  const options = makeBabelOptions(babelParserOptions, file.replace(/\.astro$/, ".tsx"), [], {
+    enableJsxSyntax: true
+  });
+  try {
+    return parseAstroFile(file, code, options);
+  } catch (err) {
+    console.error(
+      `Astro parse failed for ${file}, falling back to frontmatter-only parsing:`,
+      err?.message
+    );
+    return parseAstroFrontmatterOnly(file, code, options, err?.message);
   }
 };
 

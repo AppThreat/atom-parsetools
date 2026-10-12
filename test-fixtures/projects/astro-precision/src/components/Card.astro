@@ -1,0 +1,15 @@
+---
+interface Props { title: string; tone?: string }
+const { title, tone = 'plain', ...rest } = Astro.props;
+---
+<section {title} {...rest} class:list={['card', tone]}>
+  <h2>{title}</h2>
+  <p>unclosed paragraph
+</section>
+<script>
+  import { track } from '../lib/track';
+  track(document.title);
+</script>
+<style>
+  .card { color: red; }
+</style>
