@@ -27,7 +27,7 @@ import { getAllFiles } from "@appthreat/atom-common";
 import { exitWithSupervisor } from "./supervise.js";
 import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
 import { parseAstroFile, parseAstroFrontmatterOnly } from "./astroAst.js";
-import { parseAlpineFile } from "./alpineAst.js";
+import { parseHtmlFile } from "./htmlAst.js";
 
 // Printed by `astgen --version`. Downstream frontends (e.g. chen's jssrc2cpg)
 // fold this into their parse-cache fingerprint, so it MUST be bumped whenever
@@ -36,7 +36,7 @@ import { parseAlpineFile } from "./alpineAst.js";
 // expression values: `v-html="x"` / `:prop="x"` / `@event="x"` attribute
 // values in `.vue` templates now emit JSX expression containers (real
 // expression ASTs) instead of string literals.
-const ASTGEN_VERSION = "4.3.0";
+const ASTGEN_VERSION = "4.4.0";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -418,6 +418,19 @@ const TEST_FILE_PATTERN = new RegExp(
 const isExcludedTestFile = (file) =>
   !shouldIncludeTestFiles && TEST_FILE_PATTERN.test(file);
 
+// A minified file in the project's own tree (`assets/vendor/lib.min.js`) is a
+// vendored library, not the project's source: one line holds the whole library,
+// so every flow through it lands on that line. Skipped unless asked for; the
+// node_modules bundles below are a separate, explicit opt-in.
+const shouldIncludeMinifiedFiles =
+  process.env?.ASTGEN_INCLUDE_MINIFIED === "true";
+const MINIFIED_FILE_PATTERN = /[.-]min\.(js|cjs|mjs)$/i;
+
+const isExcludedMinifiedFile = (file) =>
+  !shouldIncludeMinifiedFiles &&
+  !/node_modules[\\/]/.test(file) &&
+  MINIFIED_FILE_PATTERN.test(file);
+
 const shouldIncludeNodeModulesBundles =
   process.env?.ASTGEN_INCLUDE_NODE_MODULES_BUNDLES === "true" ||
   (process.env?.ASTGEN_IGNORE_DIRS &&
@@ -464,7 +477,7 @@ const getAllSrcJSAndTSFiles = (src) => {
   return Promise.all([allFilesPromise, bundledFilesPromise]).then(
     ([allFiles, bundledFiles]) =>
       [...new Set([...allFiles, ...bundledFiles])]
-        .filter((file) => !isExcludedTestFile(file))
+        .filter((file) => !isExcludedTestFile(file) && !isExcludedMinifiedFile(file))
         .sort()
   );
 };
@@ -483,7 +496,7 @@ const fileToJsAst = (file, projectType, tsInstance) => {
     return toAstroAst(file);
   }
   if (file.endsWith(".html")) {
-    return toAlpineAst(file);
+    return toHtmlAst(file);
   }
   if (file.endsWith(".ejs")) {
     return toEjsAst(file);
@@ -522,13 +535,13 @@ const toSvelteAst = (file) => {
 };
 
 /**
- * Convert a single Alpine `.html` page to AST: the directives become statements
- * and JSX elements (see alpineAst.js). A page with no Alpine directive stays
- * unparsed - null here drops the file from the output.
+ * Convert a single `.html` page to AST: Alpine directives become statements and
+ * JSX elements, Angular bindings JSX attributes (see htmlAst.js). A page with
+ * neither stays unparsed - null here drops the file from the output.
  */
-const toAlpineAst = (file) => {
+const toHtmlAst = (file) => {
   const code = readFileSync(file, "utf-8");
-  return parseAlpineFile(file, code);
+  return parseHtmlFile(file, code);
 };
 
 /**

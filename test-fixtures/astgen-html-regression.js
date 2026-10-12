@@ -1,10 +1,10 @@
-// Alpine regression tests for astgen.
+// HTML template regression tests for astgen: Alpine pages and Angular templates.
 //
 // astgen lowers an Alpine `.html` page to stock Babel AST: an inline x-data
 // object's properties become one variable each, a named x-data becomes a call
 // of that name, x-init becomes its statements, and elements with x-html /
 // x-bind:* / x-text become JSX elements whose attribute values are the
-// directive expressions (see alpineAst.js). The contract these tests pin:
+// directive expressions (see htmlAst.js). The contract these tests pin:
 //
 //   1. Every emitted node's [start, end) is an absolute offset into the
 //      original `.html` file, and `loc` agrees with it.
@@ -14,12 +14,17 @@
 //      statement; x-html lowers to a JSXAttribute whose name is innerHTML and
 //      whose value is the directive's expression; x-bind:href to href.
 //   4. A page without Alpine directives is dropped (null), as before.
+//   5. Angular: a property binding keeps its bracketed name and an expression
+//      value; a pipe is a call of the pipe with the piped value first and the
+//      pipe arguments after it, each at its own offsets (whitespace around the
+//      segments included); `||` is no pipe; a two-way binding keeps its raw
+//      value; nothing but the bindings is emitted.
 
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseAlpineFile } from "../alpineAst.js";
+import { parseHtmlFile } from "../htmlAst.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -33,7 +38,7 @@ try {
   console.warn("@babel/types not resolvable; skipping the node-type vocabulary check");
 }
 
-const ast = parseAlpineFile(fixture, code);
+const ast = parseHtmlFile(fixture, code);
 assert.ok(ast, "the Alpine page parses");
 
 const walk = (node, fn) => {
@@ -119,10 +124,52 @@ assert.equal(byAttr("href").length, 1, "x-bind:href becomes href");
 assert.equal(byAttr("x-text").length, 1, "x-text keeps its own name");
 
 // a page without directives stays unparsed
-const plain = parseAlpineFile(
+const plain = parseHtmlFile(
   join(__dirname, "projects", "alpine-precision", "plain.html")?.replace?.("undefined", "") || "x.html",
   "<html><body><p>plain</p></body></html>"
 );
 assert.equal(plain, null, "no Alpine directive -> no AST");
 
-console.log("astgen-alpine-regression: all assertions passed");
+// Angular templates
+const ngFixture = join(__dirname, "projects", "angular-template", "embed.component.html");
+const ngCode = readFileSync(ngFixture, "utf-8");
+const ngAst = parseHtmlFile(ngFixture, ngCode);
+assert.ok(ngAst, "an Angular template parses");
+walk(ngAst, (node) => {
+  if (typeof node.start === "number" && node.loc) {
+    assert.equal(node.loc.start.index, node.start, "loc.start.index agrees with start");
+    assert.equal(node.loc.end.index, node.end, "loc.end.index agrees with end");
+  }
+  if (node.type === "Identifier" && node.end > node.start) {
+    assert.equal(ngCode.slice(node.start, node.end), node.name, `identifier ${node.name} at its offsets`);
+  }
+  if (babelTypes && node.type) {
+    assert.ok(babelTypes.has(node.type), `stock Babel node type: ${node.type}`);
+  }
+});
+const ngBody = ngAst.program.body;
+assert.equal(ngBody.length, 1, "only the bindings' JSX fragment is emitted");
+const ngAttrs = ngBody[0].expression.children.flatMap((el) => el.openingElement.attributes);
+const ngAttr = (name) => ngAttrs.filter((a) => a.name.name === name);
+
+const [captionHtml, noteHtml] = ngAttr("[innerHTML]");
+assert.ok(captionHtml && noteHtml, "[innerHTML] keeps its brackets");
+const piped = captionHtml.value.expression;
+assert.equal(piped.type, "CallExpression", "a pipe is a call");
+assert.equal(piped.callee.name, "safeHtml", "of the pipe");
+assert.equal(ngCode.slice(piped.arguments[0].start, piped.arguments[0].end), "caption()", "the piped value first");
+assert.equal(noteHtml.value.expression.type, "Identifier", "an unpiped value stays itself");
+
+const title = ngAttr("[title]")[0].value.expression;
+assert.equal(title.callee.name, "translate");
+assert.deepEqual(title.arguments.map((a) => ngCode.slice(a.start, a.end)), ["label", "{ name: who }", "'x'"],
+  "pipe arguments follow the piped value, trimmed, at their own offsets");
+
+const cls = ngAttr("[class.active]")[0].value.expression;
+assert.equal(cls.type, "LogicalExpression", "`||` is an operator, not a pipe");
+
+const twoWay = ngAttr("[(ngModel)]")[0];
+assert.equal(twoWay.value.type, "StringLiteral", "a two-way binding keeps its raw value");
+assert.equal(twoWay.value.value, "term");
+
+console.log("astgen-html-regression: all assertions passed");

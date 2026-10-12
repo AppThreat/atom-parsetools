@@ -79,9 +79,11 @@ When `-t flow` is given, the first two Flow-flavored attempts are promoted to th
 
 ## File discovery
 
-Discovery accepts `js`, `jsx`, `cjs`, `mjs`, `ts`, `tsx`, `mts`, `cts`, `vue`, `svelte`, `astro`, `xsjs`, `xsjslib`, and `ejs`, recursively. Two categories are excluded by default.
+Discovery accepts `js`, `jsx`, `cjs`, `mjs`, `ts`, `tsx`, `mts`, `cts`, `vue`, `svelte`, `astro`, `html`, `xsjs`, `xsjslib`, and `ejs`, recursively. Three categories are excluded by default.
 
 Test files are skipped because they are typically the heaviest, lowest-value input for type generation: each is often a full twin of a source module wrapped in test scaffolding. The pattern covers `*.poku.js`, `*.test.*`, `*.spec.*`, `*.e2e.*`, `*.integration.*`, `*.it.*`, and the `__tests__/` and `__mocks__/` directories. Set `ASTGEN_INCLUDE_TEST_FILES=true` to restore them.
+
+Minified files in the project's own tree (`*.min.js`, `*-min.js`, also `.cjs`/`.mjs`) are skipped: they are vendored libraries, not the project's source, and one line holds the whole library, so every finding inside one lands on that line. Set `ASTGEN_INCLUDE_MINIFIED=true` to restore them.
 
 `node_modules` is skipped entirely. Set `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES=true` to also parse bundled entrypoints inside it, meaning files matching `*.(bundle|dist|index|min|app).(js|cjs|mjs)`. Note the side effect of `ASTGEN_IGNORE_DIRS`: when it is set to a non-empty list that does not contain `node_modules`, those bundle entrypoints are included as well, on the reasoning that a custom ignore list implies you thought about the question.
 
@@ -138,6 +140,15 @@ Synthesized nodes carry an additive `astroKind` key (`Element`, `Component`, `Fr
 
 Accepted losses: `<style>` blocks and HTML comments are dropped; a `<script>` whose `type` is not JavaScript (JSON-LD, a template) is dropped; the frontmatter (server) and client scripts (browser) share one `Program`; `.astro` files get no typemap entries.
 
+## HTML templates: Alpine and Angular
+
+A `.html` file is parsed only when its markup carries framework bindings; a plain page yields no AST. `htmlAst.js` scans tags and their attributes and re-emits what the bindings compute, with the same invariants as Svelte and Astro: absolute offsets into the original file, stock Babel node types only.
+
+- **Alpine.** An inline `x-data="{ key: expr }"` becomes one `var key = expr;` per property; a named `x-data="search"` becomes `var search_data = search();`, a call the recognizers resolve to the `Alpine.data('search', ...)` callback; `x-init` becomes its statements. An element with `x-html`, `x-bind:<attr>`/`:<attr>` or `x-text` becomes a JSX element whose attributes hold those expressions (`x-html="v"` -> `innerHTML={v}`); a bare name with no inline state reads the nearest named component's state (`search_data.highlighted`).
+- **Angular.** A property binding `[prop]="expr"` becomes a JSX attribute that keeps its bracketed name, `[innerHTML]={expr}`: Angular sanitises every property binding, so downstream tooling must be able to tell it from a raw DOM write. A pipe is a call of the pipe - `caption() | safeHtml` is `safeHtml(caption())`, `x | translate:a:b` is `translate(x, a, b)` - so a pipe that bypasses the sanitiser is reached through its own `transform`. A two-way binding `[(ngModel)]="field"` keeps its raw value, which names the component field the control writes. Interpolations (`{{ x }}`) and event bindings are not emitted.
+
+Accepted losses: element structure and text are not emitted, only the elements that carry bindings; inline Angular templates (`template:` strings in a component) are not parsed.
+
 ## Type maps and worker sharding
 
 With `--tsTypes` on (the default), astgen builds a TypeScript program over the project, resolves a checker, and for each file records the inferred type string of interesting nodes, keyed by node start offset:
@@ -162,6 +173,7 @@ The checker is single-threaded, so parallelism comes from sharding: files are de
 | `ASTGEN_INCLUDE_TEST_FILES`           | `false`   | When `true`, include test files in AST and type generation.                            |
 | `ASTGEN_CONCURRENCY`                  | `10`      | Chunk size for the in-thread file loop; bounds peak memory between `gc()` passes.      |
 | `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES` | `false`   | When `true`, parse bundled entrypoints inside `node_modules`.                          |
+| `ASTGEN_INCLUDE_MINIFIED`             | `false`   | When `true`, parse minified files (`*.min.js`) in the project's own tree.              |
 | `ASTGEN_IGNORE_DIRS`                  | unset     | Directories to ignore; setting it without `node_modules` also enables bundle parsing.  |
 
 ## Output and the version contract
