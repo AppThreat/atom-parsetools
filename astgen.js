@@ -35,8 +35,10 @@ import { parseHtmlFile } from "./htmlAst.js";
 // older astgen are silently reused. Bumped to 4.3.0 for Vue directive
 // expression values: `v-html="x"` / `:prop="x"` / `@event="x"` attribute
 // values in `.vue` templates now emit JSX expression containers (real
-// expression ASTs) instead of string literals.
-const ASTGEN_VERSION = "4.4.0";
+// expression ASTs) instead of string literals. 4.4.1: `.vue` templates with
+// event modifiers, directive arguments or dashed bound names (`@submit.prevent`,
+// `:aria-label`) parse in place instead of falling back to the script alone.
+const ASTGEN_VERSION = "4.4.1";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -647,7 +649,13 @@ const vueCleaningRegex = /<\/*script.*>|<style[\s\S]*style>|<\/*br>/gi;
 const vueTemplateRegex = /(<template.*>)([\s\S]*)(<\/template>)/gi;
 const vueCommentRegex = /<!--[\s\S]*?-->/gi;
 const vueBindRegex = /(:\[)([\s\S]*?)(\])/gi;
-const vuePropRegex = /\s([.:@])([a-zA-Z]*?=)/gi;
+// `:prop=`, `@event=`, `.prop=`, `#slot=` - the shorthand prefix and any modifier or argument
+// (`@submit.prevent=`, `@update:model-value=`, `:aria-label=`) - are no JSX attribute names. The
+// prefix becomes a space and `.`/`:` in the name a dash, which keeps every offset.
+const vuePropRegex = /\s([.:@#])([\w.:-]*?=)/gi;
+// A directive with an argument and modifiers: `v-on:click.stop=`, `v-model.trim=`. JSX allows one
+// `:` in a name (`v-on:click`), never a `.`.
+const vueDirectiveModifierRegex = /(\sv-[\w-]+)((?::[\w-]+)?(?:[.:][\w-]+)+)(=)/gi;
 const vueOpenImgTag = /(<img)((?!>)[\s\S]+?)( [^/]>)/gi;
 const vueScriptTagRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
 
@@ -870,7 +878,11 @@ const cleanVueCodeForParsing = (code, { includeScripts = true } = {}) => {
       return maskNonNewlineChars(grA) + grB + maskNonNewlineChars(grC);
     })
     .replace(vuePropRegex, (match, grA, grB) => {
-      return " " + grA.replace(/[.:@]/g, " ") + grB.replaceAll(".", "-");
+      return " " + grA.replace(/[.:@#]/g, " ") + grB.replace(/[.:]/g, "-");
+    })
+    .replace(vueDirectiveModifierRegex, (match, grA, grB, grC) => {
+      const argument = grB.startsWith(":") ? grB.slice(0, 1) : "";
+      return grA + argument + grB.slice(argument.length).replace(/[.:]/g, "-") + grC;
     })
     .replace(vueOpenImgTag, (match, grA, grB, grC) => {
       return grA + grB + grC.replace(" >", "/>");
