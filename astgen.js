@@ -1129,6 +1129,16 @@ const TSC_FLAGS =
   tsc.TypeFormatFlags.UseFullyQualifiedType |
   tsc.TypeFormatFlags.NoTypeReduction;
 
+// The same flags with type aliases written by name, for a type too long to
+// write out.
+const TSC_FLAGS_BY_NAME = TSC_FLAGS & ~tsc.TypeFormatFlags.InTypeAlias;
+
+// Longest type string astgen writes. NoTruncation alone sets no practical limit
+// (Playwright's `expect` writes out to 1.7 million characters), and the checker
+// keeps the nodes it built for each enclosing node it printed at, so one such
+// type exhausts the heap after a few files. Real code stays far below this.
+const MAX_TYPE_STRING_LENGTH = 4096;
+
 /**
  * Convert a single vue file to AST.
  * When `tsInstance` is present also collect type inference from TSC and return both AST & types.
@@ -1563,12 +1573,54 @@ function createTsc(srcFiles, src) {
       };
     };
 
+    // The checker's writeType takes a maximum length and an object it marks
+    // when it cut the type short, which typeToString does not pass on; the
+    // public typings leave writeType out. A type cut short also stays cut short
+    // in the checker's cache for that enclosing node, without the mark, so each
+    // type that runs over is remembered and not written out in full again in
+    // the same file. Starting afresh for each file keeps a file's type map
+    // independent of the files before it, and of how files are shared out
+    // between workers.
+    const boundedTypeToString = (type, context, flags) => {
+      const out = { canIncreaseExpansionDepth: false, truncated: false };
+      const text =
+        typeof typeChecker.writeType === "function"
+          ? typeChecker.writeType(
+              type,
+              context,
+              flags,
+              undefined,
+              MAX_TYPE_STRING_LENGTH,
+              undefined,
+              out
+            )
+          : typeChecker.typeToString(type, context, flags);
+      return out.truncated || text.length >= MAX_TYPE_STRING_LENGTH
+        ? undefined
+        : text;
+    };
+    let oversizedTypes = new WeakMap();
+    const typeToBoundedString = (type, context) => {
+      if (!oversizedTypes.has(type)) {
+        const text = boundedTypeToString(type, context, TSC_FLAGS);
+        if (text !== undefined) {
+          return text;
+        }
+        oversizedTypes.set(type, "byName");
+      }
+      if (oversizedTypes.get(type) === "byName") {
+        const text = boundedTypeToString(type, context, TSC_FLAGS_BY_NAME);
+        if (text !== undefined) {
+          return text;
+        }
+        oversizedTypes.set(type, "unwritable");
+      }
+      return "any";
+    };
+
     const safeTypeToString = (type, context) => {
       try {
-        return normalizeTypeString(
-          typeChecker.typeToString(type, context, TSC_FLAGS),
-          context
-        );
+        return normalizeTypeString(typeToBoundedString(type, context), context);
       } catch (err) {
         return "any";
       }
@@ -1577,7 +1629,7 @@ function createTsc(srcFiles, src) {
     const safeTypeWithContextToString = (node, context) => {
       try {
         return normalizeTypeString(
-          typeChecker.typeToString(node, context, TSC_FLAGS),
+          typeToBoundedString(node, context),
           context
         );
       } catch (err) {
@@ -2229,6 +2281,7 @@ function createTsc(srcFiles, src) {
 
     const collectTypes = (sourceFile) => {
       const fileSeenTypes = new Map();
+      oversizedTypes = new WeakMap();
       tsc.forEachChild(sourceFile, (node) => addType(node, fileSeenTypes));
       return fileSeenTypes;
     };
