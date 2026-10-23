@@ -1,0 +1,26 @@
+astgen.js
+  h_0926447d100ad2 1132-1141,1576-1620,1623,1632,2284
+docs/ASTGEN.md
+  h_0926447d100ad2 183-184
+package.json
+  h_0926447d100ad2 9,28
+test-fixtures/astgen-oversized-types-regression.js
+  h_0926447d100ad2 1-93
+test-fixtures/projects/oversized-types/consumer.ts
+  h_0926447d100ad2 1-4
+test-fixtures/projects/oversized-types/package.json
+  h_0926447d100ad2 1-5
+test-fixtures/projects/oversized-types/pairs.ts
+  h_0926447d100ad2 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "91673173e32d1a4a685894ef3a2c73396070ce2c",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
