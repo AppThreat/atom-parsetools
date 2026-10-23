@@ -40,8 +40,11 @@ import { lowerEmberFile } from "./emberAst.js";
 // event modifiers, directive arguments or dashed bound names (`@submit.prevent`,
 // `:aria-label`) parse in place instead of falling back to the script alone.
 // 4.5.0: Ember templates (`.hbs`, `.gjs`, `.gts`) are rewritten into TSX and
-// parsed; the AST JSON carries the rewritten text as `source`.
-const ASTGEN_VERSION = "4.5.0";
+// parsed; the AST JSON carries the rewritten text as `source`. 4.5.1: files
+// with source phase or deferred imports (`import source`, `import defer`) are
+// parsed instead of dropped, and type maps include `node_modules/@types`
+// packages again when the project does not set `types`.
+const ASTGEN_VERSION = "4.5.1";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
