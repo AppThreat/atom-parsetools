@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { join, dirname, relative, resolve, basename } from "path";
+import { join, dirname, relative, resolve, basename, isAbsolute } from "path";
 import { fileURLToPath } from "url";
 import { parse } from "@babel/parser";
 import { parse as parseHermes } from "hermes-parser";
@@ -446,6 +446,70 @@ const shouldIncludeNodeModulesBundles =
   (process.env?.ASTGEN_IGNORE_DIRS &&
     process.env.ASTGEN_IGNORE_DIRS.length > 0 &&
     !process.env.ASTGEN_IGNORE_DIRS.toLowerCase().includes("node_modules"));
+
+// What discovery leaves out, decided as getAllFiles in @appthreat/atom-common
+// decides it, which exports neither list: directories named in
+// ASTGEN_IGNORE_DIRS (else its eleven defaults), compared with the lowercased
+// directory name, and any directory or file name matching
+// ASTGEN_IGNORE_FILE_PATTERN (else its default, which matches declaration files
+// and three.js).
+const DISCOVERY_IGNORE_DIRS = process.env.ASTGEN_IGNORE_DIRS
+  ? process.env.ASTGEN_IGNORE_DIRS.split(",")
+  : [
+      "venv",
+      "docs",
+      "e2e",
+      "e2e-beta",
+      "examples",
+      "cypress",
+      "jest-cache",
+      "eslint-rules",
+      "codemods",
+      "flow-typed",
+      "i18n"
+    ];
+const DISCOVERY_IGNORE_FILE_PATTERN = new RegExp(
+  process.env.ASTGEN_IGNORE_FILE_PATTERN || "(three|\\.d)\\.(js|ts|jsx|tsx)$",
+  "i"
+);
+const DECLARATION_FILE_PATTERN = /\.d\.[cm]?ts$/i;
+
+const isUnderRoot = (file, root) => {
+  const relativePath = relative(root, resolve(file));
+  return (
+    relativePath !== "" &&
+    !isAbsolute(relativePath) &&
+    relativePath.split(/[\\/]/)[0] !== ".."
+  );
+};
+
+/**
+ * Whether discovery would have left out `file`, which sits under `srcRoot`:
+ * a directory on the way is a dot directory, node_modules, or a name the
+ * ignore list or the ignore pattern covers, or the file's own name is a dotfile
+ * or matches the ignore pattern. A declaration file is not left out for its
+ * name, because the default pattern would otherwise keep a tsconfig's
+ * declarations out of the program.
+ */
+const isLeftOutByDiscovery = (file, srcRoot) => {
+  const names = relative(srcRoot, resolve(file)).split(/[\\/]/);
+  const fileName = names.pop();
+  const skipsDirectory = names.some(
+    (name) =>
+      name.startsWith(".") ||
+      name.toLowerCase() === "node_modules" ||
+      DISCOVERY_IGNORE_DIRS.includes(name.toLowerCase()) ||
+      DISCOVERY_IGNORE_FILE_PATTERN.test(name)
+  );
+  if (skipsDirectory) {
+    return true;
+  }
+  return (
+    fileName.startsWith(".") ||
+    (DISCOVERY_IGNORE_FILE_PATTERN.test(fileName) &&
+      !DECLARATION_FILE_PATTERN.test(fileName))
+  );
+};
 
 /**
  * Return paths to all (j|tsx?) files.
@@ -1129,6 +1193,16 @@ const TSC_FLAGS =
   tsc.TypeFormatFlags.UseFullyQualifiedType |
   tsc.TypeFormatFlags.NoTypeReduction;
 
+// The same flags with type aliases written by name, for a type too long to
+// write out.
+const TSC_FLAGS_BY_NAME = TSC_FLAGS & ~tsc.TypeFormatFlags.InTypeAlias;
+
+// Longest type string astgen writes. NoTruncation alone sets no practical limit
+// (Playwright's `expect` writes out to 1.7 million characters), and the checker
+// keeps the nodes it built for each enclosing node it printed at, so one such
+// type exhausts the heap after a few files. Real code stays far below this.
+const MAX_TYPE_STRING_LENGTH = 4096;
+
 /**
  * Convert a single vue file to AST.
  * When `tsInstance` is present also collect type inference from TSC and return both AST & types.
@@ -1508,9 +1582,15 @@ const createTscProgramConfig = (srcFiles, src) => {
     configParseDefaults,
     configPath
   );
-  const rootNames = [
-    ...new Set([...srcFiles, ...parsedConfig.fileNames])
-  ].sort();
+  // A tsconfig without `include` lists every file under its directory, so a
+  // file discovery left out stays out of the program too; files outside the
+  // source root are other projects' and stay in.
+  const srcRoot = resolve(src);
+  const configFileNames = parsedConfig.fileNames.filter(
+    (file) =>
+      !isUnderRoot(file, srcRoot) || !isLeftOutByDiscovery(file, srcRoot)
+  );
+  const rootNames = [...new Set([...srcFiles, ...configFileNames])].sort();
   return {
     rootNames,
     options: withAutomaticTypes(
@@ -1563,12 +1643,54 @@ function createTsc(srcFiles, src) {
       };
     };
 
+    // The checker's writeType takes a maximum length and an object it marks
+    // when it cut the type short, which typeToString does not pass on; the
+    // public typings leave writeType out. A type cut short also stays cut short
+    // in the checker's cache for that enclosing node, without the mark, so each
+    // type that runs over is remembered and not written out in full again in
+    // the same file. Starting afresh for each file keeps a file's type map
+    // independent of the files before it, and of how files are shared out
+    // between workers.
+    const boundedTypeToString = (type, context, flags) => {
+      const out = { canIncreaseExpansionDepth: false, truncated: false };
+      const text =
+        typeof typeChecker.writeType === "function"
+          ? typeChecker.writeType(
+              type,
+              context,
+              flags,
+              undefined,
+              MAX_TYPE_STRING_LENGTH,
+              undefined,
+              out
+            )
+          : typeChecker.typeToString(type, context, flags);
+      return out.truncated || text.length >= MAX_TYPE_STRING_LENGTH
+        ? undefined
+        : text;
+    };
+    let oversizedTypes = new WeakMap();
+    const typeToBoundedString = (type, context) => {
+      if (!oversizedTypes.has(type)) {
+        const text = boundedTypeToString(type, context, TSC_FLAGS);
+        if (text !== undefined) {
+          return text;
+        }
+        oversizedTypes.set(type, "byName");
+      }
+      if (oversizedTypes.get(type) === "byName") {
+        const text = boundedTypeToString(type, context, TSC_FLAGS_BY_NAME);
+        if (text !== undefined) {
+          return text;
+        }
+        oversizedTypes.set(type, "unwritable");
+      }
+      return "any";
+    };
+
     const safeTypeToString = (type, context) => {
       try {
-        return normalizeTypeString(
-          typeChecker.typeToString(type, context, TSC_FLAGS),
-          context
-        );
+        return normalizeTypeString(typeToBoundedString(type, context), context);
       } catch (err) {
         return "any";
       }
@@ -1577,7 +1699,7 @@ function createTsc(srcFiles, src) {
     const safeTypeWithContextToString = (node, context) => {
       try {
         return normalizeTypeString(
-          typeChecker.typeToString(node, context, TSC_FLAGS),
+          typeToBoundedString(node, context),
           context
         );
       } catch (err) {
@@ -2229,6 +2351,7 @@ function createTsc(srcFiles, src) {
 
     const collectTypes = (sourceFile) => {
       const fileSeenTypes = new Map();
+      oversizedTypes = new WeakMap();
       tsc.forEachChild(sourceFile, (node) => addType(node, fileSeenTypes));
       return fileSeenTypes;
     };
@@ -2263,9 +2386,10 @@ const expandSrcFilesWithRootNames = (srcFiles, rootNames, src) => {
   for (const file of rootNames) {
     const resolvedFile = resolve(file);
     if (
-      resolvedFile.startsWith(srcRoot) &&
+      isUnderRoot(resolvedFile, srcRoot) &&
       /\.(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)$/.test(file) &&
       !isExcludedTestFile(file) &&
+      !isExcludedMinifiedFile(file) &&
       !srcFileByResolvedPath.has(resolvedFile)
     ) {
       srcFileByResolvedPath.set(

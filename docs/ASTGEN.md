@@ -178,7 +178,9 @@ With `--tsTypes` on (the default), astgen builds a TypeScript program over the p
 }
 ```
 
-A `tsconfig.json` or `jsconfig.json` found at or above the source root shapes the program, and its root file names expand the parse set beyond what filename discovery found, so files referenced only through the config are still parsed.
+A `tsconfig.json` or `jsconfig.json` found at or above the source root shapes the program, and its root file names expand the parse set beyond what filename discovery found, so files referenced only through the config are still parsed. The config never overrides discovery's own rules, which matters most for a config without `include`, since that lists every file under its directory. A file in a directory discovery skips (one named in `ASTGEN_IGNORE_DIRS`, a default such as `e2e` or `examples`, a dot directory, `node_modules`) or with a name matching `ASTGEN_IGNORE_FILE_PATTERN` is neither parsed nor part of the program, and test and minified files are not parsed. Declaration files the config lists are still parsed and still give the program their types, although discovery skips them by default.
+
+A type is written in full up to 4,096 characters. A longer one is written by its alias name where it has one, so Playwright's `expect` becomes `import("@playwright/test").Expect<{}>`. Where it has none, it is left out, as an unresolved type would be. Written out in full, that one type runs to 1.7 million characters, and the checker kept what it built for every place it was printed, which exhausted the heap after a few files.
 
 Every package under `node_modules/@types` at or above the project is part of the program unless the project's config sets `types`. TypeScript 6 includes none of them by default, which would leave Node built-ins such as `node:fs`, `Buffer` and `process` typed `any`; astgen sets `types: ["*"]`, the behaviour of earlier TypeScript versions. Without a config, the packages are looked up from the source root, not from the directory astgen runs in.
 
