@@ -40,8 +40,11 @@ import { lowerEmberFile } from "./emberAst.js";
 // event modifiers, directive arguments or dashed bound names (`@submit.prevent`,
 // `:aria-label`) parse in place instead of falling back to the script alone.
 // 4.5.0: Ember templates (`.hbs`, `.gjs`, `.gts`) are rewritten into TSX and
-// parsed; the AST JSON carries the rewritten text as `source`.
-const ASTGEN_VERSION = "4.5.0";
+// parsed; the AST JSON carries the rewritten text as `source`. 4.5.1: files
+// with source phase or deferred imports (`import source`, `import defer`) are
+// parsed instead of dropped, and type maps include `node_modules/@types`
+// packages again when the project does not set `types`.
+const ASTGEN_VERSION = "4.5.1";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -274,7 +277,9 @@ const babelSyntaxPlugins = [
   "dynamicImport",
   "importAttributes",
   "explicitResourceManagement",
-  "topLevelAwait"
+  "topLevelAwait",
+  "sourcePhaseImports",
+  "deferredImportEvaluation"
 ];
 
 const isNonJsxTypeScriptFile = (file) =>
@@ -1347,6 +1352,26 @@ const findNearestPackageJson = (src) => {
   }
 };
 
+/**
+ * Every `node_modules/@types` directory at or above `dir`, nearest first: where
+ * TypeScript looks for type packages from a project directory.
+ */
+const findTypeRoots = (dir) => {
+  const typeRoots = [];
+  let currentDir = resolve(dir);
+  while (true) {
+    const typesDir = join(currentDir, "node_modules", "@types");
+    if (existsSync(typesDir)) {
+      typeRoots.push(typesDir);
+    }
+    const parentDir = dirname(currentDir);
+    if (parentDir === currentDir) {
+      return typeRoots;
+    }
+    currentDir = parentDir;
+  }
+};
+
 const detectDefaultTscOptions = (srcFiles, src) => {
   const nearPackageJson = findNearestPackageJson(src);
   const packageJson = nearPackageJson
@@ -1430,13 +1455,34 @@ const findTsConfig = (src) => {
   );
 };
 
+/**
+ * TypeScript 6 leaves every `node_modules/@types` package out of the program
+ * unless `types` names it, which types Node built-ins (`node:fs`, `Buffer`,
+ * `process`) as any. A project that does not set `types` gets them all, as
+ * before TypeScript 6. TypeScript searches from the tsconfig's directory, or
+ * else from the working directory, so without a tsconfig the search starts at
+ * the source directory instead.
+ */
+const withAutomaticTypes = (options, src) => {
+  if (options.types !== undefined) {
+    return options;
+  }
+  if (options.configFilePath) {
+    return { ...options, types: ["*"] };
+  }
+  const typeRoots = options.typeRoots ?? findTypeRoots(src);
+  return typeRoots.length > 0
+    ? { ...options, types: ["*"], typeRoots }
+    : options;
+};
+
 const createTscProgramConfig = (srcFiles, src) => {
   const detectedDefaultOptions = detectDefaultTscOptions(srcFiles, src);
   const configPath = findTsConfig(src);
   if (!configPath) {
     return {
       rootNames: srcFiles,
-      options: detectedDefaultOptions
+      options: withAutomaticTypes(detectedDefaultOptions, src)
     };
   }
 
@@ -1444,7 +1490,7 @@ const createTscProgramConfig = (srcFiles, src) => {
   if (configFile.error) {
     return {
       rootNames: srcFiles,
-      options: detectedDefaultOptions
+      options: withAutomaticTypes(detectedDefaultOptions, src)
     };
   }
 
@@ -1467,16 +1513,19 @@ const createTscProgramConfig = (srcFiles, src) => {
   ].sort();
   return {
     rootNames,
-    options: {
-      ...DEFAULT_TSC_OPTIONS,
-      ...(shouldRespectExplicitModuleSettings ? {} : detectedDefaultOptions),
-      ...parsedConfig.options,
-      allowJs: true,
-      checkJs: true,
-      noEmit: true,
-      skipLibCheck: true,
-      resolveJsonModule: true
-    }
+    options: withAutomaticTypes(
+      {
+        ...DEFAULT_TSC_OPTIONS,
+        ...(shouldRespectExplicitModuleSettings ? {} : detectedDefaultOptions),
+        ...parsedConfig.options,
+        allowJs: true,
+        checkJs: true,
+        noEmit: true,
+        skipLibCheck: true,
+        resolveJsonModule: true
+      },
+      src
+    )
   };
 };
 

@@ -30,6 +30,8 @@ The TypeScript dependency is the TS 6 engine, not TS 7. TypeScript 7 is the nati
 
 Every parse runs with error recovery enabled, so a file with syntax problems still yields a tree, with the problems recorded in the `errors` array of the output. A failed parse is logged and skipped, never fatal to the run.
 
+Source phase and deferred imports (`import source wasm from "./m.wasm"`, `import.source(...)`, `import defer * as m from "./m.js"`, `import.defer(...)`) parse too. Babel represents them with the usual `ImportDeclaration` and `ImportExpression` nodes and a `phase` field of `"source"` or `"defer"`.
+
 ## Project types and detection
 
 Without `-t`, astgen looks for a `package.json` or `rush.json` in the source directory to recognize a JavaScript or TypeScript project. With `-t` you can be explicit, which also changes parsing strategy:
@@ -178,6 +180,8 @@ With `--tsTypes` on (the default), astgen builds a TypeScript program over the p
 
 A `tsconfig.json` or `jsconfig.json` found at or above the source root shapes the program, and its root file names expand the parse set beyond what filename discovery found, so files referenced only through the config are still parsed.
 
+Every package under `node_modules/@types` at or above the project is part of the program unless the project's config sets `types`. TypeScript 6 includes none of them by default, which would leave Node built-ins such as `node:fs`, `Buffer` and `process` typed `any`; astgen sets `types: ["*"]`, the behaviour of earlier TypeScript versions. Without a config, the packages are looked up from the source root, not from the directory astgen runs in.
+
 The checker is single-threaded, so parallelism comes from sharding: files are dealt round-robin to workers, and each worker builds its own program over the full project file set before processing its shard. Cross-file resolution is therefore identical to the single-threaded path, with one cosmetic difference: a small number of inferred union types may print their members in a different order (`A | B` becomes `B | A`, semantically identical). Leave `ASTGEN_TYPE_WORKERS` unset for byte-identical output across machines; set it to `auto` or a number to trade that cosmetic reordering for a large speedup on big projects. If any worker fails, the run falls back to inline processing, which is safe because writes are idempotent.
 
 ## Environment variables
@@ -195,4 +199,4 @@ The checker is single-threaded, so parallelism comes from sharding: files are de
 
 Each source file becomes `<output>/<relative-path>.json` with the shape `{"fullName", "relativeName", "ast"}`, and each type-mapped file also gets `<relative-path>.typemap`. See [Output Formats](OUTPUT_FORMATS.md).
 
-`astgen --version` prints the AST format version (currently 4.2.0). It is not decorative: downstream frontends such as chen's `jssrc2cpg` fold it into their parse-cache fingerprint, so it must be bumped whenever the emitted AST or type shape changes. A stale version number means stale cached parses get silently reused, which is the one bug this contract exists to prevent.
+`astgen --version` prints the AST format version (currently 4.5.1). It is not decorative: downstream frontends such as chen's `jssrc2cpg` fold it into their parse-cache fingerprint, so it must be bumped whenever the emitted AST or type shape changes. A stale version number means stale cached parses get silently reused, which is the one bug this contract exists to prevent.
