@@ -1,0 +1,20 @@
+astgen.js
+  h_0926447d100ad2 43-47
+docs/ASTGEN.md
+  h_0926447d100ad2 202
+package-lock.json
+  h_0926447d100ad2 3,9
+package.json
+  h_0926447d100ad2 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7ec9bdcaadb420e6eecb1727794c253acbead920",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
