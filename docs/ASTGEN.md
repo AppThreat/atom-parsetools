@@ -30,6 +30,8 @@ The TypeScript dependency is the TS 6 engine, not TS 7. TypeScript 7 is the nati
 
 Every parse runs with error recovery enabled, so a file with syntax problems still yields a tree, with the problems recorded in the `errors` array of the output. A failed parse is logged and skipped, never fatal to the run.
 
+Source phase and deferred imports (`import source wasm from "./m.wasm"`, `import.source(...)`, `import defer * as m from "./m.js"`, `import.defer(...)`) parse too. Babel represents them with the usual `ImportDeclaration` and `ImportExpression` nodes and a `phase` field of `"source"` or `"defer"`.
+
 ## Project types and detection
 
 Without `-t`, astgen looks for a `package.json` or `rush.json` in the source directory to recognize a JavaScript or TypeScript project. With `-t` you can be explicit, which also changes parsing strategy:

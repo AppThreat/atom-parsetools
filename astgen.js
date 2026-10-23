@@ -274,7 +274,9 @@ const babelSyntaxPlugins = [
   "dynamicImport",
   "importAttributes",
   "explicitResourceManagement",
-  "topLevelAwait"
+  "topLevelAwait",
+  "sourcePhaseImports",
+  "deferredImportEvaluation"
 ];
 
 const isNonJsxTypeScriptFile = (file) =>
