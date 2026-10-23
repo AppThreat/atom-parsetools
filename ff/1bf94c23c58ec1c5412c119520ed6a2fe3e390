@@ -1,0 +1,32 @@
+.gitignore
+  h_0926447d100ad2 42-43
+astgen.js
+  h_0926447d100ad2 1350-1369,1453-1473,1480,1488,1511-1523
+docs/ASTGEN.md
+  h_0926447d100ad2 181-182
+package.json
+  h_0926447d100ad2 9,26
+test-fixtures/astgen-node-types-regression.js
+  h_0926447d100ad2 1-103
+test-fixtures/projects/node-builtins/node_modules/@types/node/index.d.ts
+  h_0926447d100ad2 1-21
+test-fixtures/projects/node-builtins/node_modules/@types/node/package.json
+  h_0926447d100ad2 1-6
+test-fixtures/projects/node-builtins/package.json
+  h_0926447d100ad2 1-5
+test-fixtures/projects/node-builtins/reader.ts
+  h_0926447d100ad2 1-4
+test-fixtures/projects/node-builtins/server.js
+  h_0926447d100ad2 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ff1bf94c23c58ec1c5412c119520ed6a2fe3e390",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
