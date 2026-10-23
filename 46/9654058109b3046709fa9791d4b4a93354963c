@@ -1,0 +1,36 @@
+astgen.js
+  h_0926447d100ad2 3,450-513,1585-1593,2389,2392
+docs/ASTGEN.md
+  h_0926447d100ad2 181
+package.json
+  h_0926447d100ad2 9,29
+test-fixtures/astgen-ignored-dirs-regression.js
+  h_0926447d100ad2 1-109
+test-fixtures/projects/ignored-dirs/e2e/flows.ts
+  h_0926447d100ad2 1
+test-fixtures/projects/ignored-dirs/examples/demo.ts
+  h_0926447d100ad2 1
+test-fixtures/projects/ignored-dirs/package.json
+  h_0926447d100ad2 1-5
+test-fixtures/projects/ignored-dirs/src/env.d.ts
+  h_0926447d100ad2 1
+test-fixtures/projects/ignored-dirs/src/legacy-api.ts
+  h_0926447d100ad2 1
+test-fixtures/projects/ignored-dirs/src/service.ts
+  h_0926447d100ad2 1-5
+test-fixtures/projects/ignored-dirs/tsconfig.json
+  h_0926447d100ad2 1-6
+test-fixtures/projects/ignored-dirs/vendor/chart-min.js
+  h_0926447d100ad2 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "469654058109b3046709fa9791d4b4a93354963c",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
