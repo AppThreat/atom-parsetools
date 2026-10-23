@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { join, dirname, relative, resolve, basename } from "path";
+import { join, dirname, relative, resolve, basename, isAbsolute } from "path";
 import { fileURLToPath } from "url";
 import { parse } from "@babel/parser";
 import { parse as parseHermes } from "hermes-parser";
@@ -446,6 +446,70 @@ const shouldIncludeNodeModulesBundles =
   (process.env?.ASTGEN_IGNORE_DIRS &&
     process.env.ASTGEN_IGNORE_DIRS.length > 0 &&
     !process.env.ASTGEN_IGNORE_DIRS.toLowerCase().includes("node_modules"));
+
+// What discovery leaves out, decided as getAllFiles in @appthreat/atom-common
+// decides it, which exports neither list: directories named in
+// ASTGEN_IGNORE_DIRS (else its eleven defaults), compared with the lowercased
+// directory name, and any directory or file name matching
+// ASTGEN_IGNORE_FILE_PATTERN (else its default, which matches declaration files
+// and three.js).
+const DISCOVERY_IGNORE_DIRS = process.env.ASTGEN_IGNORE_DIRS
+  ? process.env.ASTGEN_IGNORE_DIRS.split(",")
+  : [
+      "venv",
+      "docs",
+      "e2e",
+      "e2e-beta",
+      "examples",
+      "cypress",
+      "jest-cache",
+      "eslint-rules",
+      "codemods",
+      "flow-typed",
+      "i18n"
+    ];
+const DISCOVERY_IGNORE_FILE_PATTERN = new RegExp(
+  process.env.ASTGEN_IGNORE_FILE_PATTERN || "(three|\\.d)\\.(js|ts|jsx|tsx)$",
+  "i"
+);
+const DECLARATION_FILE_PATTERN = /\.d\.[cm]?ts$/i;
+
+const isUnderRoot = (file, root) => {
+  const relativePath = relative(root, resolve(file));
+  return (
+    relativePath !== "" &&
+    !isAbsolute(relativePath) &&
+    relativePath.split(/[\\/]/)[0] !== ".."
+  );
+};
+
+/**
+ * Whether discovery would have left out `file`, which sits under `srcRoot`:
+ * a directory on the way is a dot directory, node_modules, or a name the
+ * ignore list or the ignore pattern covers, or the file's own name is a dotfile
+ * or matches the ignore pattern. A declaration file is not left out for its
+ * name, because the default pattern would otherwise keep a tsconfig's
+ * declarations out of the program.
+ */
+const isLeftOutByDiscovery = (file, srcRoot) => {
+  const names = relative(srcRoot, resolve(file)).split(/[\\/]/);
+  const fileName = names.pop();
+  const skipsDirectory = names.some(
+    (name) =>
+      name.startsWith(".") ||
+      name.toLowerCase() === "node_modules" ||
+      DISCOVERY_IGNORE_DIRS.includes(name.toLowerCase()) ||
+      DISCOVERY_IGNORE_FILE_PATTERN.test(name)
+  );
+  if (skipsDirectory) {
+    return true;
+  }
+  return (
+    fileName.startsWith(".") ||
+    (DISCOVERY_IGNORE_FILE_PATTERN.test(fileName) &&
+      !DECLARATION_FILE_PATTERN.test(fileName))
+  );
+};
 
 /**
  * Return paths to all (j|tsx?) files.
@@ -1518,9 +1582,15 @@ const createTscProgramConfig = (srcFiles, src) => {
     configParseDefaults,
     configPath
   );
-  const rootNames = [
-    ...new Set([...srcFiles, ...parsedConfig.fileNames])
-  ].sort();
+  // A tsconfig without `include` lists every file under its directory, so a
+  // file discovery left out stays out of the program too; files outside the
+  // source root are other projects' and stay in.
+  const srcRoot = resolve(src);
+  const configFileNames = parsedConfig.fileNames.filter(
+    (file) =>
+      !isUnderRoot(file, srcRoot) || !isLeftOutByDiscovery(file, srcRoot)
+  );
+  const rootNames = [...new Set([...srcFiles, ...configFileNames])].sort();
   return {
     rootNames,
     options: withAutomaticTypes(
@@ -2316,9 +2386,10 @@ const expandSrcFilesWithRootNames = (srcFiles, rootNames, src) => {
   for (const file of rootNames) {
     const resolvedFile = resolve(file);
     if (
-      resolvedFile.startsWith(srcRoot) &&
+      isUnderRoot(resolvedFile, srcRoot) &&
       /\.(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)$/.test(file) &&
       !isExcludedTestFile(file) &&
+      !isExcludedMinifiedFile(file) &&
       !srcFileByResolvedPath.has(resolvedFile)
     ) {
       srcFileByResolvedPath.set(
