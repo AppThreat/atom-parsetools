@@ -1609,12 +1609,107 @@ const createTscProgramConfig = (srcFiles, src) => {
   };
 };
 
+// Per-file type-generation diagnostics, for finding which files and which
+// checker calls dominate a typed run. Off by default; with ASTGEN_TYPE_TIMING=1
+// each collectTypes call logs one stderr line with wall time, visited nodes and
+// checker call counts, and ASTGEN_TYPE_TIMING_SLOW_MS=n also lists the queries
+// slower than n ms. Purely observational: the type output does not change.
+const TYPE_TIMING_ENABLED =
+  process.env.ASTGEN_TYPE_TIMING === "1" ||
+  process.env.ASTGEN_TYPE_TIMING === "true";
+const TYPE_TIMING_SLOW_MS = Number(process.env.ASTGEN_TYPE_TIMING_SLOW_MS || 0);
+const TYPE_TIMING_COUNTED = [
+  "getSymbolAtLocation",
+  "getSignatureFromDeclaration",
+  "getReturnTypeOfSignature",
+  "getResolvedSignature",
+  "getSignaturesOfType",
+  "getTypeFromTypeNode"
+];
+
+/**
+ * Wraps the checker's methods with counters and returns the per-file state,
+ * or undefined when ASTGEN_TYPE_TIMING is off.
+ */
+const instrumentTypeChecker = (typeChecker) => {
+  if (!TYPE_TIMING_ENABLED) {
+    return undefined;
+  }
+  const timing = { nodes: 0, calls: {}, ms: {} };
+  const reset = () => {
+    timing.nodes = 0;
+    timing.calls = {};
+    timing.ms = {};
+    timing.kinds = new Map();
+    timing.repeats = 0;
+    timing.slow = [];
+  };
+  reset();
+  const queried = new WeakSet();
+  const wrap = (name, onCall) => {
+    if (typeof typeChecker[name] !== "function") {
+      return;
+    }
+    const original = typeChecker[name].bind(typeChecker);
+    typeChecker[name] = (...args) => {
+      const t0 = performance.now();
+      try {
+        return original(...args);
+      } finally {
+        const ms = performance.now() - t0;
+        timing.calls[name] = (timing.calls[name] || 0) + 1;
+        timing.ms[name] = (timing.ms[name] || 0) + ms;
+        onCall?.(args[0], ms);
+      }
+    };
+  };
+  wrap("getTypeAtLocation", (node, ms) => {
+    const kind = tsc.SyntaxKind[node.kind];
+    timing.kinds.set(kind, (timing.kinds.get(kind) || 0) + 1);
+    if (queried.has(node)) {
+      timing.repeats++;
+    } else {
+      queried.add(node);
+    }
+    if (TYPE_TIMING_SLOW_MS > 0 && ms >= TYPE_TIMING_SLOW_MS) {
+      const srcFile = node.getSourceFile();
+      const { line } = srcFile.getLineAndCharacterOfPosition(node.getStart());
+      timing.slow.push({ ms, at: `${kind} @${srcFile.fileName}:${line + 1}` });
+    }
+  });
+  wrap("writeType");
+  for (const name of TYPE_TIMING_COUNTED) {
+    wrap(name);
+  }
+  timing.report = (fileName, ms) => {
+    const count = (name) => timing.calls[name] || 0;
+    const own = (name) => (timing.ms[name] || 0).toFixed(0);
+    const topKinds = [...timing.kinds.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([kind, n]) => `${kind}:${n}`)
+      .join(",");
+    console.error(
+      `[astgen-type-timing] file=${fileName} ms=${ms.toFixed(0)} nodes=${timing.nodes} getTypeAtLocation=${count("getTypeAtLocation")} (ms=${own("getTypeAtLocation")}) repeatQueries=${timing.repeats} writeType=${count("writeType")} (ms=${own("writeType")}) ${TYPE_TIMING_COUNTED.map((name) => `${name}=${count(name)}`).join(" ")} topKinds=${topKinds}`
+    );
+    for (const q of timing.slow.sort((a, b) => b.ms - a.ms).slice(0, 20)) {
+      console.error(
+        `[astgen-type-timing] slow-query ${q.at} ${q.ms.toFixed(0)}ms`
+      );
+    }
+    reset();
+  };
+  return timing;
+};
+
 function createTsc(srcFiles, src) {
   try {
     const tscConfig = createTscProgramConfig(srcFiles, src);
     const program = tsc.createProgram(tscConfig.rootNames, tscConfig.options);
     const typeChecker = program.getTypeChecker();
     const seenTypes = new Map();
+
+    const typeTiming = instrumentTypeChecker(typeChecker);
 
     // Return-type inference below can re-walk the body of the *same* function
     // declaration once per referencing call site / initializer (e.g. a helper
@@ -1970,6 +2065,9 @@ function createTsc(srcFiles, src) {
     );
 
     const addType = (node, currentSeenTypes = seenTypes) => {
+      if (typeTiming) {
+        typeTiming.nodes++;
+      }
       // STRUCTURAL/CONTAINER NODES
       if (
         node.kind === tsc.SyntaxKind.SourceFile ||
@@ -2356,12 +2454,21 @@ function createTsc(srcFiles, src) {
       return fileSeenTypes;
     };
 
+    const collectTypesWithTiming = typeTiming
+      ? (sourceFile) => {
+          const t0 = performance.now();
+          const result = collectTypes(sourceFile);
+          typeTiming.report(sourceFile.fileName, performance.now() - t0);
+          return result;
+        }
+      : collectTypes;
+
     return {
       program: program,
       typeChecker: typeChecker,
       rootNames: tscConfig.rootNames,
       addType: addType,
-      collectTypes: collectTypes,
+      collectTypes: collectTypesWithTiming,
       seenTypes: seenTypes
     };
   } catch (err) {
