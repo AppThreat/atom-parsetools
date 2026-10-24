@@ -1,0 +1,21 @@
+package-lock.json
+  s_e335fe820b41b8::t_8c6a20f9a0fb32 3,9
+package.json
+  s_e335fe820b41b8::t_02a690f40f5598 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87f31c9c175c29542186a2f48831b1e930bc7314",
+  "prompts": {},
+  "sessions": {
+    "s_e335fe820b41b8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "120fe233-8899-4149-b780-6eac261dbd9d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Team AppThreat <cloud@appthreat.com>"
+    }
+  }
+}
