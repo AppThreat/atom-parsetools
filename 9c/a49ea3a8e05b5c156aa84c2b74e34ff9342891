@@ -1,0 +1,35 @@
+test-fixtures/astgen-recursive-types-regression.js
+  s_e335fe820b41b8::t_2ddd07a8e265a1 1-9,11-13,19-33,35-52,59-73
+  s_e335fe820b41b8::t_22a7b733af23fd 10,34,53-58
+  s_e335fe820b41b8::t_59603c5f5c0298 14-18
+  s_e335fe820b41b8::t_afde6d68516440 74
+test-fixtures/projects/recursive-payload/service.ts
+  s_e335fe820b41b8::t_27748792623aaa 1-12
+test-fixtures/projects/recursive-payload/client.ts
+  s_e335fe820b41b8::t_27748792623aaa 8,26-37,39,43,46,56,59,61-62,64,66,68,70,75,77,83-86,91,106,112-116,118,123-130,135-136,141-142,146,150-151,155-156
+  s_e335fe820b41b8::t_111e802153ca8f 1-7,9-25,38,40-42,44-45,47-55,57-58,60,63,65,67,69,71-74,76,78-82,87-90,92-105,107-111,117,119-122,131-134,137-140,143-145,147-149,152-154,157-158
+package.json
+  s_e335fe820b41b8::t_25dc4cc80e98c4 9
+astgen.js
+  s_e335fe820b41b8::t_ec5abac98c61eb 1209-1215,1222-1236,1798-1799,1811-1824
+  s_e335fe820b41b8::t_c5e1ea2bd85185 1221
+  s_e335fe820b41b8::t_25dc4cc80e98c4 46-49,1216-1220
+  s_e335fe820b41b8::t_874f6b64f6f0f9 1678-1679,1682-1693
+  s_e335fe820b41b8::t_eb648851d75b4d 50,1237,1694,1740,1825
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9ca49ea3a8e05b5c156aa84c2b74e34ff9342891",
+  "prompts": {},
+  "sessions": {
+    "s_e335fe820b41b8": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "120fe233-8899-4149-b780-6eac261dbd9d",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Team AppThreat <cloud@appthreat.com>"
+    }
+  }
+}
