@@ -43,8 +43,11 @@ import { lowerEmberFile } from "./emberAst.js";
 // parsed; the AST JSON carries the rewritten text as `source`. 4.5.1: files
 // with source phase or deferred imports (`import source`, `import defer`) are
 // parsed instead of dropped, and type maps include `node_modules/@types`
-// packages again when the project does not set `types`.
-const ASTGEN_VERSION = "4.5.1";
+// packages again when the project does not set `types`. 4.5.2: a project
+// whose types recursed through conditional types (Prisma 4's client) ran
+// astgen out of memory, leaving no ASTs at all; the empty parse must not be
+// reused.
+const ASTGEN_VERSION = "4.5.2";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -1203,6 +1206,35 @@ const TSC_FLAGS_BY_NAME = TSC_FLAGS & ~tsc.TypeFormatFlags.InTypeAlias;
 // type exhausts the heap after a few files. Real code stays far below this.
 const MAX_TYPE_STRING_LENGTH = 4096;
 
+// Most type nodes TypeScript may build while writing one type. Its node builder
+// stops honouring the length limit in places once it is truncating: it keeps
+// expanding substitution, conditional and template literal types, and a type
+// that recurses through them runs on until the heap is gone. One
+// `prisma.article.findMany` (Prisma 4.16) reached 17 million characters across
+// 300,000 builder calls and exhausted 4 GB, taking every file's types and ASTs
+// with it. The builder asks the checker's cancellation token once per node, so
+// a token that cancels past this many ends such a write, which is then a type
+// too long to write, as when the limit holds. A type astgen writes needs far
+// fewer: across 37 projects (juice-shop, taxonomy, the Angular, React, Vue,
+// Svelte and Solid realworld apps among them) none needed more than 305, and
+// every type map came out byte for byte as before. ASTGEN_TYPE_TIMING reports
+// the most a file's written types needed, and how many writes were cancelled.
+const MAX_TYPE_BUILDER_CALLS = 16384;
+
+/** A cancellation token that ends a type write past MAX_TYPE_BUILDER_CALLS. */
+const typeWriteBudget = () => {
+  const budget = {
+    calls: 0,
+    isCancellationRequested: () => budget.calls > MAX_TYPE_BUILDER_CALLS,
+    throwIfCancellationRequested: () => {
+      if (++budget.calls > MAX_TYPE_BUILDER_CALLS) {
+        throw new tsc.OperationCanceledException();
+      }
+    }
+  };
+  return budget;
+};
+
 /**
  * Convert a single vue file to AST.
  * When `tsInstance` is present also collect type inference from TSC and return both AST & types.
@@ -1643,8 +1675,23 @@ const instrumentTypeChecker = (typeChecker) => {
     timing.kinds = new Map();
     timing.repeats = 0;
     timing.slow = [];
+    timing.maxWrittenBuilderCalls = 0;
+    timing.cancelledWrites = 0;
   };
   reset();
+  // The builder calls a written type needed, and the writes cancelled for
+  // running past MAX_TYPE_BUILDER_CALLS.
+  timing.recordWrite = (builderCalls, written) => {
+    if (written) {
+      timing.maxWrittenBuilderCalls = Math.max(
+        timing.maxWrittenBuilderCalls,
+        builderCalls
+      );
+    }
+    if (builderCalls > MAX_TYPE_BUILDER_CALLS) {
+      timing.cancelledWrites++;
+    }
+  };
   const queried = new WeakSet();
   const wrap = (name, onCall) => {
     if (typeof typeChecker[name] !== "function") {
@@ -1690,7 +1737,7 @@ const instrumentTypeChecker = (typeChecker) => {
       .map(([kind, n]) => `${kind}:${n}`)
       .join(",");
     console.error(
-      `[astgen-type-timing] file=${fileName} ms=${ms.toFixed(0)} nodes=${timing.nodes} getTypeAtLocation=${count("getTypeAtLocation")} (ms=${own("getTypeAtLocation")}) repeatQueries=${timing.repeats} writeType=${count("writeType")} (ms=${own("writeType")}) ${TYPE_TIMING_COUNTED.map((name) => `${name}=${count(name)}`).join(" ")} topKinds=${topKinds}`
+      `[astgen-type-timing] file=${fileName} ms=${ms.toFixed(0)} nodes=${timing.nodes} getTypeAtLocation=${count("getTypeAtLocation")} (ms=${own("getTypeAtLocation")}) repeatQueries=${timing.repeats} writeType=${count("writeType")} (ms=${own("writeType")}) maxWrittenBuilderCalls=${timing.maxWrittenBuilderCalls} cancelledWrites=${timing.cancelledWrites} ${TYPE_TIMING_COUNTED.map((name) => `${name}=${count(name)}`).join(" ")} topKinds=${topKinds}`
     );
     for (const q of timing.slow.sort((a, b) => b.ms - a.ms).slice(0, 20)) {
       console.error(
@@ -1748,7 +1795,8 @@ function createTsc(srcFiles, src) {
     // between workers.
     const boundedTypeToString = (type, context, flags) => {
       const out = { canIncreaseExpansionDepth: false, truncated: false };
-      const text =
+      const budget = typeWriteBudget();
+      const write = () =>
         typeof typeChecker.writeType === "function"
           ? typeChecker.writeType(
               type,
@@ -1760,9 +1808,21 @@ function createTsc(srcFiles, src) {
               out
             )
           : typeChecker.typeToString(type, context, flags);
-      return out.truncated || text.length >= MAX_TYPE_STRING_LENGTH
-        ? undefined
-        : text;
+      let text;
+      try {
+        text = typeChecker.runWithCancellationToken
+          ? typeChecker.runWithCancellationToken(budget, write)
+          : write();
+      } catch (err) {
+        if (err instanceof tsc.OperationCanceledException) {
+          typeTiming?.recordWrite(budget.calls, false);
+          return undefined;
+        }
+        throw err;
+      }
+      const written = !out.truncated && text.length < MAX_TYPE_STRING_LENGTH;
+      typeTiming?.recordWrite(budget.calls, written);
+      return written ? text : undefined;
     };
     let oversizedTypes = new WeakMap();
     const typeToBoundedString = (type, context) => {
