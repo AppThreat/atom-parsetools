@@ -18,13 +18,17 @@ Count first, then explain. Both batch tools write a manifest with `files_parsed`
 | astgen: `node_modules` bundles missing                                   | bundles are opt-in; `ASTGEN_INCLUDE_NODE_MODULES_BUNDLES=true`                                                            |
 | phpastgen: `vendor/` or `tests/` absent                                  | the default `--exclude` regex; pass `-e NOMATCH` to disable                                                               |
 | rbastgen: `Gemfile`, `Rakefile` missing from a _different_ tool's output | basename-discovered DSL files are a rbastgen feature; check you ran rbastgen and that the manifest did not exclude them   |
-| scalasem: entries missing                                                | `scalac -print-tasty` failed for that file; check `ATOM_MAX_BUFFER` against very large class files, and stderr in the log |
+| scalasem: entries missing                                                | the helper or the build failed for that module; check the `diagnostics` array of the report, and stderr in the log       |
 
 ## A specific file produces no AST
 
 Per-file failures are never fatal in batch mode. Look in the diagnostics side-record (`phpastgen_diagnostics.jsonl`, `ruby_astgen_diagnostics.jsonl`) for the message, line, and column. Remember the naming contract: diagnostics exist only for the latest run, and a clean run deletes the file, so a stale diagnostics file on disk means something failed in the run you just did.
 
 Two file-level behaviors are sometimes mistaken for bugs. Non-UTF-8 sources are scrubbed and marked `encoding_scrubbed: true` rather than dropped. Trees deeper than `--max-depth` (default 250) are truncated with a `truncated_nodes` count rather than emitted whole or dropped.
+
+## A scalasem report covers fewer modules than the build has
+
+Read the `diagnostics` array of the report first; it names the module and the reason per case. A `helper-compile-failed` entry carries the Scala version and, when the compiler could not load a class, that class in `missingClass` — usually a runtime artifact of the compiler release that the local caches do not hold, which a run with installs allowed resolves through sbt. A `stale-output` entry says the module was read from its current output and an older output directory, built at another Scala version, was skipped; the report then describes the current build, not the older one. See [SCALASEM.md](SCALASEM.md) for the full diagnostics list.
 
 ## Output differs between machines
 

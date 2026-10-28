@@ -177,6 +177,30 @@
               "count": {
                 "type": "integer",
                 "minimum": 1
+              },
+              "missingClass": {
+                "type": "string",
+                "description": "The class a failed helper compile could not load, when the report names one."
+              },
+              "sourceRoot": {
+                "type": "string",
+                "description": "The source root a skipped output directory belongs to, relative to the project."
+              },
+              "skippedDir": {
+                "type": "string",
+                "description": "The output directory that was skipped, relative to the project."
+              },
+              "skippedVersion": {
+                "type": "string",
+                "description": "The Scala version of the skipped output."
+              },
+              "usedDir": {
+                "type": "string",
+                "description": "The output directory the module was read from, relative to the project."
+              },
+              "usedVersion": {
+                "type": "string",
+                "description": "The Scala version of the output the module was read from."
               }
             },
             "additionalProperties": false
