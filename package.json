@@ -28,7 +28,7 @@
     "test:oversized-types": "node test-fixtures/astgen-oversized-types-regression.js",
     "test:ignored-dirs": "node test-fixtures/astgen-ignored-dirs-regression.js",
     "test:supervise": "node test-fixtures/supervise-regression.js",
-    "test:scala": "node test-fixtures/scalasem-engine.js && node test-fixtures/scalasem-derive.js && node test-fixtures/scalasem-semanticdb.js && node test-fixtures/scalasem-report-schema.js && node test-fixtures/scalasem-jvm.js && node test-fixtures/scalasem-cli.js && node test-fixtures/scalasem-hygiene.js && node test-fixtures/scalasem-timeout.js",
+    "test:scala": "node test-fixtures/scalasem-engine.js && node test-fixtures/scalasem-derive.js && node test-fixtures/scalasem-semanticdb.js && node test-fixtures/scalasem-report-schema.js && node test-fixtures/scalasem-toolchain.js && node test-fixtures/scalasem-jvm.js && node test-fixtures/scalasem-cli.js && node test-fixtures/scalasem-hygiene.js && node test-fixtures/scalasem-timeout.js && node test-fixtures/scalasem-accuracy-units.js",
     "test:scala:record": "node test-fixtures/record-scalasem-inspector.js"
   },
   "dependencies": {

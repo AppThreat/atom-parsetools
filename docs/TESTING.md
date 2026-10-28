@@ -21,6 +21,25 @@ The Ruby and PHP suites skip themselves cleanly when the plugin bundle or the la
 
 The single most useful thing to know locally: `ci/verify-packed-tarball.sh` is the release check, and it runs the same way on a laptop as in CI. It packs the tarball, installs it into a scratch project, and parses fixtures with the installed copy.
 
+## The local accuracy check
+
+The fixture suites run scalasem over small projects, which no new Scala or sbt release can be trusted against alone. `test-fixtures/scalasem-accuracy.js` is the by-hand check over a large, current Scala code base, for example over a checkout of [chen](https://github.com/AppThreat/chen); run it before a release and after a change to the inventory, the compiler handling or the derivation rules. It is not part of CI and not part of `npm test`.
+
+```shell
+node test-fixtures/scalasem-accuracy.js ~/work/chen --out accuracy.json
+node test-fixtures/scalasem-accuracy.js ~/work/chen --no-build \
+    --baseline accuracy.json --out accuracy-new.json
+```
+
+The script builds the project with sbt unless `--no-build` is given (the sbt build may need `GITHUB_TOKEN`), runs scalasem, and scores the report against facts that do not come from scalasem:
+
+- **Coverage** per module is the share of main source files that have facts in the report.
+- **Diagnostics** are all listed; a `helper-compile-failed` or `stale-output` diagnostic counts as a failure and fails the run.
+- **Library usage** is read from the class files themselves: a constant pool reader collects the classes every compiled class file names, they are mapped to the jars of the module's classpath through the jars' zip central directories, and that set is compared against the types, owners and symbols the report names. A library the class files use but the report never mentions is a miss; one the report names without a class file reference lands in a review list. Inline methods and constants folded at compile time make the class files an imperfect ground truth, which is why the review list is not a failure. The project's own upstream modules are not libraries and stay out of the scoring.
+- **Call sites** are spot checked: a sample of the reported calls is checked for the called name appearing on the reported line of the source file.
+
+The numbers, the commit of the project and the scalasem version go to the `--out` JSON file, and a summary goes to stdout. With `--baseline`, the file of an earlier run, every number is shown against that run and a regression — less coverage, fewer calls, a diagnostic that appears — is called out.
+
 ## What the tests assert
 
 The suites deliberately assert what a consumer depends on rather than that a command ran. A few examples make the style concrete.
