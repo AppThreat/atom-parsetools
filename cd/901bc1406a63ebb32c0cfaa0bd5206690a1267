@@ -1,0 +1,26 @@
+test-fixtures/scalasem-accuracy.js
+  s_fa335490405673::t_8ca0029f8cc38c 514
+  s_fa335490405673::t_a24cdab7bfd705 505-506,510,512-513
+  s_fa335490405673::t_2486907c0bcb38 241-243
+  s_fa335490405673::t_b671dbc3a1cf6a 300-321,323,330-336,338-341,345,351,354-361
+lib/scalasem/build.js
+  s_fa335490405673::t_8ca0029f8cc38c 1623-1624
+  s_fa335490405673::t_e0c32f826b0f80 1615-1620,1625-1630,1635-1670
+  s_fa335490405673::t_4ead06690bf10e 1671-1672
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cd901bc1406a63ebb32c0cfaa0bd5206690a1267",
+  "prompts": {},
+  "sessions": {
+    "s_fa335490405673": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "session_4d118ca2f045774f75f935ecaaf04950",
+        "model": "unknown"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
