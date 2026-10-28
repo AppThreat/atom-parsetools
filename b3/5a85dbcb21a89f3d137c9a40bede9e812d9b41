@@ -1,0 +1,21 @@
+package-lock.json
+  s_7eb93de638d780::t_5cc18ad03442cb 3,9
+package.json
+  s_7eb93de638d780::t_c7171065c52f20 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b35a85dbcb21a89f3d137c9a40bede9e812d9b41",
+  "prompts": {},
+  "sessions": {
+    "s_7eb93de638d780": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "af19c3b2-f6ed-448e-b098-9b6aa932d5c2",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
