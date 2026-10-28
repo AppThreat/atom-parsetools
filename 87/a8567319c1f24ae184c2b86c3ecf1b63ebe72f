@@ -1,0 +1,21 @@
+lib/scalasem/build.js
+  s_7eb93de638d780::t_ab9dff3429fecb 1427-1430,1448,1468,1624
+lib/scalasem/compiler.js
+  s_7eb93de638d780::t_ab9dff3429fecb 270-271,371,387-397,496-498
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "87a8567319c1f24ae184c2b86c3ecf1b63ebe72f",
+  "prompts": {},
+  "sessions": {
+    "s_7eb93de638d780": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "af19c3b2-f6ed-448e-b098-9b6aa932d5c2",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
