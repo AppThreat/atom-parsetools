@@ -1,0 +1,24 @@
+lib/scalasem/compiler.js
+  s_fa335490405673::t_52acbb0b64979a 563
+  s_fa335490405673::t_9e87d6c03c6760 250
+  s_fa335490405673::t_8749269ae7f6cb 496-499,508-512,514-519,521-528,531
+test-fixtures/scalasem-toolchain.js
+  s_fa335490405673::t_2f5fe3d21daebd 162-165,190-192,195-196
+  s_fa335490405673::t_3ca7952061dd59 281
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "76ca11f7121fcdb5e37cdd38a051acaaea4506a2",
+  "prompts": {},
+  "sessions": {
+    "s_fa335490405673": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "session_4d118ca2f045774f75f935ecaaf04950",
+        "model": "unknown"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
