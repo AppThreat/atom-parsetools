@@ -58,7 +58,11 @@ scalasem "$(pwd)" slices.json
 The debug printer behind `scalac -print-tasty` is never used: it crashes on TASTy newer than
 the compiler that reads it, and one crash ends the whole batch. The TASTy Inspector API reads
 through the compiler's real unpickler instead. That is why the compiler that wrote the files is
-resolved first; its version is recorded in every TASTy header.
+resolved first; its version is recorded in every TASTy header. The helper is compiled against
+the compiler's full runtime classpath, which is read from the compiler's own POM in the local
+caches and resolved from those caches the way Maven resolves it, so a release that changes the
+artifacts it needs is followed without a new list; when the caches cannot satisfy the POM, the
+throwaway sbt project completes them.
 
 ## SemanticDB
 
@@ -124,7 +128,11 @@ source layout rather than the compiler's trees, and every call graph edge they p
   previous build exported next to it (sbt 1 `<module>/target/streams`, sbt 2
   `target/out/<platform>/scala-<v>/<module>/streams`, Mill `out/<module>/*.json`). When a cross
   build left several Scala 3 trees for one module, the newest is read and the choice is
-  recorded as a `no-build-scala-version` diagnostic.
+  recorded as a `no-build-scala-version` diagnostic. An sbt build that keeps the output of its
+  modules under `target/out` at the build root declares them: that output is read, whatever
+  Scala version it was built with, and the trees an earlier build left beside the sources are
+  skipped as `stale-output`, with the directory, its Scala version and the winning one named.
+  A directory that belongs to no module of the build is ignored.
 
 Only the class directories the build reports are read. A cross build keeps several
 `target/scala-<v>` trees side by side, and a directory walk would mix them; the build says
@@ -343,9 +351,10 @@ where one did:
 | `build-compile-failed`, `scala-cli-compile-failed`, `maven-classpath-failed`   | The build tool failed to compile or to print the classpath.                                    |
 | `semanticdb-unavailable`, `semanticdb-missing`, `semanticdb-compile-failed`    | No plugin release for the Scala version, or a compile that wrote no SemanticDB.                |
 | `scala2-unsupported`                                                           | A Scala 2 module with no SemanticDB to read.                                                   |
-| `compiler-unavailable`, `tasty-inspector-unavailable`, `helper-compile-failed` | The TASTy of a compiler release could not be read.                                             |
+| `compiler-unavailable`, `tasty-inspector-unavailable`, `helper-compile-failed` | The TASTy of a compiler release could not be read. A failed helper compile names the class its compiler could not load in `missingClass`.                            |
 | `unreadable-tasty`                                                             | TASTy files the compiler could not load.                                                       |
 | `scala-version-mismatch`, `no-build-scala-version`                             | `SCALA_VERSION` names a release the build output does not hold, or a cross build left several. |
+| `stale-output`                                                                 | Output of a module that an earlier build left elsewhere was skipped; the entry names the source root, the skipped directory with its Scala version, and the directory the module was read from. |
 | `unresolved-symbols`, `walker-failed`                                          | Counts of symbols the helper could not resolve and files its walker could not finish.          |
 
 ## Caching

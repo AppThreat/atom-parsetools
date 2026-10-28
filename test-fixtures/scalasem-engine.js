@@ -1063,6 +1063,123 @@ assert.deepStrictEqual(
   "per module exported classpath"
 );
 
+// An sbt 2 build keeps the output of every module under `target/out` at the build root, which
+// declares the modules and their current Scala version. The trees an sbt 1 build of the same
+// modules left beside the sources, and the older Scala version under `target/out`, are stale
+// output of the declared module; a directory no declared module claims is no project of the
+// build and is ignored.
+const migrated = join("migrated-build");
+write(join(migrated, "build.sbt"));
+write(join(migrated, "project", "build.properties"), "sbt.version=2.0.10\n");
+write(
+  join(
+    migrated,
+    "target/out/jvm/scala-3.10.0/c2cpg/classes/io/appthreat/c2cpg/A.tasty"
+  )
+);
+write(
+  join(
+    migrated,
+    "target/out/jvm/scala-3.10.0/x2cpg/classes/io/appthreat/x2cpg/B.tasty"
+  )
+);
+write(
+  join(
+    migrated,
+    "target/out/jvm/scala-3.8.4/c2cpg/classes/io/appthreat/c2cpg/A.tasty"
+  )
+);
+write(
+  join(
+    migrated,
+    "platform/frontends/c2cpg/target/scala-3.9.0/classes/io/appthreat/c2cpg/A.tasty"
+  )
+);
+write(
+  join(
+    migrated,
+    "platform/frontends/c2cpg/target/scala-3.9.0/test-classes/io/appthreat/c2cpg/A.tasty"
+  )
+);
+write(
+  join(
+    migrated,
+    "platform/frontends/x2cpg/target/scala-3.9.0/classes/io/appthreat/x2cpg/B.tasty"
+  )
+);
+write(
+  join(
+    migrated,
+    "scratchpad/dsl-doc-probes/target/scala-3.9.0/classes/probes/C.tasty"
+  )
+);
+const migratedInventory = await inventory(join(scratch, migrated), {
+  noBuild: true
+});
+assert.deepStrictEqual(
+  migratedInventory.modules.map((m) => [
+    m.id,
+    m.scalaVersion,
+    m.classDirs.map((d) => d.replace(`${join(scratch, migrated)}/`, ""))
+  ]),
+  [
+    ["c2cpg", "3.10.0", ["target/out/jvm/scala-3.10.0/c2cpg/classes"]],
+    ["x2cpg", "3.10.0", ["target/out/jvm/scala-3.10.0/x2cpg/classes"]]
+  ],
+  "the output the build declares wins, at its current Scala version"
+);
+const staleOf = (module, version) =>
+  migratedInventory.diagnostics.find(
+    (d) =>
+      d.code === "stale-output" &&
+      d.module === module &&
+      d.skippedVersion === version
+  );
+assert.ok(
+  staleOf("c2cpg", "3.9.0")?.skippedDir ===
+    "platform/frontends/c2cpg/target/scala-3.9.0/classes" &&
+    staleOf("c2cpg", "3.9.0").sourceRoot === "platform/frontends/c2cpg" &&
+    staleOf("c2cpg", "3.9.0").usedVersion === "3.10.0",
+  "the sbt 1 tree of a declared module is skipped as stale output"
+);
+assert.ok(
+  staleOf("c2cpg", "3.8.4")?.usedDir ===
+    "target/out/jvm/scala-3.10.0/c2cpg/classes",
+  "the older Scala version under target/out is skipped as stale output"
+);
+assert.ok(
+  staleOf("x2cpg", "3.9.0"),
+  "every stale tree of a declared module is reported"
+);
+assert.ok(
+  !migratedInventory.diagnostics.some((d) =>
+    (d.skippedDir || "").includes("dsl-doc-probes")
+  ) && !migratedInventory.modules.some((m) => m.id.includes("dsl-doc-probes")),
+  "a directory that is no project of the build is ignored"
+);
+assert.ok(
+  !migratedInventory.modules.some((m) => m.id.startsWith("platform/")),
+  "the stale trees do not appear as modules of their own"
+);
+
+// Without a build definition that can be read, nothing tells the current output of a module
+// from a stale one, and every tree keeps standing on its own.
+const unmanaged = join("unreadable-layouts");
+write(join(unmanaged, "target/out/jvm/scala-3.10.0/x2cpg/classes/x/B.tasty"));
+write(join(unmanaged, "platform/x2cpg/target/scala-3.9.0/classes/x/B.tasty"));
+const unmanagedInventory = await inventory(join(scratch, unmanaged), {
+  noBuild: true
+});
+assert.deepStrictEqual(
+  unmanagedInventory.modules.map((m) => m.id).sort(),
+  ["platform/x2cpg", "x2cpg"],
+  "an unreadable build keeps both trees as modules of their own"
+);
+assert.ok(
+  !unmanagedInventory.diagnostics.some((d) => d.code === "stale-output"),
+  "an unreadable build reports no stale output"
+);
+
 const cross = join("cross-left");
 write(join(cross, "build.sbt"));
 write(join(cross, "project", "build.properties"), "sbt.version=1.10.11\n");

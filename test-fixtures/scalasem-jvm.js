@@ -59,8 +59,10 @@ assert.deepStrictEqual(
 
 // The compiler comes from the caches of this machine, so the releases that resolve without a
 // download vary; at least one is required. On CI the cache starts empty, and the first release
-// is fetched through sbt the way scalasem itself does when installs are allowed.
-const versions = ["3.3.7", "3.5.2", "3.7.3", "3.8.4", "3.9.0"];
+// is fetched through sbt the way scalasem itself does when installs are allowed. The list runs
+// through the shapes the helper classpath has to cover: the shaded assembler of 3.3 to 3.9 and
+// the upstream ASM artifacts of 3.10.
+const versions = ["3.3.7", "3.5.2", "3.7.3", "3.8.4", "3.9.0", "3.10.0"];
 const fetchFirst = Boolean(process.env.CI || process.env.SCALASEM_TEST_FETCH);
 const run = [];
 for (const version of versions) {
@@ -77,9 +79,9 @@ for (const version of versions) {
     console.log(`scalasem-jvm: ${version} not resolvable offline, skipped`);
     continue;
   }
-  const helperDir = compileHelper(toolchain);
-  assert.ok(helperDir, `${version}: helper compiled`);
-  const lines = runInspector(toolchain, helperDir, [classDir], tastyFiles);
+  const helper = compileHelper(toolchain);
+  assert.ok(helper?.dir, `${version}: helper compiled`);
+  const lines = runInspector(toolchain, helper.dir, [classDir], tastyFiles);
   const facts = lines.filter((l) => l.includes('"kind":"def"')).length;
   const calls = lines.filter((l) => l.includes('"kind":"call"')).length;
   assert.ok(calls > 20, `${version}: expected call facts from the helper run`);
@@ -104,7 +106,7 @@ const first = resolveToolchain(
 if (first?.inspectorJar) {
   const before = compileHelper(first);
   const after = compileHelper(first);
-  assert.strictEqual(
+  assert.deepStrictEqual(
     before,
     after,
     "helper cache directory changed between compiles"

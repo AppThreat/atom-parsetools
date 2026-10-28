@@ -29,13 +29,13 @@ for (const version of ["3.3.7", "3.5.2", "3.8.4", "3.9.0"]) {
     },
     { installDeps: true }
   );
-  const helperDir = toolchain && compileHelper(toolchain);
-  if (!helperDir) {
+  const helper = toolchain && compileHelper(toolchain);
+  if (!helper?.dir) {
     console.error(`${version}: no compiler or helper, recording skipped`);
     process.exitCode = 1;
     continue;
   }
-  const lines = runInspector(toolchain, helperDir, [classDir], tastyFiles);
+  const lines = runInspector(toolchain, helper.dir, [classDir], tastyFiles);
   writeFileSync(
     join(projects, "inspector", `showcase-${version}.jsonl`),
     `${lines.join("\n")}\n`
