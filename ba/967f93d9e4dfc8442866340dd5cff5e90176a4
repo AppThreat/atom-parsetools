@@ -1,0 +1,55 @@
+lib/scalasem/build.js
+  s_fa335490405673::t_17aea8398b6354 1374-1378
+  s_7eb93de638d780::t_ab9dff3429fecb 1427-1430,1448,1468,1624
+  s_fa335490405673::t_94578893ec998e 1431-1447,1449-1467,1486-1487,1494-1501,1503,1505-1508
+  s_fa335490405673::t_e0c32f826b0f80 1616-1621,1625-1630,1635-1670
+  s_fa335490405673::t_61ad42bf16bec4 1469-1485,1488-1493,1502,1504
+  s_7eb93de638d780::t_f3ae3d6566310d 1509-1510,1671-1672
+docs/TROUBLESHOOTING.md
+  s_fa335490405673::t_4606ab249814bd 29-31
+  s_fa335490405673::t_7288f7df277aca 21
+  s_ccd076faf9aa60::t_380d2d6d845100 32
+lib/scalasem/scalasem-v2.schema.json
+  s_fa335490405673::t_80dc6f847229a2 180-183
+  s_fa335490405673::t_61ade34aea600a 184-203
+test-fixtures/scalasem-engine.js
+  s_fa335490405673::t_cb2d9813fc3f7a 1157,1168-1169
+  s_fa335490405673::t_367abe40e22829 1066-1156,1158-1167,1170-1182
+docs/SCALASEM.md
+  s_fa335490405673::t_94155669596f00 357
+  s_fa335490405673::t_4be18266b0a7cc 131-135
+  s_fa335490405673::t_9ff2c0c7e1fb2f 61-65
+  s_fa335490405673::t_00a96b826f8ece 354
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ba967f93d9e4dfc8442866340dd5cff5e90176a4",
+  "prompts": {},
+  "sessions": {
+    "s_7eb93de638d780": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "af19c3b2-f6ed-448e-b098-9b6aa932d5c2",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    },
+    "s_ccd076faf9aa60": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "session_0ee22ba9045b31133f76fc3dbc4dfa72",
+        "model": "GLM-5.3-Flash"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    },
+    "s_fa335490405673": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "session_4d118ca2f045774f75f935ecaaf04950",
+        "model": "unknown"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
