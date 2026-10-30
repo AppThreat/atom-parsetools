@@ -503,6 +503,49 @@ assert.deepStrictEqual(
     version: "11.0.4"
   }
 );
+// The Ivy local repository that `publishLocal` writes, with and without the sbt plugin
+// directories, the Ivy cache of sbt 0.13 to 1.2, and the Gradle cache.
+for (const [jarPath, expected] of [
+  [
+    "/home/u/.ivy2/local/io.appthreat/c2cpg_3/4.0.0/jars/c2cpg_3.jar",
+    { group: "io.appthreat", artifact: "c2cpg_3", version: "4.0.0" }
+  ],
+  [
+    "C:\\Users\\u\\.ivy2\\local\\io.appthreat\\x2cpg_3\\4.0.0-jrtfix\\jars\\x2cpg_3.jar",
+    { group: "io.appthreat", artifact: "x2cpg_3", version: "4.0.0-jrtfix" }
+  ],
+  [
+    "/home/u/.ivy2/local/com.github.sbt/sbt-native-packager/scala_2.12/sbt_1.0/1.11.1/jars/sbt-native-packager.jar",
+    {
+      group: "com.github.sbt",
+      artifact: "sbt-native-packager",
+      version: "1.11.1"
+    }
+  ],
+  [
+    "/home/u/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.12.20.jar",
+    { group: "org.scala-lang", artifact: "scala-library", version: "2.12.20" }
+  ],
+  [
+    "/home/u/.ivy2/cache/org.typelevel/cats-core_2.13/bundles/cats-core_2.13-2.13.0.jar",
+    { group: "org.typelevel", artifact: "cats-core_2.13", version: "2.13.0" }
+  ],
+  [
+    "/home/u/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.6.0-jre/8a1f4bd2c0d4e9e1c1f5a3b2d6e7f8091a2b3c4d/guava-33.6.0-jre.jar",
+    { group: "com.google.guava", artifact: "guava", version: "33.6.0-jre" }
+  ]
+]) {
+  assert.deepStrictEqual(jarCoordinate(jarPath), expected, jarPath);
+}
+// An unmanaged jar and a jar whose directories name no release have no coordinate.
+for (const jarPath of [
+  "/src/atom/lib/org.eclipse.cdt.core_9.3.200.202607131546.jar",
+  "/home/u/.ivy2/local/io.appthreat/c2cpg_3/latest/jars/c2cpg_3.jar",
+  "/home/u/.ivy2/local/io.appthreat/c2cpg_3/4.0.0/jars/other.jar",
+  "/home/u/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.6.0-jre/guava-33.6.0-jre.jar"
+]) {
+  assert.strictEqual(jarCoordinate(jarPath), undefined, jarPath);
+}
 
 assert.strictEqual(
   sanitizeUrl(
