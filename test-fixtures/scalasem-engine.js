@@ -20,7 +20,8 @@ import {
   expandVirtualPaths,
   ownValues,
   parseSbtProjects,
-  sbtModules
+  sbtModules,
+  sbtSystemProperty
 } from "../lib/scalasem/build.js";
 import { parseFacts } from "../lib/scalasem/inspect.js";
 import { buildFileEntry } from "../lib/scalasem/facts.js";
@@ -378,6 +379,67 @@ const expanded = expandVirtualPaths(
   "/src/app"
 );
 assert.ok(!expanded.includes("${"), "virtual path variables expanded");
+
+// sbt 2 names a `publishLocal` dependency under `${IVY_HOME}/local` and its own jars under
+// `${SBT_BOOT}`; both expand to the launcher's directories, and `sbt.ivy.home` moves the first.
+{
+  const home = mkdtempSync(join(tmpdir(), "scalasem-home-"));
+  const build = join(home, "build");
+  const localJar = join(
+    home,
+    ".ivy2",
+    "local",
+    "io.appthreat",
+    "x2cpg_3",
+    "4.0.0",
+    "jars",
+    "x2cpg_3.jar"
+  );
+  const bootJar = join(home, ".sbt", "boot", "scala-3.8.4", "sbt.jar");
+  const customJar = join(home, "ivy", "local", "a_3", "1.0", "jars", "a_3.jar");
+  for (const jar of [localJar, bootJar, customJar]) {
+    mkdirSync(dirname(jar), { recursive: true });
+    writeFileSync(jar, "jar");
+  }
+  mkdirSync(build);
+  const env = { HOME: home };
+  const one = (line, environment = env) =>
+    normalize(expandVirtualPaths(line, build, environment));
+  assert.strictEqual(
+    one(
+      "List(${IVY_HOME}/local/io.appthreat/x2cpg_3/4.0.0/jars/x2cpg_3.jar>sha256-0a1b/42)"
+    ),
+    normalize(localJar),
+    "the Ivy home of a publishLocal jar expands"
+  );
+  assert.strictEqual(
+    one("${SBT_BOOT}/scala-3.8.4/sbt.jar"),
+    normalize(bootJar),
+    "the sbt boot directory expands"
+  );
+  assert.strictEqual(
+    one("${IVY_HOME}/local/a_3/1.0/jars/a_3.jar", {
+      ...env,
+      SBT_OPTS: `-Xmx2g -Dsbt.ivy.home=${join(home, "ivy")}`
+    }),
+    normalize(customJar),
+    "sbt.ivy.home from SBT_OPTS moves the Ivy home"
+  );
+  writeFileSync(
+    join(build, ".sbtopts"),
+    `-J-Dsbt.ivy.home=${join(home, "ivy")}\n`
+  );
+  assert.strictEqual(
+    sbtSystemProperty("sbt.ivy.home", build, env),
+    join(home, "ivy"),
+    "a -J prefixed option of .sbtopts is read"
+  );
+  assert.strictEqual(
+    sbtSystemProperty("sbt.boot.directory", build, env),
+    undefined
+  );
+  rmSync(home, { recursive: true, force: true });
+}
 
 // Play routes and endpoint configuration values.
 const config = parseProjectConfig(join(projects, "playish"));
