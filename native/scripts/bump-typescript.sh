@@ -14,9 +14,10 @@ case "${1:---head}" in
 esac
 [ -n "$new" ] || { echo "cannot resolve the new commit" >&2; exit 2; }
 echo "pin: $old -> $new"
-restore() { echo "$old" > "$pinfile"; "$here/scripts/fetch-typescript.sh" || true; echo "restored pin $old" >&2; }
+restore() { echo "$old" > "$pinfile"; cp "$pinfile" "$here/internal/typemap/pin.txt"; "$here/scripts/fetch-typescript.sh" || true; echo "restored pin $old" >&2; }
 trap 'rc=$?; [ $rc -eq 0 ] || restore' EXIT
 echo "$new" > "$pinfile"
+cp "$pinfile" "$here/internal/typemap/pin.txt"  # embedded in the binary
 start=$(date +%s)
 "$here/scripts/fetch-typescript.sh"
 wd="$here/scripts/wd.sh"
