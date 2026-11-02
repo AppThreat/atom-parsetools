@@ -1,0 +1,33 @@
+native/THIRD-PARTY-NOTICES.md
+  s_666069ac765bc0::t_9afcfd8b4aee5c 1-6
+native/patches/README.md
+  s_666069ac765bc0::t_57d896f32ff640 1-7
+native/scripts/bump-typescript.sh
+  s_666069ac765bc0::t_bfcc167222bb6f 1-31
+native/scripts/wd.sh
+  s_666069ac765bc0::t_57f2e6d909428e 1-10
+native/shim/go.mod
+  s_666069ac765bc0::t_c6e0da3c9cf66a 1-17
+native/shim/go.sum
+  s_666069ac765bc0::t_28a21f4fd8e834 1-22
+native/tools/gen_shims/LICENSE.tsgolint
+  s_666069ac765bc0::t_4ea216617449ae 1-22
+native/tools/gen_shims/README.md
+  s_666069ac765bc0::t_f475491499722f 1-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7cbc6b859ea5d21ef7f80f60fad1f862af66725a",
+  "prompts": {},
+  "sessions": {
+    "s_666069ac765bc0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "53385780-6cf0-4c65-be3b-a245ddf89522",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
