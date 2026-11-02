@@ -1,0 +1,69 @@
+lib/typemap/canon.mjs
+  s_0dbbcb5914c2c5::t_83dbc287be81ba 1-294
+lib/typemap/diff.mjs
+  s_e69bf50db22bd3::t_02ecae0b94b672 1-360
+native/testdata/typemap/rules/baseline-ts6/README.md
+  s_e69bf50db22bd3::t_586b90b6a3976a 1-3
+native/testdata/typemap/rules/baseline-ts6/src/r01-wrapper.ts.typemap
+  s_e69bf50db22bd3::t_879942f2a0c3d2 1
+native/testdata/typemap/rules/baseline-ts6/src/r02-function-like.ts.typemap
+  s_e69bf50db22bd3::t_34d0005778ff68 1
+native/testdata/typemap/rules/baseline-ts6/src/r03-async-fallback.ts.typemap
+  s_e69bf50db22bd3::t_ba452e1221c130 1
+native/testdata/typemap/rules/baseline-ts6/src/r04-property-declaration.ts.typemap
+  s_e69bf50db22bd3::t_fae4a482763abf 1
+native/testdata/typemap/rules/baseline-ts6/src/r05-variable-declaration.ts.typemap
+  s_e69bf50db22bd3::t_6dc01cb13dca54 1
+native/testdata/typemap/rules/baseline-ts6/src/r06-binding-parameter-property.ts.typemap
+  s_e69bf50db22bd3::t_5c4a569936d7aa 1
+native/testdata/typemap/rules/baseline-ts6/src/r07-dynamic-import.ts.typemap
+  s_e69bf50db22bd3::t_e9d82055240d32 1
+native/testdata/typemap/rules/baseline-ts6/src/r08-call-new.ts.typemap
+  s_e69bf50db22bd3::t_a9112793a6c987 1
+native/testdata/typemap/rules/baseline-ts6/src/r09-access.ts.typemap
+  s_e69bf50db22bd3::t_00072c9663bf4c 1
+native/testdata/typemap/rules/baseline-ts6/src/r10-expressions.ts.typemap
+  s_e69bf50db22bd3::t_8bf4e42c4ff0c0 1
+native/testdata/typemap/rules/baseline-ts6/src/r11-class-enum.ts.typemap
+  s_e69bf50db22bd3::t_538c5431baaac1 1
+native/testdata/typemap/rules/baseline-ts6/src/r12-default-literals.ts.typemap
+  s_e69bf50db22bd3::t_e576f9ce2fb81e 1
+native/testdata/typemap/rules/baseline-ts6/src/r13-type-positions.ts.typemap
+  s_e69bf50db22bd3::t_b3b0d950875628 1
+native/testdata/typemap/rules/baseline-ts6/src/r14-scoring.ts.typemap
+  s_e69bf50db22bd3::t_170292ee6d203a 1
+native/testdata/typemap/rules/baseline-ts6/src/r15-unresolved-filter.ts.typemap
+  s_e69bf50db22bd3::t_1a0a5626b03a96 1
+native/testdata/typemap/rules/baseline-ts6/src/r16-oversized.ts.typemap
+  s_e69bf50db22bd3::t_57ca35f1dfc79a 1
+package.json
+  s_e69bf50db22bd3::t_c54af7cb99e5e2 9,11
+test-fixtures/typemap-allow.json
+  s_e69bf50db22bd3::t_3f6efe95d78069 1-11
+test-fixtures/typemap-diff-regression.js
+  s_e69bf50db22bd3::t_32cfc57e024d74 1-249
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0637830344fb5b1b918dd03f65868a3bebba1167",
+  "prompts": {},
+  "sessions": {
+    "s_0dbbcb5914c2c5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_dd7541fb-2df2-4da7-a16f-14967800872a",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    },
+    "s_e69bf50db22bd3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "31e71087-5fc6-4376-867e-474a7094f632",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
