@@ -1,0 +1,152 @@
+native/cmd/atom-parsetools-native/main.go
+  h_0926447d100ad2 1-165
+native/internal/typemap/budget.go
+  h_0926447d100ad2 1-22
+native/internal/typemap/discover.go
+  h_0926447d100ad2 1-184
+native/internal/typemap/discover_test.go
+  h_0926447d100ad2 1-92
+native/internal/typemap/fixtures_test.go
+  h_0926447d100ad2 1-106
+native/internal/typemap/helpers_test.go
+  h_0926447d100ad2 1-76
+native/internal/typemap/jsonout.go
+  h_0926447d100ad2 1-84
+native/internal/typemap/offsets.go
+  h_0926447d100ad2 1-127
+native/internal/typemap/offsets_test.go
+  h_0926447d100ad2 1-90
+native/internal/typemap/pin.txt
+  h_0926447d100ad2 1
+native/internal/typemap/print.go
+  h_0926447d100ad2 1-151
+native/internal/typemap/program.go
+  h_0926447d100ad2 1-396
+native/internal/typemap/rules.go
+  h_0926447d100ad2 1-682
+native/internal/typemap/run.go
+  h_0926447d100ad2 1-251
+native/internal/typemap/version.go
+  h_0926447d100ad2 1-12
+native/scripts/bump-typescript.sh
+  h_0926447d100ad2 17,20
+native/scripts/test-native.sh
+  h_0926447d100ad2 1-18
+native/testdata/.gitattributes
+  h_0926447d100ad2 1
+native/testdata/typemap/offsets/expected/bom.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/offsets/expected/crlf.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/offsets/expected/four-byte.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/offsets/expected/mixed.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/offsets/expected/no-final-newline.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/offsets/expected/three-byte.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/offsets/expected/two-byte.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/offsets/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/offsets/src/bom.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/offsets/src/crlf.ts
+  h_0926447d100ad2 1-3
+native/testdata/typemap/offsets/src/four-byte.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/offsets/src/mixed.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/offsets/src/no-final-newline.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/offsets/src/three-byte.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/offsets/src/two-byte.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/rules/expected/r01-wrapper.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r02-function-like.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r03-async-fallback.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r04-property-declaration.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r05-variable-declaration.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r06-binding-parameter-property.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r07-dynamic-import.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r08-call-new.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r09-access.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r10-expressions.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r11-class-enum.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r12-default-literals.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r13-type-positions.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r14-scoring.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r15-unresolved-filter.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r16-oversized.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/src/r01-wrapper.ts
+  h_0926447d100ad2 1-7
+native/testdata/typemap/rules/src/r02-function-like.ts
+  h_0926447d100ad2 1-15
+native/testdata/typemap/rules/src/r03-async-fallback.ts
+  h_0926447d100ad2 1-6
+native/testdata/typemap/rules/src/r04-property-declaration.ts
+  h_0926447d100ad2 1-7
+native/testdata/typemap/rules/src/r05-variable-declaration.ts
+  h_0926447d100ad2 1-12
+native/testdata/typemap/rules/src/r06-binding-parameter-property.ts
+  h_0926447d100ad2 1-7
+native/testdata/typemap/rules/src/r07-dynamic-import.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/rules/src/r08-call-new.ts
+  h_0926447d100ad2 1-9
+native/testdata/typemap/rules/src/r09-access.ts
+  h_0926447d100ad2 1-5
+native/testdata/typemap/rules/src/r10-expressions.ts
+  h_0926447d100ad2 1-15
+native/testdata/typemap/rules/src/r11-class-enum.ts
+  h_0926447d100ad2 1-5
+native/testdata/typemap/rules/src/r12-default-literals.ts
+  h_0926447d100ad2 1-10
+native/testdata/typemap/rules/src/r13-type-positions.ts
+  h_0926447d100ad2 1-10
+native/testdata/typemap/rules/src/r14-scoring.ts
+  h_0926447d100ad2 1-7
+native/testdata/typemap/rules/src/r15-unresolved-filter.ts
+  h_0926447d100ad2 1-7
+native/testdata/typemap/rules/src/r16-oversized.ts
+  h_0926447d100ad2 1-5
+native/testdata/typemap/rules/tsconfig.json
+  h_0926447d100ad2 1
+native/tools/determinism/main.go
+  h_0926447d100ad2 1-168
+native/tools/determinism/main_test.go
+  h_0926447d100ad2 1-80
+package.json
+  h_0926447d100ad2 11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9b67c6da78c58782acadd8b64bf9701edc5ff85d",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
