@@ -20,7 +20,8 @@ import (
 	"github.com/AppThreat/atom-parsetools/parsa/internal/typemap"
 )
 
-const version = "0.1.0"
+// version is set at build time (scripts/build-release.sh); a plain go build reports "dev".
+var version = "dev"
 
 func main() {
 	if len(os.Args) < 2 {

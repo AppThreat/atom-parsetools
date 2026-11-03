@@ -1,0 +1,157 @@
+name: parsa binaries
+# Builds parsa for every target on one Linux machine (parsa has no cgo yet, so it cross-compiles and
+# the Linux binaries are static, for glibc and musl alike), then runs the binaries it can on their own
+# platforms. A push to main publishes the binaries to ghcr.io/appthreat/parsa with oras, tagged
+# <os>-<arch>-<commit> and <os>-<arch>-main. A published release also gets them as assets, with a
+# .sha256 file each and build provenance, and as <os>-<arch>-<version> on ghcr.io; cdxgen-plugins-bin
+# bakes those assets into its platform packages.
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+    - "parsa/**"
+    - "package.json"
+    - ".github/workflows/parsa-release.yml"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+    - "parsa/**"
+    - ".github/workflows/parsa-release.yml"
+  release:
+    types: [ published ]
+  workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+permissions: {}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+      with:
+        go-version-file: parsa/go.mod
+        cache: false
+    - name: version
+      id: version
+      env:
+        EVENT: ${{ github.event_name }}
+        TAG: ${{ github.event.release.tag_name }}
+      run: |
+        if [ "$EVENT" = release ]; then
+          version=${TAG#v}
+        else
+          version="$(jq -r .version package.json)-dev+${GITHUB_SHA::12}"
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+    - name: build every target
+      working-directory: parsa
+      env:
+        PARSA_VERSION: ${{ steps.version.outputs.version }}
+      run: ./scripts/build-release.sh _deps/dist
+    - name: the Linux x64 binary types the fixtures
+      working-directory: parsa
+      run: |
+        ./_deps/dist/parsa-linux-amd64 --version
+        ./_deps/dist/parsa-linux-amd64 js --types-only -i testdata/typemap/sfc -o /tmp/parsa-out
+        test "$(find /tmp/parsa-out -name '*.typemap' | wc -l)" -gt 0
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+      with:
+        name: parsa
+        path: parsa/_deps/dist/
+        if-no-files-found: error
+
+  # Runs the cross-compiled binaries where they belong. macOS runners are scarce, so the darwin
+  # binaries run here only for a release; ci.yml builds and tests parsa on macOS for every change.
+  run:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(github.event_name == 'release' && '[{"os":"ubuntu-24.04-arm","bin":"parsa-linux-arm64"},{"os":"windows-latest","bin":"parsa-windows-amd64.exe"},{"os":"windows-11-arm","bin":"parsa-windows-arm64.exe"},{"os":"macos-15","bin":"parsa-darwin-arm64"},{"os":"macos-15-intel","bin":"parsa-darwin-amd64"}]' || '[{"os":"ubuntu-24.04-arm","bin":"parsa-linux-arm64"},{"os":"windows-latest","bin":"parsa-windows-amd64.exe"}]') }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+        sparse-checkout: parsa/testdata/typemap/sfc
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+      with:
+        name: parsa
+        path: dist
+    - name: ${{ matrix.bin }} types the fixtures
+      shell: bash
+      env:
+        BIN: ${{ matrix.bin }}
+      run: |
+        chmod +x "dist/$BIN"
+        "dist/$BIN" --version
+        "dist/$BIN" js --types-only -i parsa/testdata/typemap/sfc -o parsa-out
+        test "$(find parsa-out -name '*.typemap' | wc -l)" -gt 0
+
+  ghcr:
+    needs: [build, run]
+    if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+      with:
+        name: parsa
+        path: dist
+    - uses: oras-project/setup-oras@005458ad77f1c8facd38a094e4af2e69e5607ff4  # v2.0.2
+    - name: push to ghcr.io/appthreat/parsa
+      working-directory: dist
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ACTOR: ${{ github.actor }}
+        EVENT: ${{ github.event_name }}
+        VERSION: ${{ needs.build.outputs.version }}
+      run: |
+        echo "$GITHUB_TOKEN" | oras login ghcr.io -u "$ACTOR" --password-stdin
+        if [ "$EVENT" = release ]; then suffixes="$VERSION"; else suffixes="${GITHUB_SHA::12} main"; fi
+        for bin in parsa-*; do
+          case "$bin" in *.sha256) continue ;; esac
+          platform=${bin#parsa-}
+          platform=${platform%.exe}
+          for suffix in $suffixes; do
+            oras push "ghcr.io/appthreat/parsa:$platform-$suffix" \
+              --artifact-type application/vnd.appthreat.parsa.v1 \
+              --annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
+              --annotation "org.opencontainers.image.version=$VERSION" \
+              "$bin:application/octet-stream" "$bin.sha256:text/plain"
+          done
+        done
+
+  release-assets:
+    needs: [build, run]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+      with:
+        name: parsa
+        path: dist
+    - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
+      with:
+        subject-path: dist/parsa-*
+    - name: attach to the release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ github.event.release.tag_name }}
+      run: gh release upload "$TAG" dist/parsa-* --clobber --repo "$GITHUB_REPOSITORY"
