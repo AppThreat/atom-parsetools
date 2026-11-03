@@ -25,6 +25,7 @@ type unit struct {
 	sf           *ast.SourceFile
 	off          *Offsets
 	seen         map[int]string
+	spans        map[Span]string // the type of the node that spans [Start, End), whatever else starts at Start
 	oversized    map[*checker.Type]uint8
 	stats        fileStats
 	slot         *Slot // budget watcher registration; nil in tests that run without one
@@ -48,6 +49,7 @@ func newUnit(c *checker.Checker, sf *ast.SourceFile, off *Offsets) *unit {
 	return &unit{
 		c: c, sf: sf, off: off,
 		seen:          map[int]string{},
+		spans:         map[Span]string{},
 		oversized:     map[*checker.Type]uint8{},
 		memoRet:       map[*ast.Node]memoStr{},
 		memoAsyncBody: map[*ast.Node]memoStr{},
@@ -131,6 +133,62 @@ func (u *unit) addAt(pos int, typeStr string) {
 	if ns > es || (ns == es && JSLen(typeStr) >= JSLen(existing)) {
 		u.seen[pos] = typeStr
 	}
+}
+
+// Span is a node's extent as UTF-16 offsets, the key of the span map.
+type Span struct{ Start, End int }
+
+// addSpan records the type of one node under its extent. Unlike the position keyed map it cannot
+// confuse `a`, `a.b` and `a.b()`, which all start at the same offset, so a reader that has the
+// extent of a node of its own AST finds that node's type and no other.
+func (u *unit) addSpan(sp Span, typeStr string) {
+	if sp.Start < 0 || sp.End < sp.Start || typeStr == "" || isIgnoredForKey(typeStr) {
+		return
+	}
+	existing, ok := u.spans[sp]
+	if !ok || existing == "" {
+		u.spans[sp] = typeStr
+		return
+	}
+	es, ns := scoreTypeString(existing), scoreTypeString(typeStr)
+	if ns > es || (ns == es && JSLen(typeStr) >= JSLen(existing)) {
+		u.spans[sp] = typeStr
+	}
+}
+
+// spanOf is the extent of n from its first token (no trivia, no JSDoc) to its end.
+func (u *unit) spanOf(n *ast.Node) Span {
+	return Span{u.start(n), u.off.At(n.End())}
+}
+
+// strippedSpan is the extent of a declaration without the `export` and `default` keywords in front
+// of it: Babel starts a function or class after them, and TypeScript before.
+func (u *unit) strippedSpan(n *ast.Node) (Span, bool) {
+	if n.Kind != ast.KindFunctionDeclaration && n.Kind != ast.KindClassDeclaration {
+		return Span{}, false
+	}
+	mods := n.Modifiers()
+	if mods == nil {
+		return Span{}, false
+	}
+	start := -1
+	for _, m := range mods.Nodes {
+		if m.Kind == ast.KindExportKeyword || m.Kind == ast.KindDefaultKeyword {
+			continue
+		}
+		start = u.start(m)
+		break
+	}
+	if start < 0 {
+		// `export default function () {}`: the first token after the keywords is `function`
+		if n.Kind == ast.KindFunctionDeclaration {
+			last := mods.Nodes[len(mods.Nodes)-1]
+			rest := u.off.At(scanner.SkipTrivia(u.sf.Text(), last.End()))
+			return Span{rest, u.off.At(n.End())}, true
+		}
+		return Span{}, false
+	}
+	return Span{start, u.off.At(n.End())}, true
 }
 
 func isFnDecl(n *ast.Node) bool {
@@ -483,6 +541,10 @@ func (u *unit) visit(n *ast.Node) {
 		}
 	}()
 	typeStr := u.typeForNode(n)
+	u.addSpan(u.spanOf(n), typeStr)
+	if sp, ok := u.strippedSpan(n); ok {
+		u.addSpan(sp, typeStr)
+	}
 	if !isDirectCallee && typeStr != "" && !isIgnoredForKey(typeStr) {
 		u.addAt(u.start(n), typeStr)
 	}

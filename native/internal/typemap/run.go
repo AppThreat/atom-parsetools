@@ -445,6 +445,11 @@ func typeFile(ctx context.Context, s *Setup, w *Watch, b Budget, probe func(uint
 		if err := os.WriteFile(out, EncodeTypeMap(u.seen), 0o644); err != nil {
 			return 0, st, &FileReport{File: relSlash, Reason: "write", Detail: err.Error()}, u.tainted
 		}
+		if len(u.spans) > 0 {
+			if err := os.WriteFile(filepath.Join(outDir, rel+".typespans"), EncodeSpans(u.spans), 0o644); err != nil {
+				return 0, st, &FileReport{File: relSlash, Reason: "write", Detail: err.Error()}, u.tainted
+			}
+		}
 	}
 	if u.overWhy != "" {
 		diag = &FileReport{File: relSlash, Reason: u.overWhy, Detail: "no further entries were written for this file", Keys: len(u.seen), Ms: time.Since(start).Milliseconds()}
