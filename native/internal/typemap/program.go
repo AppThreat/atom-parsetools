@@ -1,10 +1,12 @@
 package typemap
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -88,6 +90,24 @@ func overlayDefaults(o *core.CompilerOptions, d *core.CompilerOptions, nodeNext 
 	if nodeNext {
 		overlayNodeNext(o)
 	}
+}
+
+// emulateBaseURL keeps TypeScript 6's meaning of `baseUrl`, which TypeScript 7
+// no longer uses to resolve modules: `paths` entries are relative to it, and a
+// bare specifier is looked up under it after them. This is the migration the
+// TypeScript 7 release notes give (`"paths": {"*": ["./*"]}` next to baseUrl).
+func emulateBaseURL(o *core.CompilerOptions) {
+	if o.BaseUrl == "" {
+		return
+	}
+	if o.Paths == nil {
+		field := reflect.ValueOf(o).Elem().FieldByName("Paths")
+		field.Set(reflect.New(field.Type().Elem()))
+	}
+	if !o.Paths.Has("*") {
+		o.Paths.Set("*", []string{"*"})
+	}
+	o.PathsBasePath = o.BaseUrl
 }
 
 // IsUnderRoot mirrors isUnderRoot.
@@ -212,48 +232,74 @@ func withAutomaticTypes(o *core.CompilerOptions, src string, hasConfig bool) {
 	}
 }
 
-// stripJSONC removes comments and trailing commas so encoding/json can read a tsconfig.
+// stripJSONC removes a byte order mark, comments and trailing commas so encoding/json can read a
+// tsconfig, as TypeScript's own reader accepts them. Comments go first, so that a comma followed by a
+// comment and then a closing bracket is seen as trailing.
 func stripJSONC(in []byte) []byte {
-	var out []byte
-	inStr := false
-	for i := 0; i < len(in); i++ {
-		c := in[i]
-		if inStr {
-			out = append(out, c)
-			if c == '\\' && i+1 < len(in) {
-				i++
-				out = append(out, in[i])
-			} else if c == '"' {
-				inStr = false
-			}
-			continue
+	in = bytes.TrimPrefix(in, []byte("\xef\xbb\xbf"))
+	return dropTrailingCommas(dropComments(in))
+}
+
+// skipString copies the string literal that starts at in[i] to out and returns the index after it.
+func skipString(in []byte, i int, out []byte) (int, []byte) {
+	out = append(out, in[i])
+	for i++; i < len(in); i++ {
+		out = append(out, in[i])
+		if in[i] == '\\' && i+1 < len(in) {
+			i++
+			out = append(out, in[i])
+		} else if in[i] == '"' {
+			return i + 1, out
 		}
+	}
+	return i, out
+}
+
+func dropComments(in []byte) []byte {
+	out := make([]byte, 0, len(in))
+	for i := 0; i < len(in); {
 		switch {
-		case c == '"':
-			inStr = true
-			out = append(out, c)
-		case c == '/' && i+1 < len(in) && in[i+1] == '/':
+		case in[i] == '"':
+			i, out = skipString(in, i, out)
+		case in[i] == '/' && i+1 < len(in) && in[i+1] == '/':
 			for i < len(in) && in[i] != '\n' {
 				i++
 			}
-			out = append(out, '\n')
-		case c == '/' && i+1 < len(in) && in[i+1] == '*':
+		case in[i] == '/' && i+1 < len(in) && in[i+1] == '*':
 			i += 2
 			for i+1 < len(in) && !(in[i] == '*' && in[i+1] == '/') {
 				i++
 			}
+			i += 2
+			out = append(out, ' ')
+		default:
+			out = append(out, in[i])
 			i++
-		case c == ',':
+		}
+	}
+	return out
+}
+
+func dropTrailingCommas(in []byte) []byte {
+	out := make([]byte, 0, len(in))
+	for i := 0; i < len(in); {
+		switch {
+		case in[i] == '"':
+			i, out = skipString(in, i, out)
+		case in[i] == ',':
 			j := i + 1
 			for j < len(in) && (in[j] == ' ' || in[j] == '\n' || in[j] == '\r' || in[j] == '\t') {
 				j++
 			}
 			if j < len(in) && (in[j] == '}' || in[j] == ']') {
+				i++
 				continue
 			}
-			out = append(out, c)
+			out = append(out, in[i])
+			i++
 		default:
-			out = append(out, c)
+			out = append(out, in[i])
+			i++
 		}
 	}
 	return out
@@ -355,6 +401,7 @@ func BuildSetup(src string, projectFiles []string, disc *Discovery, checkers int
 				o = &core.CompilerOptions{}
 			}
 			overlayDefaults(o, baseOptions(), nodeNext && !respect)
+			emulateBaseURL(o)
 			opts = o
 			for _, f := range p.FileNames() {
 				ff := string(f)

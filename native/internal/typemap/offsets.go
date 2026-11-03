@@ -61,14 +61,6 @@ func (o *Offsets) At(b int) int {
 	return int(o.table[b]) + o.shift
 }
 
-// Len16 returns the length of the text in UTF-16 code units, without the shift.
-func (o *Offsets) Len16(textLen int) int {
-	if o.table == nil {
-		return textLen
-	}
-	return int(o.table[len(o.table)-1])
-}
-
 // decodeStep returns how many bytes of s form the next character (or maximal
 // invalid subpart) and how many UTF-16 code units that is.
 func decodeStep(s string) (bytes, units int) {

@@ -13,6 +13,7 @@ import (
 // fileStats counts what happened while one file was typed.
 type fileStats struct {
 	nodes, writes, gaveUp, recovered int
+	retriedByName                    int // types written again with aliases by name after the full form did not fit
 	work, ms                         int64
 }
 
@@ -35,6 +36,7 @@ type unit struct {
 	memoAsyncBody map[*ast.Node]memoStr
 	memoAsyncSyn  map[*ast.Node]memoStr
 	syntaxDepth   int
+	moduleTypes   map[string]*checker.Type // a file's `export =` type, by file name
 }
 
 type memoStr struct {
@@ -50,6 +52,7 @@ func newUnit(c *checker.Checker, sf *ast.SourceFile, off *Offsets) *unit {
 		memoRet:       map[*ast.Node]memoStr{},
 		memoAsyncBody: map[*ast.Node]memoStr{},
 		memoAsyncSyn:  map[*ast.Node]memoStr{},
+		moduleTypes:   map[string]*checker.Type{},
 	}
 }
 
@@ -445,15 +448,19 @@ func (u *unit) addType(n *ast.Node) {
 		u.overWhy = u.slot.Reason()
 		return
 	}
+	if n.Flags&ast.NodeFlagsJSDoc != 0 {
+		// TypeScript 7 builds nodes from JSDoc tags (@type, @param, @template, @import) and hangs them on
+		// the declaration; TypeScript 6's walk never saw them. Every node of such a subtree keeps the flag
+		// of the comment it was parsed from, so the whole subtree is left out.
+		return
+	}
 	if isStructural(n.Kind) {
 		u.recurse(n)
 		return
 	}
 	if n.Flags&ast.NodeFlagsReparsed != 0 {
-		// TypeScript 7 builds nodes from JSDoc tags (@type {X}, @param {Y}) and hangs them on the
-		// declaration; TypeScript 6's walk never saw them. Only the root of such a subtree carries the
-		// flag, and everything below it lies inside the comment. A reparsed type subtree is skipped as
-		// a whole. Any other reparsed node (a cast) is not recorded, but its real children are visited.
+		// The root of a subtree built from JSDoc. A reparsed type is skipped; any other reparsed node (a
+		// cast) is not recorded, but its real children are visited.
 		if ast.IsTypeNode(n) {
 			return
 		}

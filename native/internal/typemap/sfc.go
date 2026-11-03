@@ -114,7 +114,7 @@ func typeSFC(ctx context.Context, file string, b Budget, w *Watch) (seen map[int
 	}
 	vfile, sfile = filepath.Join(real, filepath.Base(vfile)), filepath.Join(real, shimName)
 	disc := NewDiscovery(Env{})
-	setup, err := BuildSetup(real, []string{vfile, sfile}, disc, 1)
+	setup, err := safeBuildSetup(real, []string{vfile, sfile}, disc, 1)
 	if err != nil {
 		return nil, st, "", err
 	}

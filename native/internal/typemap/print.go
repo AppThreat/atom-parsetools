@@ -99,11 +99,22 @@ func normalizeTypeString(s, currentFile string) string {
 }
 
 // writeType prints t once with the given flags and reports whether the result
-// is complete: the checker did not cut it short and it is under the limit.
-func (u *unit) writeType(t *checker.Type, enclosing *ast.Node, flags checker.TypeFormatFlags) (string, bool) {
+// is complete: the checker did not cut it short, it is under the limit and the
+// node builder stayed within its call budget. Like astgen's cancelled write, a
+// write over the call budget is incomplete, so the caller can still try the
+// shorter form with aliases by name.
+func (u *unit) writeType(t *checker.Type, enclosing *ast.Node, flags checker.TypeFormatFlags) (s string, ok bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			if _, over := r.(checker.BuilderBudgetExceeded); !over {
+				panic(r)
+			}
+			s, ok = "", false
+		}
+	}()
 	vc := &checker.VerbosityContext{MaxTruncationLength: MaxTypeStringLength, MaxBuilderCalls: u.builderCalls}
 	u.stats.writes++
-	s := u.c.TypeToStringEx(t, enclosing, flags, vc)
+	s = u.c.TypeToStringEx(t, enclosing, flags, vc)
 	if vc.Truncated {
 		return s, false
 	}
@@ -126,6 +137,7 @@ func (u *unit) typeToBounded(t *checker.Type, enclosing *ast.Node) string {
 		st = typeByName
 	}
 	if st == typeByName {
+		u.stats.retriedByName++
 		if s, ok := u.writeType(t, enclosing, flagsByName); ok {
 			return s
 		}
@@ -146,16 +158,49 @@ func (u *unit) typeStr(t *checker.Type, enclosing *ast.Node) (res string) {
 			if _, ok := r.(checker.Interrupted); ok {
 				panic(r) // not a failure of this type: the whole file is out of budget
 			}
-			if _, ok := r.(checker.BuilderBudgetExceeded); ok {
-				u.oversized[t] = typeUnwritable
-				u.stats.gaveUp++
-				res = "any"
-				return
-			}
-
 			u.noteRecovered(r)
 			res = "any"
 		}
 	}()
+	if m := u.moduleTypeName(t); m != "" {
+		return normalizeTypeString(m, string(u.sf.FileName()))
+	}
 	return normalizeTypeString(u.typeToBounded(t, enclosing), string(u.sf.FileName()))
+}
+
+// moduleTypeName names the type a CommonJS module exports (`module.exports = {...}`)
+// as `typeof import("<file>")`, which is what TypeScript 6 wrote for most uses of a
+// required module and what chen turns into a link to that module. TypeScript 7
+// prints the exported object's structure instead, which loses the module. Inside
+// the exporting file TypeScript 6 printed the structure too, and so does this.
+func (u *unit) moduleTypeName(t *checker.Type) string {
+	if t.Flags()&checker.TypeFlagsObject == 0 {
+		return ""
+	}
+	sym := t.Symbol()
+	if sym == nil || sym.ValueDeclaration() == nil {
+		return ""
+	}
+	sf := ast.GetSourceFileOfNode(sym.ValueDeclaration())
+	if sf == nil || sf == u.sf || !ast.IsExternalOrCommonJSModule(sf) {
+		return ""
+	}
+	name := string(sf.FileName())
+	if cached, ok := u.moduleTypes[name]; ok {
+		if cached == t {
+			return `typeof import("` + name + `")`
+		}
+		return ""
+	}
+	var exported *checker.Type
+	if fileSym := sf.AsNode().Symbol(); fileSym != nil {
+		if ms := u.c.ResolveExternalModuleSymbol(fileSym); ms != nil && ms != fileSym {
+			exported = u.c.GetTypeOfSymbol(ms)
+		}
+	}
+	u.moduleTypes[name] = exported
+	if exported == t {
+		return `typeof import("` + name + `")`
+	}
+	return ""
 }

@@ -156,20 +156,24 @@ index 7c90f3f32..46cc1d6c1 100644
  	b.ctx.flags &^= nodebuilder.FlagsInTypeAlias
  
 diff --git a/tsc/internal/checker/printer.go b/tsc/internal/checker/printer.go
-index b84c96788..f90a33e5d 100644
+index b84c96788..66638bd7c 100644
 --- a/tsc/internal/checker/printer.go
 +++ b/tsc/internal/checker/printer.go
-@@ -74,15 +74,26 @@ func (c *Checker) typeToStringEx(t *Type, enclosingDeclaration *ast.Node, flags
+@@ -73,16 +73,29 @@ func (c *Checker) typeToStringEx(t *Type, enclosingDeclaration *ast.Node, flags
+ 	if noTruncation {
  		combinedFlags = combinedFlags | nodebuilder.FlagsNoTruncation
  	}
- 	nodeBuilder, release := c.getNodeBuilder()
+-	nodeBuilder, release := c.getNodeBuilder()
 -	defer release()
++	nodeBuilder, _ := c.getNodeBuilder()
 +	panicking := true
 +	defer func() {
-+		release()
++		// The arenas of this write's builder are released through the local reference: a nested write
++		// that was abandoned may already have dropped c.typeToStringNodebuilder.
++		nodeBuilder.EmitContext().Factory.ReleaseArenas()
 +		if panicking {
 +			// The write was abandoned inside the node builder, which was left inside a context it never
-+			// exited: do not reuse it. (After release, which still needs it.)
++			// exited: do not reuse it.
 +			c.typeToStringNodebuilder = nil
 +		}
 +	}()

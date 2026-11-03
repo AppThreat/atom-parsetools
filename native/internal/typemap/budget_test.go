@@ -196,6 +196,20 @@ func TestBuilderBudgetGivesUpOneTypeOnly(t *testing.T) {
 	}
 }
 
+// A write over the builder budget is retried with aliases by name, as astgen retries a cancelled write,
+// before the type is given up.
+func TestBuilderBudgetRetriesByName(t *testing.T) {
+	var props []string
+	for i := 0; i < 40; i++ {
+		props = append(props, fmt.Sprintf("p%d: { a: 'x', b: { c: 1, d: [true] } }", i))
+	}
+	src := "const wide = {" + strings.Join(props, ", ") + "};\nexport const viaWide = wide;\n"
+	_, rep := runProject(t, map[string]string{"wide.ts": src}, 1, Env{}, Budget{BuilderCalls: 50, FileWork: 1_000_000_000})
+	if rep.GaveUp == 0 || rep.RetriedByName < rep.GaveUp {
+		t.Fatalf("every type given up must first be retried by name: gave up %d, retried %d", rep.GaveUp, rep.RetriedByName)
+	}
+}
+
 // Releasing the printer's caches after each file keeps the heap lower than keeping them. The inputs are
 // 16 files that each print large inferred types; the heap is read with the checker still alive.
 func TestPrinterCachesAreReleasedPerFile(t *testing.T) {
@@ -272,13 +286,40 @@ func TestOutputDoesNotDependOnTheNumberOfWorkers(t *testing.T) {
 	}
 }
 
-// The program is built with FixedCheckers, whatever the number of workers (read from the program, not
-// from what was asked for).
+// The program is built with FixedCheckers, or one per file when there are fewer files, whatever the
+// number of workers (read from the program, not from what was asked for).
 func TestProgramUsesAFixedNumberOfCheckers(t *testing.T) {
+	files := map[string]string{}
+	for i := 0; i < FixedCheckers+2; i++ {
+		files[fmt.Sprintf("f%d.js", i)] = "export const a = 1;\n"
+	}
 	for _, workers := range []int{1, 3, 8} {
-		_, rep := runProject(t, map[string]string{"a.js": "export const a = 1;\n"}, workers, Env{}, Budget{})
+		_, rep := runProject(t, map[string]string{"a.js": "export const a = 1;\n", "b.js": "export const b = 2;\n"}, workers, Env{}, Budget{})
+		if rep.Checkers != 2 {
+			t.Fatalf("workers=%d: two files need two checkers, the program has %d", workers, rep.Checkers)
+		}
+		_, rep = runProject(t, files, workers, Env{}, Budget{})
 		if rep.Checkers != FixedCheckers {
 			t.Fatalf("workers=%d: the program has %d checkers, want %d", workers, rep.Checkers, FixedCheckers)
 		}
+	}
+}
+
+// Past the memory cap of the run the files being typed stop and the rest are left out, each with a
+// diagnostic, and the run still ends normally. A cap of 1 MB is below any heap, so every file is reported.
+func TestMemoryCapStopsTheRunAndReportsEveryFile(t *testing.T) {
+	files := map[string]string{}
+	for i := 0; i < 6; i++ {
+		files[fmt.Sprintf("f%d.ts", i)] = fmt.Sprintf("export const v%d = [1, 2, 3].map((x) => x * %d);\n", i, i)
+	}
+	_, rep := runProject(t, files, 2, Env{}, Budget{MemoryCapMB: 1, Poll: time.Millisecond, FileWork: 1_000_000_000})
+	reported := map[string]bool{}
+	for _, d := range rep.Diagnostics {
+		if d.Reason == ReasonCap {
+			reported[d.File] = true
+		}
+	}
+	if len(reported) != 6 {
+		t.Fatalf("a run over its memory cap must report every file it did not type: %+v", rep.Diagnostics)
 	}
 }

@@ -132,13 +132,18 @@ func TestConfigNodeNextDetection(t *testing.T) {
 	}
 }
 
-// A bare specifier through baseUrl does not resolve in TypeScript 7; a paths alias does. Documented in
-// testdata/typemap/config/README.md.
-func TestConfigBaseUrlBareSpecifierIsATypeScript7Difference(t *testing.T) {
-	maps, _, proj := runConfig(t, "baseurl-paths")
-	src := read(t, proj, "src/use.ts")
-	if got := typeAt(maps["src/use.ts"], src, "a = make()"); !strings.Contains(got, "Item") {
-		t.Fatalf("the paths alias must resolve: a has type %q", got)
+// TypeScript 7 no longer resolves modules through baseUrl; BuildSetup keeps TypeScript 6's meaning by
+// resolving paths from baseUrl and adding a "*" entry. baseurl-paths has baseUrl at the tsconfig's
+// directory, baseurl-src points it into src/, so a paths entry relative to the tsconfig would miss.
+func TestConfigBaseUrlResolvesLikeTypeScript6(t *testing.T) {
+	for _, name := range []string{"baseurl-paths", "baseurl-src"} {
+		maps, _, proj := runConfig(t, name)
+		src := read(t, proj, "src/use.ts")
+		for _, marker := range []string{"a = make()", "b = bare()"} {
+			if got := typeAt(maps["src/use.ts"], src, marker); !strings.Contains(got, "Item") {
+				t.Errorf("%s: %s has type %q, want Item", name, marker, got)
+			}
+		}
 	}
 }
 
@@ -186,5 +191,25 @@ func TestConfigOptionsPerRule(t *testing.T) {
 	// automatic types
 	if o := setupFor(t, "auto-types").Options(); len(o.Types) != 1 || o.Types[0] != "*" {
 		t.Errorf("auto-types: types must be [*], got %v", o.Types)
+	}
+}
+
+// The explicit module check reads tsconfigs the way TypeScript does: a byte order mark, comments, and a
+// trailing comma followed by a comment are all accepted.
+func TestExplicitCompilerOptionReadsLikeTypeScript(t *testing.T) {
+	dir := t.TempDir()
+	for name, body := range map[string]string{
+		"bom":           "\xef\xbb\xbf{\"compilerOptions\":{\"module\":\"esnext\"}}",
+		"comma-comment": "{\n  \"compilerOptions\": {\n    \"module\": \"esnext\", // esm\n  }\n}\n",
+		"block-comment": "{ /* a */ \"compilerOptions\": { \"module\": \"esnext\" /* b */ , } }",
+		"url-in-string": "{ \"compilerOptions\": { \"module\": \"esnext\", \"x\": \"http://a/*b*/\", } }",
+	} {
+		p := filepath.Join(dir, name+".json")
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if !hasExplicitCompilerOption(p, "module") {
+			t.Errorf("%s: module is set explicitly", name)
+		}
 	}
 }

@@ -55,6 +55,9 @@ subcommands:
                 --report FILE   write the run manifest (JSON) to FILE
                 --file-ms N     wall time budget per file in milliseconds (default 60000)
                 --file-work N   checker work budget per file (default 150000000; deterministic)
+                --memory-mb N   heap cap for the whole run in MB (default 6144); past it the
+                                remaining files are not typed and are reported
+                                (for the three budgets, 0 keeps the default)
   version`)
 }
 
@@ -64,6 +67,7 @@ type args struct {
 	tsTypes                  bool
 	fileMs                   int
 	fileWork                 int
+	memoryMB                 int
 }
 
 func parseArgs(in []string) (args, error) {
@@ -93,7 +97,7 @@ func parseArgs(in []string) (args, error) {
 			a.typ, err = val(&i, name)
 		case "--report":
 			a.report, err = val(&i, name)
-		case "--workers", "--file-ms", "--file-work":
+		case "--workers", "--file-ms", "--file-work", "--memory-mb":
 			var s string
 			if s, err = val(&i, name); err == nil {
 				n, e := strconv.Atoi(s)
@@ -105,6 +109,8 @@ func parseArgs(in []string) (args, error) {
 					a.workers = n
 				case "--file-ms":
 					a.fileMs = n
+				case "--memory-mb":
+					a.memoryMB = n
 				default:
 					a.fileWork = n
 				}
@@ -158,10 +164,9 @@ func runTypemap(in []string) int {
 	if a.fileWork > 0 {
 		budget.FileWork = int64(a.fileWork)
 	}
-	if v := os.Getenv("TYPEMAP_RECYCLE_AFTER"); v != "" { // experiment, off by default
-		budget.RecycleAfter, _ = strconv.Atoi(v)
+	if a.memoryMB > 0 {
+		budget.MemoryCapMB = a.memoryMB
 	}
-	budget.KeepPrinterCaches = os.Getenv("TYPEMAP_KEEP_PRINTER_CACHES") != "" // experiment, off by default
 	opts := typemap.Options{Budget: budget,
 		Src: a.src, Output: a.output, Workers: a.workers, Env: typemap.EnvFromProcess(), ReportPath: a.report,
 		Log: func(f string, v ...any) { fmt.Fprintf(os.Stderr, f+"\n", v...) },

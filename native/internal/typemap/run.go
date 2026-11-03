@@ -59,6 +59,7 @@ type Report struct {
 	Typed         int          `json:"typed"`
 	Keys          int          `json:"keys"`
 	GaveUp        int          `json:"gaveUpTypes"`
+	RetriedByName int          `json:"typesRetriedByName"`
 	Recovered     int          `json:"recoveredPanics"`
 	ConfigPath    string       `json:"config,omitempty"`
 	Warnings      []string     `json:"warnings,omitempty"`
@@ -156,7 +157,7 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 		workers = ResolveWorkers(os.Getenv("ASTGEN_TYPE_WORKERS"), len(discovered))
 	}
 	rep.Workers = workers
-	setup, err := BuildSetup(src, projectFiles, disc, FixedCheckers)
+	setup, err := safeBuildSetup(src, projectFiles, disc, min(FixedCheckers, max(1, len(projectFiles))))
 	if err != nil {
 		return rep, err
 	}
@@ -192,6 +193,7 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 
 	type result struct {
 		keys, gaveUp, recovered int
+		retriedByName           int
 		work, ms                int64
 		diag                    *FileReport
 	}
@@ -227,6 +229,10 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 			defer func() { <-slots }()
 			cur := setup
 			for n, i := range list {
+				if watch.Capped() {
+					results[i] = result{diag: &FileReport{File: rels[i], Reason: ReasonCap, Detail: "not typed: the run went over its memory cap"}}
+					continue
+				}
 				sf := targets[i]
 				if cur != setup {
 					sf = cur.Program.GetSourceFile(rootedFile(filepath.ToSlash(string(targets[i].FileName()))))
@@ -236,13 +242,11 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 					}
 				}
 				k, st, d, tainted := typeFile(ctx, cur, watch, o.Budget, probeOnce(o.HeapProbe, &probeMu), sf, filepath.FromSlash(rels[i]), outDir, rels[i])
-				results[i] = result{k, st.gaveUp, st.recovered, st.work, st.ms, d}
-				recycle := o.Budget.RecycleAfter > 0 && (n+1)%o.Budget.RecycleAfter == 0
-				if (tainted || recycle) && n+1 < len(list) {
-					// Either the checker was stopped inside a query and may hold half built state, or
-					// RecycleAfter files have gone through it and its type cache is dropped to bound memory.
-					// The rest of its files go to a fresh single checker program.
-					next, err := BuildSetup(src, projectFiles, disc, 1)
+				results[i] = result{keys: k, gaveUp: st.gaveUp, recovered: st.recovered, retriedByName: st.retriedByName, work: st.work, ms: st.ms, diag: d}
+				if tainted && n+1 < len(list) && !watch.Capped() {
+					// The checker was stopped inside a query and may hold half built state. The rest of its
+					// files go to a fresh single checker program.
+					next, err := safeBuildSetup(src, projectFiles, disc, 1)
 					if err != nil {
 						for _, j := range list[n+1:] {
 							results[j] = result{diag: &FileReport{File: rels[j], Reason: "rebuild-failed", Detail: err.Error()}}
@@ -281,8 +285,12 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 				rel := mustRel(src, sfcFiles[i])
 				relSlash := filepath.ToSlash(rel)
 				start := time.Now()
-				seen, st, why, err := typeSFC(ctx, sfcFiles[i], o.Budget, watch)
-				r := result{keys: len(seen), gaveUp: st.gaveUp, recovered: st.recovered, work: st.work, ms: time.Since(start).Milliseconds()}
+				if watch.Capped() {
+					sfcResults[i] = result{diag: &FileReport{File: relSlash, Reason: ReasonCap, Detail: "not typed: the run went over its memory cap"}}
+					continue
+				}
+				seen, st, why, err := safeTypeSFC(ctx, sfcFiles[i], o.Budget, watch)
+				r := result{keys: len(seen), gaveUp: st.gaveUp, recovered: st.recovered, retriedByName: st.retriedByName, work: st.work, ms: time.Since(start).Milliseconds()}
 				switch {
 				case err != nil:
 					r.diag = &FileReport{File: relSlash, Reason: "sfc-error", Detail: err.Error()}
@@ -320,6 +328,7 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 		heavy = append(heavy, FileWork{rels[i], r.work, r.ms})
 		rep.Keys += r.keys
 		rep.GaveUp += r.gaveUp
+		rep.RetriedByName += r.retriedByName
 		rep.Recovered += r.recovered
 		if r.work > rep.MaxWork {
 			rep.MaxWork = r.work
@@ -371,6 +380,26 @@ func probeOnce(f func(uint64), mu *sync.Mutex) func(uint64) {
 	}
 }
 
+// safeTypeSFC is typeSFC with a panic turned into an error, so one component cannot end the run.
+func safeTypeSFC(ctx context.Context, file string, b Budget, w *Watch) (seen map[int]string, st fileStats, why string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			seen, why, err = nil, "", fmt.Errorf("typing the component panicked: %v", r)
+		}
+	}()
+	return typeSFC(ctx, file, b, w)
+}
+
+// safeBuildSetup is BuildSetup with a panic in the checker's program code turned into an error.
+func safeBuildSetup(src string, projectFiles []string, disc *Discovery, checkers int) (s *Setup, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			s, err = nil, fmt.Errorf("building the program panicked: %v", r)
+		}
+	}()
+	return BuildSetup(src, projectFiles, disc, checkers)
+}
+
 // typeFile types one file with its own exclusive checker and writes its map. An interrupt (a time
 // or memory budget) ends the file: what was collected before it is kept, the diagnostic says why,
 // and the checker, which may have been left half way through a query, is reported as tainted.
@@ -378,7 +407,9 @@ func typeFile(ctx context.Context, s *Setup, w *Watch, b Budget, probe func(uint
 	start := time.Now()
 	defer func() {
 		if r := recover(); r != nil {
+			// the checker stopped half way through a query and is not used again
 			diag = &FileReport{File: relSlash, Reason: "panic", Detail: fmt.Sprint(r), Ms: time.Since(start).Milliseconds()}
+			tainted = true
 		}
 	}()
 	c, done := s.Program.GetTypeCheckerForFileExclusive(ctx, sf)
