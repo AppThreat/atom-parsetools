@@ -1,9 +1,9 @@
 name: parsa binaries
 # Builds parsa for every target on one Linux machine (parsa has no cgo yet, so it cross-compiles and
 # the Linux binaries are static, for glibc and musl alike), then runs the binaries it can on their own
-# platforms. A push to main publishes the binaries to ghcr.io/appthreat/parsa with oras, tagged
-# <os>-<arch>-<commit> and <os>-<arch>-main. A published release also gets them as assets, with a
-# .sha256 file each and build provenance, and as <os>-<arch>-<version> on ghcr.io; cdxgen-plugins-bin
+# platforms, and writes a post-build SBOM of what the binaries link. A push to main publishes the binaries to ghcr.io/appthreat/parsa with oras, tagged
+# <os>-<arch>-<commit> and <os>-<arch>-main, each with its .sha256 file and the SBOM. A published
+# release also gets them as assets, with a .sha256 file each, the SBOM and build provenance, and as <os>-<arch>-<version> on ghcr.io; cdxgen-plugins-bin
 # bakes those assets into its platform packages.
 on:
   push:
@@ -56,6 +56,26 @@ jobs:
       env:
         PARSA_VERSION: ${{ steps.version.outputs.version }}
       run: ./scripts/build-release.sh _deps/dist
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+      with:
+        node-version: '26.x'
+        package-manager-cache: false
+    # cdxgen reads go.mod, prune-go-sbom.js keeps the modules the binaries' build info names (adding
+    # the ones cdxgen missed), and annotate-sbom.js names the pinned TypeScript commit, its patches
+    # and parsa's version. The Go toolchain goes into the formulation. cdx-validate fails the build on a schema
+    # or reference error.
+    - name: post-build SBOM
+      working-directory: parsa
+      env:
+        FETCH_LICENSE: "true"
+        VERSION: ${{ steps.version.outputs.version }}
+        REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+      run: |
+        sbom=_deps/dist/sbom-parsa-postbuild.cdx.json
+        npx -y @cdxgen/cdxgen@13.4.0 -t go --no-recurse --exclude "testdata/**" --exclude "_deps/**" -o "$sbom" .
+        node scripts/prune-go-sbom.js "$sbom" _deps/dist/parsa-*
+        node scripts/annotate-sbom.js "$sbom" "$VERSION" "$REPO_URL" "$GITHUB_SHA"
+        npx -y -p @cdxgen/cdxgen@13.4.0 cdx-validate -i "$sbom" --strict --fail-severity critical --no-include-manual
     - name: the Linux x64 binary types the fixtures
       working-directory: parsa
       run: |
@@ -68,14 +88,15 @@ jobs:
         path: parsa/_deps/dist/
         if-no-files-found: error
 
-  # Runs the cross-compiled binaries where they belong. macOS runners are scarce, so the darwin
-  # binaries run here only for a release; ci.yml builds and tests parsa on macOS for every change.
+  # Runs the cross-compiled binaries where they belong. The Apple silicon runners are scarce, so the
+  # darwin-arm64 binary runs here only for a release (ci.yml builds and tests parsa on Apple silicon
+  # for every change); the Intel macOS runner runs darwin-amd64 every time.
   run:
     needs: build
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(github.event_name == 'release' && '[{"os":"ubuntu-24.04-arm","bin":"parsa-linux-arm64"},{"os":"windows-latest","bin":"parsa-windows-amd64.exe"},{"os":"windows-11-arm","bin":"parsa-windows-arm64.exe"},{"os":"macos-15","bin":"parsa-darwin-arm64"},{"os":"macos-15-intel","bin":"parsa-darwin-amd64"}]' || '[{"os":"ubuntu-24.04-arm","bin":"parsa-linux-arm64"},{"os":"windows-latest","bin":"parsa-windows-amd64.exe"}]') }}
+        include: ${{ fromJSON(github.event_name == 'release' && '[{"os":"ubuntu-24.04-arm","bin":"parsa-linux-arm64"},{"os":"windows-latest","bin":"parsa-windows-amd64.exe"},{"os":"windows-11-arm","bin":"parsa-windows-arm64.exe"},{"os":"macos-15","bin":"parsa-darwin-arm64"},{"os":"macos-15-intel","bin":"parsa-darwin-amd64"}]' || '[{"os":"ubuntu-24.04-arm","bin":"parsa-linux-arm64"},{"os":"windows-latest","bin":"parsa-windows-amd64.exe"},{"os":"macos-15-intel","bin":"parsa-darwin-amd64"}]') }}
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -130,7 +151,8 @@ jobs:
               --artifact-type application/vnd.appthreat.parsa.v1 \
               --annotation "org.opencontainers.image.source=https://github.com/${GITHUB_REPOSITORY}" \
               --annotation "org.opencontainers.image.version=$VERSION" \
-              "$bin:application/octet-stream" "$bin.sha256:text/plain"
+              "$bin:application/octet-stream" "$bin.sha256:text/plain" \
+              "sbom-parsa-postbuild.cdx.json:application/vnd.cyclonedx+json"
           done
         done
 
@@ -149,9 +171,11 @@ jobs:
         path: dist
     - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
       with:
-        subject-path: dist/parsa-*
+        subject-path: |
+          dist/parsa-*
+          dist/sbom-parsa-postbuild.cdx.json
     - name: attach to the release
       env:
         GH_TOKEN: ${{ github.token }}
         TAG: ${{ github.event.release.tag_name }}
-      run: gh release upload "$TAG" dist/parsa-* --clobber --repo "$GITHUB_REPOSITORY"
+      run: gh release upload "$TAG" dist/parsa-* dist/sbom-parsa-postbuild.cdx.json --clobber --repo "$GITHUB_REPOSITORY"

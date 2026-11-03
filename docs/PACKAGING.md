@@ -56,16 +56,18 @@ The main CI job exercises the whole surface under both runtimes: `npm test` and 
 
 ## The parsa binaries
 
-`parsa` is not part of the npm package. `.github/workflows/parsa-release.yml` cross-compiles it on one Linux machine with `parsa/scripts/build-release.sh`, which needs no cgo yet: Linux, macOS and Windows on x64 and arm64, six files of about 19 MB, each with a `.sha256` file. The Linux binaries are static, so the same file runs on glibc and musl. The build is reproducible (`-trimpath`, no build id, no VCS stamp): building the same commit twice gives the same bytes. The job then runs the Linux arm64 and Windows x64 binaries on their own runners, and for a release every binary, macOS included.
+`parsa` is not part of the npm package. `.github/workflows/parsa-release.yml` cross-compiles it on one Linux machine with `parsa/scripts/build-release.sh`, which needs no cgo yet: Linux, macOS and Windows on x64 and arm64, six files of about 19 MB, each with a `.sha256` file. The Linux binaries are static, so the same file runs on glibc and musl. The build is reproducible (`-trimpath`, no build id, no VCS stamp): building the same commit twice gives the same bytes. The job then runs the Linux arm64, Windows x64 and macOS x64 (Intel) binaries on their own runners, and for a release every binary, Apple silicon and Windows arm64 included.
 
-Each push to main that touches `parsa/` publishes the binaries to `ghcr.io/appthreat/parsa` with oras, tagged `<os>-<arch>-<commit>` and `<os>-<arch>-main`, so atom, chen and cdxgen-plugins-bin can test a build before it is released:
+The same job writes a post-build SBOM, `sbom-parsa-postbuild.cdx.json`, of what the binaries link: cdxgen reads `parsa/go.mod`, `parsa/scripts/prune-go-sbom.js` (shared with cdxgen-plugins-bin) keeps the modules the binaries' build info names, and `parsa/scripts/annotate-sbom.js` records microsoft/TypeScript by its pinned commit, with the patches in `parsa/patches` as its pedigree. The Go release the binaries were built with is recorded in the SBOM's formulation (`formula:go-build`), not as a component. `cdx-validate` fails the build on a schema or reference error.
+
+Each push to main that touches `parsa/` publishes the binaries to `ghcr.io/appthreat/parsa` with oras, each with its `.sha256` file and the SBOM, tagged `<os>-<arch>-<commit>` and `<os>-<arch>-main`, so atom, chen and cdxgen-plugins-bin can test a build before it is released:
 
 ```shell
 oras pull ghcr.io/appthreat/parsa:linux-amd64-main
 sha256sum -c parsa-linux-amd64.sha256
 ```
 
-A published GitHub release gets the binaries and their `.sha256` files as assets, with build provenance (`gh attestation verify parsa-linux-amd64 --repo AppThreat/atom-parsetools`), and on ghcr.io the tags `<os>-<arch>-<version>`. cdxgen-plugins-bin downloads the release assets, checks the hashes and bakes the binaries into its platform packages. Once cgo arrives (the Prism parser for `parsa rb`), each target has to build on its own runner instead.
+A published GitHub release gets the binaries, their `.sha256` files and the SBOM as assets, with build provenance (`gh attestation verify parsa-linux-amd64 --repo AppThreat/atom-parsetools`), and on ghcr.io the tags `<os>-<arch>-<version>`. cdxgen-plugins-bin downloads the release assets, checks the hashes and bakes the binaries into its platform packages. Once cgo arrives (the Prism parser for `parsa rb`), each target has to build on its own runner instead.
 
 ## Publishing this documentation site
 
