@@ -1,0 +1,164 @@
+native/internal/typemap/config_test.go
+  h_0926447d100ad2 1-190
+native/internal/typemap/fixtures_test.go
+  h_0926447d100ad2 32-99,112,116-119,127-129,132-134
+native/internal/typemap/program.go
+  h_0926447d100ad2 306-308,386-388
+native/internal/typemap/run.go
+  h_0926447d100ad2 246-294,408-419
+native/internal/typemap/sfc.go
+  h_0926447d100ad2 1-140
+native/internal/typemap/sfc_test.go
+  h_0926447d100ad2 1-128
+native/internal/typemap/shims/svelte-shims.d.ts
+  h_0926447d100ad2 1-40
+native/internal/typemap/shims/vue-shims.d.ts
+  h_0926447d100ad2 1-29
+native/testdata/typemap/config/README.md
+  h_0926447d100ad2 1-4
+native/testdata/typemap/config/auto-types/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/auto-types/src/g.ts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/baseurl-paths/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/baseurl-paths/src/lib/item.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/config/baseurl-paths/src/use.ts
+  h_0926447d100ad2 1-4
+native/testdata/typemap/config/baseurl-paths/tsconfig.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/auto-types/src/g.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/baseurl-paths/src/lib/item.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/baseurl-paths/src/use.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/extends/other/b.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/extends/src/a.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/forced-options/a.js.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/include-exclude/scripts/run.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/include-exclude/src/kept.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/include-exclude/src/skip/s.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/jsconfig/a.js.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/left-out/src/x.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/nodenext/a.mts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/nodenext/b.mts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/references/app/main.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/references/lib/index.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/expected/removed-options/r.ts.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/config/extends/base.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/extends/other/b.ts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/extends/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/extends/src/a.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/config/extends/tsconfig.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/forced-options/a.js
+  h_0926447d100ad2 1-2
+native/testdata/typemap/config/forced-options/data.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/forced-options/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/forced-options/tsconfig.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/include-exclude/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/include-exclude/scripts/run.ts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/include-exclude/src/kept.ts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/include-exclude/src/skip/s.ts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/include-exclude/tsconfig.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/jsconfig/a.js
+  h_0926447d100ad2 1-3
+native/testdata/typemap/config/jsconfig/jsconfig.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/jsconfig/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/left-out/.hidden/h.ts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/left-out/docs/d.ts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/left-out/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/left-out/src/three.js
+  h_0926447d100ad2 1
+native/testdata/typemap/config/left-out/src/x.ts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/left-out/tsconfig.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/nodenext/a.mts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/config/nodenext/b.mts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/nodenext/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/references/app/main.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/config/references/app/tsconfig.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/references/lib/index.ts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/references/lib/tsconfig.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/references/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/references/tsconfig.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/removed-options/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/config/removed-options/r.ts
+  h_0926447d100ad2 1-2
+native/testdata/typemap/config/removed-options/tsconfig.json
+  h_0926447d100ad2 1
+native/testdata/typemap/sfc/expected/Counter.vue.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/sfc/expected/Plain.vue.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/sfc/expected/Todo.svelte.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/sfc/expected/Unicode.vue.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/sfc/package.json
+  h_0926447d100ad2 1
+native/testdata/typemap/sfc/src/Counter.vue
+  h_0926447d100ad2 1-15
+native/testdata/typemap/sfc/src/NoScript.vue
+  h_0926447d100ad2 1
+native/testdata/typemap/sfc/src/Plain.vue
+  h_0926447d100ad2 1-7
+native/testdata/typemap/sfc/src/Todo.svelte
+  h_0926447d100ad2 1-12
+native/testdata/typemap/sfc/src/Unicode.vue
+  h_0926447d100ad2 1-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "58ce7613c94cf71dcbcd93ad0d0549bb6e083026",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
