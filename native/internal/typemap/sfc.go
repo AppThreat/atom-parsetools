@@ -81,14 +81,14 @@ func VirtualSource(code string) (source string, hasScript bool) {
 // path never is): type the virtual source with a throwaway program next to the framework's shim
 // declarations, both in a temporary directory, as astgen does. It returns the type map, nil when
 // the file has no script content.
-func typeSFC(ctx context.Context, file string, b Budget, w *Watch) (seen map[int]string, st fileStats, diag string, err error) {
+func typeSFC(ctx context.Context, file string, b Budget, w *Watch) (seen map[int]string, spans map[Span]string, st fileStats, diag string, err error) {
 	data, err := os.ReadFile(file)
 	if err != nil {
-		return nil, st, "", err
+		return nil, nil, st, "", err
 	}
 	virtual, has := VirtualSource(string(data))
 	if !has {
-		return nil, st, "", nil
+		return nil, nil, st, "", nil
 	}
 	shimName, shimSrc := "vue-shims.d.ts", vueShims
 	if strings.HasSuffix(file, ".svelte") {
@@ -96,16 +96,16 @@ func typeSFC(ctx context.Context, file string, b Budget, w *Watch) (seen map[int
 	}
 	dir, err := os.MkdirTemp("", "atom-parsetools-sfc-")
 	if err != nil {
-		return nil, st, "", err
+		return nil, nil, st, "", err
 	}
 	defer os.RemoveAll(dir)
 	vfile := filepath.Join(dir, filepath.Base(file)+".ts")
 	sfile := filepath.Join(dir, shimName)
 	if err := os.WriteFile(vfile, []byte(virtual), 0o644); err != nil {
-		return nil, st, "", err
+		return nil, nil, st, "", err
 	}
 	if err := os.WriteFile(sfile, []byte(shimSrc), 0o644); err != nil {
-		return nil, st, "", err
+		return nil, nil, st, "", err
 	}
 	// The throwaway directory is resolved the way astgen resolves it: createTsc([virtual, shim], dir).
 	real, _ := filepath.EvalSymlinks(dir)
@@ -116,11 +116,11 @@ func typeSFC(ctx context.Context, file string, b Budget, w *Watch) (seen map[int
 	disc := NewDiscovery(Env{})
 	setup, err := safeBuildSetup(real, []string{vfile, sfile}, disc, 1)
 	if err != nil {
-		return nil, st, "", err
+		return nil, nil, st, "", err
 	}
 	sf := setup.Program.GetSourceFile(rootedFile(filepath.ToSlash(vfile)))
 	if sf == nil {
-		return nil, st, "", fmt.Errorf("the virtual source is not in its program")
+		return nil, nil, st, "", fmt.Errorf("the virtual source is not in its program")
 	}
 	start := time.Now()
 	c, done := setup.Program.GetTypeCheckerForFileExclusive(ctx, sf)
@@ -136,5 +136,5 @@ func typeSFC(ctx context.Context, file string, b Budget, w *Watch) (seen map[int
 	st = u.stats
 	st.work = c.Work()
 	st.ms = time.Since(start).Milliseconds()
-	return u.seen, st, u.overWhy, nil
+	return u.seen, u.spans, st, u.overWhy, nil
 }

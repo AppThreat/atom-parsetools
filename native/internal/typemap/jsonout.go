@@ -82,3 +82,32 @@ func writeJSString(b *bytes.Buffer, s string) {
 	}
 	b.WriteByte('"')
 }
+
+// EncodeSpans writes the span map as one JSON object keyed "start:end", ordered by start and then end.
+func EncodeSpans(spans map[Span]string) []byte {
+	keys := make([]Span, 0, len(spans))
+	for k := range spans {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].Start != keys[j].Start {
+			return keys[i].Start < keys[j].Start
+		}
+		return keys[i].End < keys[j].End
+	})
+	var b bytes.Buffer
+	b.WriteByte('{')
+	for i, k := range keys {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteByte('"')
+		b.WriteString(strconv.Itoa(k.Start))
+		b.WriteByte(':')
+		b.WriteString(strconv.Itoa(k.End))
+		b.WriteString(`":`)
+		writeJSString(&b, spans[k])
+	}
+	b.WriteByte('}')
+	return b.Bytes()
+}

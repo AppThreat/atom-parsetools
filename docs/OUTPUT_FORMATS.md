@@ -37,6 +37,14 @@ With type generation on (the default), each file also gets `<relative-path>.type
 
 The key is the same `start` offset the AST node carries, so joining a node to its type is a lookup, not a search.
 
+That map holds one type per offset, and several nodes start at one offset: `svc`, `svc.load` and `svc.load(user)` share their entry, so the entry cannot say which of them it types. With `ASTGEN_TYPES=native` each file therefore also gets `<relative-path>.typespans`, a JSON object mapping `"start:end"` (the `start` and `end` the AST node carries) to the type of the node with exactly that extent:
+
+```json
+{ "680:686": "User", "680:691": "string", "680:714": "string" }
+```
+
+Nodes whose type is `any` or `unknown` are left out. A function or class declaration also has an entry for its extent without the leading `export` and `default` keywords, because Babel starts such a node after them. Single-file components (`.vue`, `.svelte`) get one too, keyed by offsets of the component. The `types` record in `astgen_manifest.jsonl` counts the type maps as `typemap_files` and the span files as `typespans_files`. TypeScript 6 (`ASTGEN_TYPES=ts6`) writes no `.typespans` file, and readers fall back to the `.typemap` alone.
+
 ## phpastgen
 
 Batch mode writes one file per parsed PHP file at `<output>/<relative-path>.json`:

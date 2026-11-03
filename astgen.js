@@ -2746,7 +2746,7 @@ const runNativeTypePhase = async (options) => {
         fallbackReason: outcome.ok ? undefined : outcome.reason,
         bin: found.path,
         report: outcome.report,
-        files: outcome.files?.length,
+        files: outcome.files,
         version: ASTGEN_VERSION
       })
     );
