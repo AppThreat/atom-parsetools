@@ -1,0 +1,39 @@
+astgen.js
+  s_79a7c562b49300::t_36266eba415c78 57,2760-2762,2882,2903
+docs/ASTGEN.md
+  s_79a7c562b49300::t_80fb2376e6f2a4 196-197,201-203
+docs/ENV.md
+  s_79a7c562b49300::t_65fe6e8bcb8b87 12
+lib/typemap/native.mjs
+  s_79a7c562b49300::t_ba951713aaa9ca 67-86,113-114,119,124-139,152-164,166
+package.json
+  s_79a7c562b49300::t_6c351c67c787d8 9
+test-fixtures/astgen-native-types-regression.js
+  s_c0804e5357f0c5::t_0f763df93c8b46 21,25,27,42-47,194-245
+test-fixtures/astgen-relative-path-regression.js
+  s_79a7c562b49300::t_b87477123d4547 1-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6be5abd47dca26d9b1156f39f245a4979efa5c05",
+  "prompts": {},
+  "sessions": {
+    "s_79a7c562b49300": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e06ad8c2-0767-47dd-913e-35689e5f05ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    },
+    "s_c0804e5357f0c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75227701-fd30-4fc7-8eae-71a8df8f3a1c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
