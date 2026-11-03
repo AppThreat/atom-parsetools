@@ -10,7 +10,7 @@
     "test:evaluate": "node test-fixtures/evaluate-astgen.js",
     "test:native-types": "node test-fixtures/astgen-native-types-regression.js",
     "test:typemap-diff": "node test-fixtures/typemap-diff-regression.js",
-    "test:native": "sh native/scripts/test-native.sh",
+    "test:native": "sh parsa/scripts/test-native.sh",
     "test:ruby": "node test-fixtures/rbastgen-regression.js",
     "test:php": "node test-fixtures/phpastgen-cli.js && node test-fixtures/phpastgen-parser-info.js && node test-fixtures/phpastgen-discovery.js && node test-fixtures/phpastgen-provenance.js && node test-fixtures/phpastgen-framework-facts.js && node test-fixtures/phpastgen-legacy-regression.js && node test-fixtures/phpastgen-concurrency.js && node test-fixtures/phpastgen-chunk.js && node test-fixtures/phpastgen-regression.js && node test-fixtures/phpastgen-contract-snapshot.js && npm run test:php:pbt",
     "test:php:concurrency": "node test-fixtures/phpastgen-concurrency.js",

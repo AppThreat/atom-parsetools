@@ -188,7 +188,7 @@ The checker is single-threaded, so parallelism comes from sharding: files are de
 
 ## Native type maps (opt-in)
 
-`ASTGEN_TYPES=native` runs `atom-parsetools-native typemap` once for the project and moves the `.typemap` files it wrote into the output directory, under the names astgen would have used. Babel still parses every file; only the type phase changes. The binary type checks with TypeScript 7's checker (typescript-go), in one process with one checker per CPU (at most 8, `ASTGEN_TYPE_WORKERS` to choose), and reads the same `ASTGEN_*` variables for discovery, so both sides see the same files.
+`ASTGEN_TYPES=native` runs `parsa js --types-only` once for the project and moves the `.typemap` files it wrote into the output directory, under the names astgen would have used. Babel still parses every file; only the type phase changes. The binary type checks with TypeScript 7's checker (typescript-go), in one process with one checker per CPU (at most 8, `ASTGEN_TYPE_WORKERS` to choose), and reads the same `ASTGEN_*` variables for discovery, so both sides see the same files.
 
 What differs from the default `ts6` path, on purpose:
 

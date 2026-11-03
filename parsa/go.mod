@@ -1,4 +1,4 @@
-module github.com/AppThreat/atom-parsetools/native
+module github.com/AppThreat/atom-parsetools/parsa
 
 go 1.27
 

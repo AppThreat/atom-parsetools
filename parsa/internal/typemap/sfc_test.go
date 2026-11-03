@@ -59,7 +59,7 @@ func TestShimsMatchAstgen(t *testing.T) {
 		js := strings.ReplaceAll(strings.ReplaceAll(string(m[1]), `\\`, "\x00"), `\"`, `"`)
 		js = strings.ReplaceAll(js, "\x00", `\`)
 		if js != want {
-			t.Errorf("%s differs from astgen.js; regenerate native/internal/typemap/shims", name)
+			t.Errorf("%s differs from astgen.js; regenerate parsa/internal/typemap/shims", name)
 		}
 	}
 }

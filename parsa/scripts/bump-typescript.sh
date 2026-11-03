@@ -1,7 +1,7 @@
 #!/bin/sh
 # bump-typescript.sh [<commit> | --head]
-# Move the microsoft/TypeScript pin (native/third_party/typescript.pin), refetch
-# tsc/, apply native/patches, regenerate native/shim, then build and run the
+# Move the microsoft/TypeScript pin (parsa/third_party/typescript.pin), refetch
+# tsc/, apply parsa/patches, regenerate parsa/shim, then build and run the
 # type map tests. Every heavy step runs under the watchdog. On failure the old
 # pin is restored. Needs git, go and network access.
 set -eu

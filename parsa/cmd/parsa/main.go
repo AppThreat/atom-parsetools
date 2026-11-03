@@ -1,11 +1,11 @@
-// Command atom-parsetools-native is the native replacement for atom-parsetools'
-// parsers. This tranche implements one subcommand:
+// Command parsa ("parse for atom") is the native replacement for atom-parsetools'
+// parsers, with a subcommand per language. It implements one so far:
 //
-//	atom-parsetools-native typemap -i SRC -o OUT [--workers N] [--report FILE]
+//	parsa js --types-only -i SRC -o OUT [--workers N] [--report FILE]
 //
-// typemap writes OUT/<relative path>.typemap for every file astgen would type,
-// using the flags and ASTGEN_* variables astgen reads. Later subcommands (astgen,
-// phpastgen, rbastgen) are added to the switch in main.
+// which writes OUT/<relative path>.typemap and .typespans for every file astgen
+// would type, using the flags and ASTGEN_* variables astgen reads. parsa js
+// without --types-only (the AST), parsa php, parsa rb and parsa scala come later.
 package main
 
 import (
@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AppThreat/atom-parsetools/native/internal/typemap"
+	"github.com/AppThreat/atom-parsetools/parsa/internal/typemap"
 )
 
 const version = "0.1.0"
@@ -28,8 +28,8 @@ func main() {
 		os.Exit(2)
 	}
 	switch os.Args[1] {
-	case "typemap":
-		os.Exit(runTypemap(os.Args[2:]))
+	case "js":
+		os.Exit(runJS(os.Args[2:]))
 	case "--version", "version":
 		fmt.Println(version + " (TypeScript " + typemap.TypeScriptPin() + ")")
 	case "-h", "--help", "help":
@@ -42,10 +42,11 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, `usage: atom-parsetools-native <subcommand> [options]
+	fmt.Fprintln(os.Stderr, `usage: parsa <language> [options]
 
-subcommands:
-  typemap   write .typemap files, as astgen does with types on
+languages:
+  js        JavaScript and TypeScript. Only type maps so far, so --types-only is required:
+                --types-only    write .typemap and .typespans files, as astgen does with types on
             -i, --src DIR       source directory            [default: .]
             -o, --output DIR    output directory            [default: <src>/ast_out]
             -t, --type TYPE     project type; auto-detected when absent
@@ -68,6 +69,7 @@ type args struct {
 	fileMs                   int
 	fileWork                 int
 	memoryMB                 int
+	typesOnly                bool
 }
 
 func parseArgs(in []string) (args, error) {
@@ -115,6 +117,8 @@ func parseArgs(in []string) (args, error) {
 					a.fileWork = n
 				}
 			}
+		case "--types-only":
+			a.typesOnly = true
 		case "-r", "--recurse", "--tsTypes":
 		case "--no-tsTypes":
 			a.tsTypes = false
@@ -128,10 +132,14 @@ func parseArgs(in []string) (args, error) {
 	return a, nil
 }
 
-func runTypemap(in []string) int {
+func runJS(in []string) int {
 	a, err := parseArgs(in)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
+		return 2
+	}
+	if !a.typesOnly {
+		fmt.Fprintln(os.Stderr, "parsa js writes only type maps so far; pass --types-only (astgen still writes the AST)")
 		return 2
 	}
 	if a.output == "ast_out" {

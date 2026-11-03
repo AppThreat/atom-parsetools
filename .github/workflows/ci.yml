@@ -76,7 +76,7 @@ jobs:
   # The native type map binary (Go, typescript-go through a pinned shim). Builds it, runs its Go tests
   # under the watchdog, then runs astgen's native integration tests against the built binary, which
   # the build job skips because it has no Go toolchain.
-  native:
+  parsa:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -88,7 +88,7 @@ jobs:
         persist-credentials: false
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
       with:
-        go-version-file: native/go.mod
+        go-version-file: parsa/go.mod
         cache: false
     - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
       with:
@@ -97,8 +97,8 @@ jobs:
     - name: go tests
       run: npm run test:native
     - name: build the binary
-      working-directory: native
-      run: ./scripts/wd.sh -t 900 -m 6144 -- go build -trimpath -o _deps/bin/atom-parsetools-native ./cmd/atom-parsetools-native
+      working-directory: parsa
+      run: ./scripts/wd.sh -t 900 -m 6144 -- go build -trimpath -o _deps/bin/parsa ./cmd/parsa
     - name: astgen with ASTGEN_TYPES=native
       env:
         ASTGEN_NATIVE_REQUIRED: "1"

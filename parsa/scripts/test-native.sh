@@ -1,5 +1,5 @@
 #!/bin/sh
-# Runs the Go tests of native/ under the watchdog. Skips, with a reason and exit
+# Runs the Go tests of parsa/ under the watchdog. Skips, with a reason and exit
 # status 0, when Go or git is missing (the Node tests must not need them).
 #
 # Caps: compiling the checker needs more memory than running a test, so the build
