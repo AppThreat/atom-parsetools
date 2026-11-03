@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/microsoft/TypeScript/tsc/shim/ast"
 	"github.com/microsoft/TypeScript/tsc/shim/checker"
@@ -392,6 +393,7 @@ func typeFile(ctx context.Context, s *Setup, w *Watch, b Budget, probe func(uint
 		defer c.ReleasePrinterCaches() // see budget.go: this halves the heap on outline and angular-realworld
 	}
 	bom := hasUTF8BOM(string(sf.FileName()))
+	notes := inspectText(sf.Text())
 	u := newUnit(c, sf, NewOffsets(sf.Text(), bom))
 	u.builderCalls = b.BuilderCalls
 	u.slot = slot
@@ -415,6 +417,8 @@ func typeFile(ctx context.Context, s *Setup, w *Watch, b Budget, probe func(uint
 	}
 	if u.overWhy != "" {
 		diag = &FileReport{File: relSlash, Reason: u.overWhy, Detail: "no further entries were written for this file", Keys: len(u.seen), Ms: time.Since(start).Milliseconds()}
+	} else if len(notes) > 0 {
+		diag = &FileReport{File: relSlash, Reason: notes[0].reason, Detail: strings.Join(detailsOf(notes), "; "), Keys: len(u.seen), Ms: time.Since(start).Milliseconds()}
 	}
 	return len(u.seen), st, diag, u.tainted
 }
@@ -441,4 +445,58 @@ func hasUTF8BOM(path string) bool {
 	var b [3]byte
 	n, _ := f.Read(b[:])
 	return n == 3 && b[0] == 0xEF && b[1] == 0xBB && b[2] == 0xBF
+}
+
+// A note is something about a file's content that the user should know although the file was typed.
+type note struct{ reason, detail string }
+
+func detailsOf(ns []note) []string {
+	out := make([]string, len(ns))
+	for i, n := range ns {
+		out[i] = n.detail
+	}
+	return out
+}
+
+const (
+	// ReasonInvalidUTF8 marks a file with bytes that are not UTF-8. They were read as U+FFFD, one for each
+	// invalid sequence, as Node's decoder reads them.
+	ReasonInvalidUTF8 = "invalid-utf8"
+	// ReasonBinary marks a file that has NUL bytes in its first 8 KB: it is almost certainly not source.
+	ReasonBinary = "binary-content"
+	// ReasonLarge marks a file over LargeFileBytes: a bundle or generated file, the usual cause of an
+	// expensive type phase. It is typed anyway.
+	ReasonLarge = "large-file"
+	// LargeFileBytes is the size from which a file is reported as large.
+	LargeFileBytes = 5 << 20
+)
+
+// inspectText reports what is odd about a file's text. The first note decides the reason of the diagnostic.
+func inspectText(text string) []note {
+	var ns []note
+	head := text
+	if len(head) > 8192 {
+		head = head[:8192]
+	}
+	if strings.IndexByte(head, 0) >= 0 {
+		ns = append(ns, note{ReasonBinary, "the first 8 KB contain NUL bytes: this is probably not source code"})
+	}
+	if !utf8.ValidString(text) {
+		bad := 0
+		for i := 0; i < len(text); {
+			r, size := utf8.DecodeRuneInString(text[i:])
+			if r == utf8.RuneError && size == 1 {
+				bad++
+				n, _ := decodeStep(text[i:])
+				i += n
+				continue
+			}
+			i += size
+		}
+		ns = append(ns, note{ReasonInvalidUTF8, fmt.Sprintf("%d invalid UTF-8 sequence(s) read as U+FFFD", bad)})
+	}
+	if len(text) > LargeFileBytes {
+		ns = append(ns, note{ReasonLarge, fmt.Sprintf("%d bytes: a bundle or generated file", len(text))})
+	}
+	return ns
 }
