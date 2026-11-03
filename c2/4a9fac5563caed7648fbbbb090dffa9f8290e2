@@ -1,0 +1,58 @@
+native/internal/typemap/budget_test.go
+  s_79a7c562b49300::t_e8ff406acfd893 203-206
+  s_79a7c562b49300::t_99d1fc94098209 199-202,207-212,289-290,292-295,297-301,307-325
+native/cmd/atom-parsetools-native/main.go
+  s_79a7c562b49300::t_bfa0f1c0e2ed89 58-60,70,100,112-113,167-168
+native/internal/typemap/budget.go
+  s_79a7c562b49300::t_2c434a329e90c5 10,12-14,19-26,35,38,45,53,60-62,97,117-127,129-130,132-133,147,151-154
+native/internal/typemap/config_test.go
+  s_79a7c562b49300::t_37bfa4cbbd6853 135-146,196-215
+native/internal/typemap/jsdoc_test.go
+  s_79a7c562b49300::t_8096e6ae8d1eee 1-41
+native/internal/typemap/module_test.go
+  s_79a7c562b49300::t_a672b65f354a3e 1-22
+native/internal/typemap/print.go
+  s_79a7c562b49300::t_1662f21a6de2fe 102-114,117,140,165-167,170-206
+native/internal/typemap/program.go
+  s_79a7c562b49300::t_10d6637b11c1b3 4,9,95-112,235-237,239-252,254-260,262-264,268,273-276,278-289,295,298-299,301-302,404
+native/internal/typemap/rules.go
+  s_79a7c562b49300::t_5be957cca5589f 16,39,55,451-456,462-463
+native/internal/typemap/run.go
+  s_79a7c562b49300::t_e0355496412d35 62,160,196,232-235,245-249,288-293,331,383-402,410,412
+native/internal/typemap/sfc.go
+  s_79a7c562b49300::t_04d094d949d876 117
+native/patches/0001-checker-printing-budget-interrupt-and-cache-release.patch
+  s_79a7c562b49300::t_67db683b339f79 159,162-163,166,168,171-173,176
+native/testdata/typemap/config/README.md
+  s_79a7c562b49300::t_27b2ba67283be5 2-4
+native/testdata/typemap/config/baseurl-src/package.json
+  s_79a7c562b49300::t_b2094b0339f2e3 1
+native/testdata/typemap/config/baseurl-src/src/lib/item.ts
+  s_79a7c562b49300::t_bfce7ba2b598a1 1-2
+native/testdata/typemap/config/baseurl-src/src/use.ts
+  s_79a7c562b49300::t_631fa397a155fa 1-4
+native/testdata/typemap/config/baseurl-src/tsconfig.json
+  s_79a7c562b49300::t_873ff97c504652 1
+native/testdata/typemap/config/expected/baseurl-paths/src/use.ts.typemap
+  s_79a7c562b49300::t_8af1a5376463e6 1
+native/testdata/typemap/config/expected/baseurl-src/src/lib/item.ts.typemap
+  s_79a7c562b49300::t_e8f8a807691346 1
+native/testdata/typemap/config/expected/baseurl-src/src/use.ts.typemap
+  s_79a7c562b49300::t_9b0e22c8f886b6 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c24a9fac5563caed7648fbbbb090dffa9f8290e2",
+  "prompts": {},
+  "sessions": {
+    "s_79a7c562b49300": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e06ad8c2-0767-47dd-913e-35689e5f05ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
