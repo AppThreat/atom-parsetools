@@ -596,6 +596,11 @@ func (u *unit) typeForNode(n *ast.Node) string {
 
 	// STANDARD EXPRESSIONS, IDENTIFIERS AND TYPE NODES: literal types are widened
 	default:
+		if n.Kind == ast.KindThisKeyword {
+			if m := u.commonJSModuleThis(n); m != "" {
+				return m
+			}
+		}
 		t := u.typeAtLocationForDefault(n)
 		if t == nil {
 			return ""
@@ -607,6 +612,30 @@ func (u *unit) typeForNode(n *ast.Node) string {
 		}
 		return u.typeStr(t, n)
 	}
+}
+
+// commonJSModuleThis is the type of a `this` at the top level of a CommonJS module, which is the
+// module's exports. TypeScript 6 wrote it as `typeof import("./<file>")`; TypeScript 7 types it as
+// `typeof globalThis`, which hides the module from chen (compiled code reads helpers through it:
+// `this && this.__importDefault`). Arrow functions do not bind `this`, so they are looked through.
+func (u *unit) commonJSModuleThis(n *ast.Node) string {
+	if u.sf.CommonJSModuleIndicator == nil || u.sf.ExternalModuleIndicator != nil {
+		return ""
+	}
+	for p := n.Parent; p != nil; p = p.Parent {
+		switch p.Kind {
+		case ast.KindSourceFile:
+			return normalizeTypeString(`typeof import("`+string(u.sf.FileName())+`")`, string(u.sf.FileName()))
+		case ast.KindArrowFunction:
+			continue
+		case ast.KindFunctionDeclaration, ast.KindFunctionExpression, ast.KindMethodDeclaration,
+			ast.KindConstructor, ast.KindGetAccessor, ast.KindSetAccessor, ast.KindClassDeclaration,
+			ast.KindClassExpression, ast.KindClassStaticBlockDeclaration, ast.KindPropertyDeclaration,
+			ast.KindModuleDeclaration:
+			return ""
+		}
+	}
+	return ""
 }
 
 func (u *unit) functionLike(n *ast.Node) string {

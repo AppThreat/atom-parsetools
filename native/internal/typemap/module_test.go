@@ -20,3 +20,20 @@ func TestCommonJSModuleIsNamedByImport(t *testing.T) {
 		t.Errorf("lib/m.js exports: got %q", got)
 	}
 }
+
+// `this` at the top level of a CommonJS module is its exports: TypeScript 6 wrote the module's type,
+// and chen links the helpers compiled code reads through it. Inside a function it stays as it is.
+func TestCommonJSTopLevelThisIsTheModule(t *testing.T) {
+	src := "var helper = (this && this.helper) || function (m) { return m; };\nfunction f() { return this; }\nexports.x = 1;\n"
+	esm := "export const y = this;\n"
+	maps, _ := runProject(t, map[string]string{"build/app.js": src, "esm.mjs": esm}, 1, Env{}, Budget{})
+	if got := typeAt(maps["build/app.js"], src, "this && "); got != `typeof import("./app")` {
+		t.Errorf("top-level this: got %q", got)
+	}
+	if got := typeAt(maps["build/app.js"], src, "this; }"); got == `typeof import("./app")` {
+		t.Errorf("this inside a function is not the module: got %q", got)
+	}
+	if got := typeAt(maps["esm.mjs"], esm, "this;"); got == `typeof import("./esm")` {
+		t.Errorf("this in an ES module is not the module: got %q", got)
+	}
+}
