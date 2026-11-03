@@ -90,3 +90,24 @@ func TestSpansLeaveOutAny(t *testing.T) {
 		}
 	}
 }
+
+// A single-file component is typed from its virtual source, which keeps the offsets of the component,
+// so its spans are written too.
+func TestSpansOfSingleFileComponent(t *testing.T) {
+	proj := filepath.Join("..", "..", "testdata", "typemap", "sfc")
+	out := filepath.Join(t.TempDir(), "out")
+	if _, err := Run(context.Background(), Options{Src: proj, Output: out, Workers: 1}); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(out, "src", "Counter.vue.typespans"))
+	if err != nil {
+		t.Fatalf("no span file for the component: %v", err)
+	}
+	spans := map[string]string{}
+	if err := json.Unmarshal(b, &spans); err != nil {
+		t.Fatal(err)
+	}
+	if len(spans) == 0 {
+		t.Fatal("the span file is empty")
+	}
+}

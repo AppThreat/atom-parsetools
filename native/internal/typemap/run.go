@@ -289,7 +289,7 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 					sfcResults[i] = result{diag: &FileReport{File: relSlash, Reason: ReasonCap, Detail: "not typed: the run went over its memory cap"}}
 					continue
 				}
-				seen, st, why, err := safeTypeSFC(ctx, sfcFiles[i], o.Budget, watch)
+				seen, spans, st, why, err := safeTypeSFC(ctx, sfcFiles[i], o.Budget, watch)
 				r := result{keys: len(seen), gaveUp: st.gaveUp, recovered: st.recovered, retriedByName: st.retriedByName, work: st.work, ms: time.Since(start).Milliseconds()}
 				switch {
 				case err != nil:
@@ -297,7 +297,7 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 				case why != "":
 					r.diag = &FileReport{File: relSlash, Reason: why, Detail: "no further entries were written for this file", Keys: len(seen), Ms: r.ms}
 				}
-				if werr := writeTypeMap(outDir, rel, seen); werr != nil && r.diag == nil {
+				if werr := writeTypeMap(outDir, rel, seen, spans); werr != nil && r.diag == nil {
 					r.diag = &FileReport{File: relSlash, Reason: "write", Detail: werr.Error()}
 				}
 				sfcResults[i] = r
@@ -381,10 +381,10 @@ func probeOnce(f func(uint64), mu *sync.Mutex) func(uint64) {
 }
 
 // safeTypeSFC is typeSFC with a panic turned into an error, so one component cannot end the run.
-func safeTypeSFC(ctx context.Context, file string, b Budget, w *Watch) (seen map[int]string, st fileStats, why string, err error) {
+func safeTypeSFC(ctx context.Context, file string, b Budget, w *Watch) (seen map[int]string, spans map[Span]string, st fileStats, why string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			seen, why, err = nil, "", fmt.Errorf("typing the component panicked: %v", r)
+			seen, spans, why, err = nil, nil, "", fmt.Errorf("typing the component panicked: %v", r)
 		}
 	}()
 	return typeSFC(ctx, file, b, w)
@@ -459,8 +459,8 @@ func typeFile(ctx context.Context, s *Setup, w *Watch, b Budget, probe func(uint
 	return len(u.seen), st, diag, u.tainted
 }
 
-// writeTypeMap writes <outDir>/<rel>.typemap when there is anything to write.
-func writeTypeMap(outDir, rel string, seen map[int]string) error {
+// writeTypeMap writes <outDir>/<rel>.typemap, and <rel>.typespans when there are spans, when there is anything to write.
+func writeTypeMap(outDir, rel string, seen map[int]string, spans map[Span]string) error {
 	if len(seen) == 0 {
 		return nil
 	}
@@ -468,7 +468,13 @@ func writeTypeMap(outDir, rel string, seen map[int]string) error {
 	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(out, EncodeTypeMap(seen), 0o644)
+	if err := os.WriteFile(out, EncodeTypeMap(seen), 0o644); err != nil {
+		return err
+	}
+	if len(spans) == 0 {
+		return nil
+	}
+	return os.WriteFile(filepath.Join(outDir, rel+".typespans"), EncodeSpans(spans), 0o644)
 }
 
 // hasUTF8BOM reports whether the file on disk starts with a UTF-8 byte order mark.

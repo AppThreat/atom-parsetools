@@ -261,6 +261,21 @@ test("native types land in the same .typemap files and the manifest records the 
   assert.equal(rec.engine, "native");
   assert.match(rec.typescript, /^[0-9a-f]{40}$/);
   assert.ok(Array.isArray(rec.diagnostics));
+  // the span files are part of the output contract: listed in the record, next to a type map each
+  const spanFiles = listFiles(r.out, ".typespans");
+  assert.ok(spanFiles.length > 0, "the binary writes span files");
+  assert.equal(rec.typespans_files, spanFiles.length, "the record counts the span files");
+  assert.equal(rec.typemap_files, listFiles(r.out, ".typemap").length, "and the type maps apart from them");
+  for (const f of spanFiles) {
+    assert.ok(existsSync(join(r.out, `${f.slice(0, -".typespans".length)}.typemap`)), `${f} has a type map`);
+    const spans = JSON.parse(readFileSync(join(r.out, f), "utf8"));
+    for (const [k, v] of Object.entries(spans)) {
+      assert.match(k, /^\d+:\d+$/, `${f}: a span key is "start:end"`);
+      assert.equal(typeof v, "string");
+      assert.ok(v !== "any" && v !== "unknown", `${f}: ${k} must not be ${v}`);
+    }
+  }
+  assert.deepEqual(listFiles(base.out, ".typespans"), [], "TypeScript 6 writes no span files");
   assert.ok(listFiles(r.out, ".json").every((f) => !f.endsWith("jsonl")), "no side record may end in .json");
   rmSync(r.out, { recursive: true, force: true });
   rmSync(base.out, { recursive: true, force: true });
@@ -282,6 +297,7 @@ test("astgen does not type single-file components itself in native mode", () => 
   const twice = [...seen].filter(([, n]) => n > 1);
   assert.deepEqual(twice, [], `type maps written twice: ${JSON.stringify(twice)}`);
   assert.ok(listFiles(nat.out, ".typemap").some((f) => f.endsWith(".vue.typemap")), "the binary types .vue files");
+  assert.ok(listFiles(nat.out, ".typespans").some((f) => f.endsWith(".vue.typespans")), "and writes their spans");
   rmSync(nat.out, { recursive: true, force: true });
 }, { needsBinary: true });
 

@@ -43,7 +43,7 @@ That map holds one type per offset, and several nodes start at one offset: `svc`
 { "680:686": "User", "680:691": "string", "680:714": "string" }
 ```
 
-Nodes whose type is `any` or `unknown` are left out. A function or class declaration also has an entry for its extent without the leading `export` and `default` keywords, because Babel starts such a node after them. TypeScript 6 (`ASTGEN_TYPES=ts6`) writes no `.typespans` file, and readers fall back to the `.typemap` alone.
+Nodes whose type is `any` or `unknown` are left out. A function or class declaration also has an entry for its extent without the leading `export` and `default` keywords, because Babel starts such a node after them. Single-file components (`.vue`, `.svelte`) get one too, keyed by offsets of the component. The `types` record in `astgen_manifest.jsonl` counts the type maps as `typemap_files` and the span files as `typespans_files`. TypeScript 6 (`ASTGEN_TYPES=ts6`) writes no `.typespans` file, and readers fall back to the `.typemap` alone.
 
 ## phpastgen
 
