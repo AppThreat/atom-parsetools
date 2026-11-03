@@ -77,7 +77,7 @@ type Report struct {
 // order of the files on a checker are functions of the input alone, and the number of workers only
 // decides how many checkers run at once. Three files of about 6,000 differed between one and eight
 // checkers before this was fixed.
-const FixedCheckers = 8
+var FixedCheckers = 8 // a variable only so that a test can put every file on one checker; never changed by the program
 
 // DefaultWorkers is the number of checkers that run at the same time when nothing asks for one: the CPU
 // count, at most 8.

@@ -88,18 +88,53 @@ func TestWorkBudgetStopsARunawayFileDeterministically(t *testing.T) {
 	}
 }
 
-// A file that tripped the budget taints its checker; files typed after it on the same checker must
-// come out as if the interrupted file had never been there.
+// A file that tripped the budget taints its checker; files typed after it on the same checker must come out
+// as if the interrupted file had never been there. Which files share a checker is up to the pool, so this test
+// puts every file on one (FixedCheckers = 1) and compares each file with itself typed in a project without the
+// runaway file.
 func TestFilesAfterAnInterruptedFileAreUnaffected(t *testing.T) {
-	good := "export const a = [1, 2, 3].map((n) => n + 1);\nexport function f(x) { return { x }; }\n"
-	files := map[string]string{"a-first.js": good, "b-runaway.js": evolvingArrayFile(20, false), "c-after.js": good}
-	alone, _ := runProject(t, map[string]string{"c-after.js": good}, 1, Env{}, Budget{})
-	maps, rep := runProject(t, files, 1, Env{}, Budget{FileWork: 3_000_000})
-	if rep.Rebuilds == 0 {
-		t.Fatalf("a checker that was interrupted must be replaced: %+v", rep)
+	saved := FixedCheckers
+	FixedCheckers = 1
+	defer func() { FixedCheckers = saved }()
+	good := func(i int) string {
+		return fmt.Sprintf("export const a%d = [1, 2, 3].map((n) => n + %d);\nexport function f%d(x) { return { x, k: %d }; }\n", i, i, i, i)
 	}
-	if fmt.Sprint(maps["c-after.js"]) != fmt.Sprint(alone["c-after.js"]) {
-		t.Fatalf("the file after the interrupted one differs from the same file typed alone\nafter: %v\nalone: %v", maps["c-after.js"], alone["c-after.js"])
+	files := map[string]string{"a-first.js": good(0), "b-runaway.js": evolvingArrayFile(20, false)}
+	clean := map[string]string{"a-first.js": good(0)}
+	for i := 1; i <= 6; i++ {
+		name := fmt.Sprintf("c%02d.js", i)
+		files[name] = good(i)
+		clean[name] = good(i)
+	}
+	cleanMaps, _ := runProject(t, clean, 1, Env{}, Budget{})
+	maps, rep := runProject(t, files, 1, Env{}, Budget{FileWork: 3_000_000})
+	if len(rep.Diagnostics) != 1 || rep.Diagnostics[0].File != "b-runaway.js" {
+		t.Fatalf("exactly the runaway file must be reported: %+v", rep.Diagnostics)
+	}
+	if rep.Rebuilds != 1 {
+		t.Fatalf("a checker that was interrupted must be replaced when files remain on it: %+v", rep)
+	}
+	for name := range clean {
+		if fmt.Sprint(maps[name]) != fmt.Sprint(cleanMaps[name]) {
+			t.Fatalf("%s differs from the same file typed without the interrupted one\nwith:    %v\nwithout: %v", name, maps[name], cleanMaps[name])
+		}
+	}
+}
+
+// Using an expensive function costs the files that use it too: the budget is per file, the work is per symbol.
+// A file that imports the runaway module pays for it and is reported on its own.
+func TestFilesThatUseARunawayFunctionAreBudgetedToo(t *testing.T) {
+	files := map[string]string{
+		"b-runaway.js": evolvingArrayFile(20, false),
+		"user.js":      "import { scan } from './b-runaway.js';\nexport const s = scan({ types: [] });\n",
+	}
+	_, rep := runProject(t, files, 1, Env{}, Budget{FileWork: 3_000_000})
+	reported := map[string]bool{}
+	for _, d := range rep.Diagnostics {
+		reported[d.File] = true
+	}
+	if !reported["b-runaway.js"] || !reported["user.js"] {
+		t.Fatalf("both the function's file and the file that calls it hit the budget: %+v", rep.Diagnostics)
 	}
 }
 
