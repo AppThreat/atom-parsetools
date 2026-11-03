@@ -1,0 +1,30 @@
+lib/typemap/diff.mjs
+  h_0926447d100ad2 36-40,42-66,73-82,94-117,143,146,211-212,274,299
+native/internal/typemap/rules.go
+  h_0926447d100ad2 435-444,446
+native/testdata/typemap/rules/baseline-ts6/src/r17-jsdoc.js.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/expected/r17-jsdoc.js.typemap
+  h_0926447d100ad2 1
+native/testdata/typemap/rules/src/r17-jsdoc.js
+  h_0926447d100ad2 1-15
+native/tools/watchdog/main.go
+  h_0926447d100ad2 158-162,165,176-184
+native/tools/watchdog/main_test.go
+  h_0926447d100ad2 40-47,133-144
+test-fixtures/typemap-allow.json
+  h_0926447d100ad2 9-13
+test-fixtures/typemap-diff-regression.js
+  h_0926447d100ad2 9-10,134,137-138,141-144,152-154,156-187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6b4aa931c4b9a1a0aae5803f8e63dc54f5050939",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
