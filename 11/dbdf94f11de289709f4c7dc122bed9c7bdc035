@@ -1,0 +1,25 @@
+.github/workflows/parsa-release.yml
+  s_79a7c562b49300::t_f24677da13fb8f 64-65
+docs/PACKAGING.md
+  s_79a7c562b49300::t_29be35c477a42d 61
+parsa/scripts/annotate-sbom.js
+  s_79a7c562b49300::t_58bce6735ebee9 11-12,45-46,48-49,51-52,70-77
+parsa/scripts/annotate-sbom.test.js
+  s_79a7c562b49300::t_7c12e1b7e92b3d 47,57-58,66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "11dbdf94f11de289709f4c7dc122bed9c7bdc035",
+  "prompts": {},
+  "sessions": {
+    "s_79a7c562b49300": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e06ad8c2-0767-47dd-913e-35689e5f05ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
