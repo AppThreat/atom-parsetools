@@ -1,0 +1,53 @@
+.github/workflows/ci.yml
+  s_79a7c562b49300::t_1eff6eb909dd4d 79,91,100-101
+astgen.js
+  s_79a7c562b49300::t_415f98e780c7a0 2707
+docs/ASTGEN.md
+  s_79a7c562b49300::t_111ae8e8a82a85 191
+docs/ENV.md
+  s_79a7c562b49300::t_d58c550d8bfc49 10-11
+lib/typemap/native.mjs
+  s_79a7c562b49300::t_db201cfd0a1152 1,21,114
+package.json
+  s_79a7c562b49300::t_3edf7527634aad 13
+parsa/cmd/parsa/main.go
+  s_79a7c562b49300::t_7e9a959ff5560d 1-2,4,6-8,20,31-32,45,47-49,72,120-121,135,141-144
+parsa/go.mod
+  s_79a7c562b49300::t_a9f4062fd45f40 1
+parsa/internal/typemap/run.go
+  s_79a7c562b49300::t_05c15fe1f00c5a 152
+parsa/internal/typemap/sfc_test.go
+  s_79a7c562b49300::t_e22720d0f92972 62
+parsa/scripts/bump-typescript.sh
+  s_79a7c562b49300::t_580da9402a1548 3-4
+parsa/scripts/fetch-typescript.sh
+  s_79a7c562b49300::t_fc9e810ae7e3bf 3
+parsa/scripts/test-native.sh
+  s_79a7c562b49300::t_526b0114a98eb9 2
+parsa/testdata/typemap/rules/baseline-ts6/README.md
+  s_79a7c562b49300::t_406a8127412c4d 1
+parsa/tools/gen_shims/README.md
+  s_79a7c562b49300::t_cc30b418e301d4 5,7,14
+parsa/tools/gen_shims/go.mod
+  s_79a7c562b49300::t_ed035bb82e5c4f 1
+test-fixtures/astgen-native-types-regression.js
+  s_79a7c562b49300::t_0d098190f46e18 2-3,36,110
+test-fixtures/typemap-diff-regression.js
+  s_79a7c562b49300::t_abb6fc2e104e1d 377
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6de7669f17bb29c65c91ad2c8ddad9e656984b0a",
+  "prompts": {},
+  "sessions": {
+    "s_79a7c562b49300": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e06ad8c2-0767-47dd-913e-35689e5f05ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
