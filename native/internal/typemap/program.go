@@ -303,6 +303,14 @@ func isSupportedRoot(f string) bool {
 	return false
 }
 
+// CheckerCount is the number of checkers the program's pool has.
+func (s *Setup) CheckerCount() int {
+	if n := s.Program.Options().Checkers; n != nil {
+		return *n
+	}
+	return 1
+}
+
 // Options returns the compiler options the program was created with.
 func (s *Setup) Options() *core.CompilerOptions { return s.Program.Options() }
 

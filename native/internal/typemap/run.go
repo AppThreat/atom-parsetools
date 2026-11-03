@@ -53,6 +53,7 @@ type Report struct {
 	Tool          string       `json:"tool"`
 	TypeScript    string       `json:"typescript"`
 	Workers       int          `json:"workers"`
+	Checkers      int          `json:"checkers"`
 	Files         int          `json:"files"`
 	Typed         int          `json:"typed"`
 	Keys          int          `json:"keys"`
@@ -69,7 +70,16 @@ type Report struct {
 	Millis        int64        `json:"ms"`
 }
 
-// DefaultWorkers is the checker count when nothing asks for one: the CPU
+// FixedCheckers is the number of checkers every program is built with, whatever the number of workers.
+// The pool ties each file to one checker, and a checker's answers can depend on what it resolved before
+// (a circular reference is cut at another place, a contextual type is found or not), so the output depends
+// on which files share a checker. With the checker count fixed, the file to checker association and the
+// order of the files on a checker are functions of the input alone, and the number of workers only
+// decides how many checkers run at once. Three files of about 6,000 differed between one and eight
+// checkers before this was fixed.
+const FixedCheckers = 8
+
+// DefaultWorkers is the number of checkers that run at the same time when nothing asks for one: the CPU
 // count, at most 8.
 func DefaultWorkers() int {
 	n := runtime.NumCPU()
@@ -145,11 +155,12 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 		workers = ResolveWorkers(os.Getenv("ASTGEN_TYPE_WORKERS"), len(discovered))
 	}
 	rep.Workers = workers
-	setup, err := BuildSetup(src, projectFiles, disc, workers)
+	setup, err := BuildSetup(src, projectFiles, disc, FixedCheckers)
 	if err != nil {
 		return rep, err
 	}
 	rep.ConfigPath = setup.ConfigPath
+	rep.Checkers = setup.CheckerCount() // what the program was built with, not what was asked for
 	rep.Warnings = append(rep.Warnings, setup.Warnings...)
 
 	// expandSrcFilesWithRootNames: the typed set also holds tsconfig files under the source root.
@@ -176,7 +187,7 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 			rels = append(rels, mustRel(src, f))
 		}
 	}
-	logf("program ready: %d root files, %d to type, %d checkers, %d ms", len(setup.RootNames), len(targets), workers, time.Since(t0).Milliseconds())
+	logf("program ready: %d root files, %d to type, %d checkers, %d at a time, %d ms", len(setup.RootNames), len(targets), FixedCheckers, workers, time.Since(t0).Milliseconds())
 
 	type result struct {
 		keys, gaveUp, recovered int
@@ -205,11 +216,14 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 	}
 	var wg sync.WaitGroup
 	var rebuilds atomic.Int64
+	slots := make(chan struct{}, workers) // at most `workers` checkers type files at the same time
 	for _, c := range order {
 		list := groups[c]
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			slots <- struct{}{}
+			defer func() { <-slots }()
 			cur := setup
 			for n, i := range list {
 				sf := targets[i]

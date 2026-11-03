@@ -209,3 +209,41 @@ func TestPrinterCachesAreReleasedPerFile(t *testing.T) {
 		t.Fatalf("releasing the printer caches must lower the heap by at least 10%%: keep=%d MB release=%d MB", kept>>20, released>>20)
 	}
 }
+
+// The output must not depend on the number of workers. A checker's answers can depend on what it resolved
+// before, so the files are tied to a fixed number of checkers. The vendored arborist code (see
+// testdata/typemap/arborist/README.md) is an input on which the output differed between one and eight
+// workers when the number of checkers followed the number of workers.
+func TestOutputDoesNotDependOnTheNumberOfWorkers(t *testing.T) {
+	proj := filepath.Join("..", "..", "testdata", "typemap", "arborist")
+	var first map[string]map[int]string
+	for _, workers := range []int{1, 2, 4, 8} {
+		maps, rep := runDir(t, proj, workers, Env{}, Budget{})
+		if len(rep.Diagnostics) != 0 {
+			t.Fatalf("workers=%d: %+v", workers, rep.Diagnostics)
+		}
+		if first == nil {
+			first = maps
+			if len(first) < 20 {
+				t.Fatalf("expected at least 20 type maps, got %d", len(first))
+			}
+			continue
+		}
+		for f, m := range first {
+			if fmt.Sprint(m) != fmt.Sprint(maps[f]) {
+				t.Fatalf("workers=%d: the type map of %s differs from the one with 1 worker", workers, f)
+			}
+		}
+	}
+}
+
+// The program is built with FixedCheckers, whatever the number of workers (read from the program, not
+// from what was asked for).
+func TestProgramUsesAFixedNumberOfCheckers(t *testing.T) {
+	for _, workers := range []int{1, 3, 8} {
+		_, rep := runProject(t, map[string]string{"a.js": "export const a = 1;\n"}, workers, Env{}, Budget{})
+		if rep.Checkers != FixedCheckers {
+			t.Fatalf("workers=%d: the program has %d checkers, want %d", workers, rep.Checkers, FixedCheckers)
+		}
+	}
+}
