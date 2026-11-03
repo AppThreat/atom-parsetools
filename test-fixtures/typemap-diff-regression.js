@@ -182,12 +182,14 @@ test("every sample carries file, offset and both strings", () => {
 test("difference classes: each classifier fires on its example and not on a plain difference", () => {
   const ctx = { noNodeModules: true, externalNames: new Set(["useForm"]), nodeText: "useForm()" };
   const cases = {
-    "import-specifier": ['import("./a").T', 'import("./b").T'],
+    "import-specifier": ['import("../node_modules/zod/lib/index").T', 'import("zod").T'],
     "shadowed-type-parameter-name": ["Promise<T_1>", "Promise<T>"],
     parenthesization: ["Meta<(<E>(a: E) => any)>", "Meta<<E>(a: E) => any>"],
     "declared-vs-instantiated-reference": ["Promise<T>", "Promise<any>"],
     "undefined-member": ["string | undefined", "string"],
+    "typeof-alias-vs-import": ["typeof morgan", 'typeof import("./config/morgan")'],
     "typeof-vs-structure": ['typeof import("./m")', "{ a: string; }"],
+    "module-object": ["{ exports: typeof module.exports; }", "{ exports: { a: string; }; }"],
     "structure-vs-typeof": ["{ a: string; }", "typeof module.exports"],
     "deferred-vs-evaluated": ["T extends (...a: any) => infer R ? R : any", "{ id: any; }"],
     "unresolved-external-type": ["Foo<string>", "Bar"],
@@ -205,6 +207,22 @@ test("difference classes: each classifier fires on its example and not on a plai
   const external = DIFFERENCE_CLASSIFIERS.find((k) => k.id === "unresolved-external-type");
   assert.ok(!external.test("A", "B", { ...ctx, noNodeModules: false }), "needs node_modules to be absent");
   assert.ok(!external.test("A", "B", { ...ctx, nodeText: "other()" }), "needs an imported name to occur");
+});
+
+test("difference classes do not name differences that change the type", () => {
+  const cls = (b, c) => DIFFERENCE_CLASSIFIERS.find((k) => k.test(b, c, {}))?.id;
+  // each pair names different types; none may land in a class that is allow-listed as harmless
+  const harmless = ["import-specifier", "shadowed-type-parameter-name", "parenthesization", "undefined-member", "typeof-vs-structure", "structure-vs-typeof", "typeof-alias-vs-import"];
+  for (const [b, c] of [
+    ["(A | B)[]", "A | B[]"],
+    ["{ a: typeof x; }", "number"],
+    ['import("lodash").Foo', 'import("./local").Foo'],
+    ["Error_1", "Error_2"],
+    ["{ a: string | undefined; b: number; }", "{ a: string; b: number | undefined; }"],
+    ["typeof x", "number"]
+  ]) {
+    assert.ok(!harmless.includes(cls(b, c)), `${b} / ${c} classified as ${cls(b, c)}`);
+  }
 });
 
 test("typeof inside a string literal is not a typeof type", () => {
@@ -275,6 +293,15 @@ test("max bounds a class", () => {
     classes: [{ id: "different:declared-vs-instantiated-reference", reason: "r", reviewer: "x", max: 0 }]
   }).filter((p) => p.id === "different:declared-vs-instantiated-reference");
   assert.equal(bad.length, 1);
+});
+
+test("maxShare bounds a class by its share of all keys", () => {
+  const r = diffOf();
+  const share = r.classes["different:declared-vs-instantiated-reference"].count / r.totals.keys;
+  const entry = (maxShare) => ({ classes: [{ id: "different:declared-vs-instantiated-reference", reason: "r", reviewer: "x", maxShare }] });
+  const hits = (maxShare) => checkAllowList(r, entry(maxShare)).filter((p) => p.id === "different:declared-vs-instantiated-reference");
+  assert.equal(hits(share).length, 0);
+  assert.equal(hits(share / 2).length, 1);
 });
 
 test("a normalization can be bounded with an entry", () => {
