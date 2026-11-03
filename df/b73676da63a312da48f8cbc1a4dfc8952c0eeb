@@ -1,0 +1,21 @@
+native/internal/typemap/module_test.go
+  s_79a7c562b49300::t_753eceb7761033 23-39
+native/internal/typemap/rules.go
+  s_79a7c562b49300::t_981488bba511ad 599-603,617-640
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dfb73676da63a312da48f8cbc1a4dfc8952c0eeb",
+  "prompts": {},
+  "sessions": {
+    "s_79a7c562b49300": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e06ad8c2-0767-47dd-913e-35689e5f05ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
