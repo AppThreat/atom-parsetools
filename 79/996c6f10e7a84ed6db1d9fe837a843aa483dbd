@@ -1,0 +1,31 @@
+astgen.js
+  s_74398300cc48c7::t_a845a009bf841b 2749
+docs/OUTPUT_FORMATS.md
+  s_74398300cc48c7::t_cf728aa3f10659 46
+lib/typemap/native.mjs
+  s_74398300cc48c7::t_b9a801a019b18e 188-194
+native/internal/typemap/run.go
+  s_74398300cc48c7::t_88db6c44dba3c3 292,300,384,387,462-463,471-477
+native/internal/typemap/sfc.go
+  s_74398300cc48c7::t_3421affc3e678b 84,87,91,99,105,108,119,123,139
+native/internal/typemap/spans_test.go
+  s_74398300cc48c7::t_902b29783b6759 93-113
+test-fixtures/astgen-native-types-regression.js
+  s_74398300cc48c7::t_3dcb051f665fc3 264-278,300
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "79996c6f10e7a84ed6db1d9fe837a843aa483dbd",
+  "prompts": {},
+  "sessions": {
+    "s_74398300cc48c7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d0904532-37d4-48a7-8f6e-50bec4d75023",
+        "model": "claude-sonnet-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
