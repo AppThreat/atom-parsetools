@@ -1,0 +1,10 @@
+export const num = 42;
+export const str = "text";
+export const flag = true;
+export const big = 10n;
+export let widened = "wide";
+export const obj = { k: 1 };
+const ident = num;
+export const useIdent = ident;
+export const re = /x/g;
+export const nul = null;

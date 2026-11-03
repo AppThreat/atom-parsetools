@@ -25,6 +25,13 @@ import {
 } from "fs";
 import { getAllFiles } from "@appthreat/atom-common";
 import { exitWithSupervisor } from "./supervise.js";
+import {
+  findNativeBinary,
+  requestedEngine,
+  runNativeTypes,
+  typesRecord,
+  writeManifestRecord
+} from "./lib/typemap/native.mjs";
 import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
 import { parseAstroFile, parseAstroFrontmatterOnly } from "./astroAst.js";
 import { parseHtmlFile } from "./htmlAst.js";
@@ -47,7 +54,7 @@ import { lowerEmberFile } from "./emberAst.js";
 // whose types recursed through conditional types (Prisma 4's client) ran
 // astgen out of memory, leaving no ASTs at all; the empty parse must not be
 // reused.
-const ASTGEN_VERSION = "4.5.2";
+const ASTGEN_VERSION = "4.6.0";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -424,7 +431,7 @@ const shouldIncludeTestFiles =
 const TEST_FILE_EXT = "(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)";
 const TEST_FILE_PATTERN = new RegExp(
   `(?:\\.(?:poku|test|spec|e2e|integration|it)\\.${TEST_FILE_EXT}$` +
-    `|[\\\\/]__(?:tests|mocks)__[\\\\/])`,
+    `|(?:^|[\\\\/])__(?:tests|mocks)__[\\\\/])`,
   "i"
 );
 
@@ -1245,7 +1252,7 @@ const toVueAst = (file, tsInstance) => {
 };
 
 const collectSeenTypesForFile = (file, ts, options) => {
-  if (!options?.tsTypes) {
+  if (!options?.tsTypes || nativeTypesWritten) {
     return undefined;
   }
 
@@ -2697,6 +2704,69 @@ const runTypeGenerationInWorkers = (
   ).then((results) => results.every(Boolean));
 };
 
+// ASTGEN_TYPES=native: the type map comes from atom-parsetools-native, run once for the project, and
+// this process only parses (Babel). Set once the native phase has written the .typemap files, so that
+// collectSeenTypesForFile does not type anything a second time.
+let nativeTypesWritten = false;
+
+/**
+ * The native type phase. Returns true when the native binary produced the type maps. On any problem
+ * (no binary, a failing run) it warns once and returns false, and the caller carries on with the
+ * TypeScript 6 path, so the user gets types either way.
+ */
+const runNativeTypePhase = async (options) => {
+  const warnOnce = (message) => console.error(`astgen: ${message}`);
+  const requested = requestedEngine(process.env, warnOnce);
+  if (requested !== "native") {
+    return false;
+  }
+  const found = findNativeBinary({
+    env: process.env,
+    astgenDir: dirname(fileURLToPath(import.meta.url))
+  });
+  let outcome;
+  if (found.error) {
+    outcome = { ok: false, reason: found.error };
+  } else {
+    outcome = await runNativeTypes({
+      bin: found.path,
+      src: options.src,
+      output: options.output,
+      type: options.type,
+      env: process.env,
+      onFile: (rel, dest) => console.log("Converted types for", rel, "to", dest)
+    });
+  }
+  try {
+    writeManifestRecord(
+      options.output,
+      typesRecord({
+        engine: outcome.ok ? "native" : "ts6",
+        requested,
+        fallbackReason: outcome.ok ? undefined : outcome.reason,
+        bin: found.path,
+        report: outcome.report,
+        files: outcome.files?.length,
+        version: ASTGEN_VERSION
+      })
+    );
+  } catch (err) {
+    console.error("astgen: cannot write the manifest:", err?.message);
+  }
+  if (!outcome.ok) {
+    warnOnce(`ASTGEN_TYPES=native: ${outcome.reason}; falling back to TypeScript 6 for types.`);
+    return false;
+  }
+  for (const w of outcome.report?.warnings ?? []) {
+    console.error(`astgen: native types: warning: ${w}`);
+  }
+  for (const d of outcome.report?.diagnostics ?? []) {
+    console.error(`astgen: native types: ${d.file}: ${d.reason}${d.detail ? ` (${d.detail})` : ""}`);
+  }
+  nativeTypesWritten = true;
+  return true;
+};
+
 /**
  * Generate AST for JavaScript or TypeScript
  */
@@ -2721,6 +2791,13 @@ const createJSAst = async (options) => {
       tscConfig?.rootNames,
       options.src
     );
+
+    if (await runNativeTypePhase(options)) {
+      // Babel parses the same files as on the TypeScript 6 path; the native binary has written the
+      // type maps (see test-fixtures/astgen-native-types-regression.js for the file sets).
+      await processFilesInline(srcFiles, options, undefined);
+      return;
+    }
 
     const workerCount = resolveTypeWorkerCount(srcFiles.length);
     if (workerCount > 1) {
@@ -2802,7 +2879,7 @@ const getCircularReplacer = () => {
  * Write AST data to a json file
  */
 const writeAstFile = (file, ast, options) => {
-  const relativePath = file.replace(new RegExp("^" + options.src + "/"), "");
+  const relativePath = relative(options.src, file);
   const outAstFile = join(options.output, relativePath + ".json");
   const data = {
     fullName: file,
@@ -2823,7 +2900,7 @@ const writeAstFile = (file, ast, options) => {
 };
 
 const writeTypesFile = (file, seenTypes, options) => {
-  const relativePath = file.replace(new RegExp("^" + options.src + "/"), "");
+  const relativePath = relative(options.src, file);
   const outTypeFile = join(options.output, relativePath + ".typemap");
   mkdirSync(dirname(outTypeFile), { recursive: true });
   writeFileSync(
