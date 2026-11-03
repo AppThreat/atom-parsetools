@@ -9,7 +9,7 @@ import {
   diffTrees,
   externalImportNames
 } from "../lib/typemap/diff.mjs";
-import { NORMALIZATIONS, canon, equalAfterNormalization } from "../lib/typemap/canon.mjs";
+import { CANONICAL_FORMS, NORMALIZATIONS, canon, equalAfterNormalization } from "../lib/typemap/canon.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = mkdtempSync(join(tmpdir(), "typemap-diff-"));
@@ -70,6 +70,55 @@ test("typeof is only equated with a function type, and only when the name is in 
   assert.deepEqual(equalAfterNormalization("typeof f", "(a: number) => void", { nodeText: "f(1)" }), ["typeof-vs-signature"]);
   assert.equal(equalAfterNormalization("typeof f", "(a: number) => void", { nodeText: "g(1)" }), undefined);
   assert.equal(equalAfterNormalization("typeof f", "number | (() => void)", {}), undefined);
+});
+
+for (const [input, want] of CANONICAL_FORMS) {
+  test(`canon writes ${input} as ${want}`, () => {
+    assert.equal(canon(input, ["union-order", "object-member-order", "quote-style"]), want);
+  });
+}
+
+// A normalizer that is switched off must not change a string. Real type maps showed that a normalizer that
+// printed strings again from tokens respelled 15 percent of them (`Array <string>`, `({ a; }: T)`), so this
+// runs the normalizer with nothing on over strings built from the shapes that occur in type maps.
+function generatedTypeStrings() {
+  const atoms = ["string", "number", "any", "Foo", "React.ReactNode", '"a"', "'b'", "1", "T_1", "import(\"./m\").Foo", "typeof f", "void"];
+  const out = new Set(atoms);
+  const wrap = (t) => [
+    `Array<${t}>`, `Promise<${t}>`, `Map<string, ${t}>`, `${t}[]`, `[${t}, ${t}]`, `readonly ${t}[]`,
+    `{ a: ${t}; b?: ${t}; }`, `{ [k: string]: ${t}; }`, `{ readonly r: ${t}; (x: ${t}): void; new (y: ${t}): Foo; }`,
+    `(a: ${t}, b?: ${t}, ...rest: ${t}[]) => ${t}`, `({ feature }: { feature: ${t}; }) => boolean`,
+    `<E extends ${t}>(e: E) => E`, `${t} | undefined`, `${t} & Foo`, `keyof ${t}`,
+    `T extends ${t} ? X : Y`, `T extends (infer R)[] ? R : never`, `{ [P in keyof T]?: ${t}; }`,
+    `${t} extends infer U extends keyof ${t} ? { [P in U]: ${t}[P]; } : never`
+  ];
+  let layer = [...atoms];
+  for (let depth = 0; depth < 2; depth++) {
+    const next = [];
+    for (const t of layer) for (const w of wrap(t)) if (!out.has(w)) { out.add(w); next.push(w); }
+    layer = next.slice(0, 400);
+  }
+  return [...out];
+}
+
+test("with every normalization off canon changes no string (generated shapes)", () => {
+  const strings = generatedTypeStrings();
+  assert.ok(strings.length > 1000, `only ${strings.length} strings`);
+  const bad = strings.filter((x) => canon(x, []) !== x.replace(/\s+/g, " ").trim());
+  assert.deepEqual(bad.slice(0, 5), [], `${bad.length} of ${strings.length} respelled`);
+});
+
+test("canon is idempotent with every normalization on (generated shapes)", () => {
+  const on = ["union-order", "object-member-order", "quote-style"];
+  const bad = generatedTypeStrings().filter((x) => canon(canon(x, on), on) !== canon(x, on));
+  assert.deepEqual(bad.slice(0, 5), []);
+});
+
+test("canon with all normalizations on only moves or requotes: the same characters remain", () => {
+  const on = ["union-order", "object-member-order", "quote-style"];
+  const chars = (x) => [...x.replace(/['"\s]/g, "")].sort().join("");
+  const bad = generatedTypeStrings().filter((x) => chars(canon(x, on)) !== chars(x));
+  assert.deepEqual(bad.slice(0, 5), []);
 });
 
 test("canon does not merge distinct unions that share a prefix", () => {
