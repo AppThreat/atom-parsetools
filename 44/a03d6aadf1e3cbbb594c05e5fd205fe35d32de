@@ -1,0 +1,18 @@
+native/testdata/.gitignore
+  h_0926447d100ad2 1-3
+native/testdata/typemap/config/auto-types/node_modules/@types/fake/index.d.ts
+  h_0926447d100ad2 1
+native/testdata/typemap/config/auto-types/node_modules/@types/fake/package.json
+  h_0926447d100ad2 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "44a03d6aadf1e3cbbb594c05e5fd205fe35d32de",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
