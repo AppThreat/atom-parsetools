@@ -1,6 +1,6 @@
 // ASTGEN_TYPES=native: the sidecar, its lookup, its fallback, and that both engines see the same files.
-// Needs the Go binary (native/_deps/bin/atom-parsetools-native, built by `npm run test:native`
-// or `go build ./cmd/atom-parsetools-native` in native/); without it the tests that run it are
+// Needs the Go binary (parsa/_deps/bin/parsa, built by `npm run test:native`
+// or `go build ./cmd/parsa` in parsa/); without it the tests that run it are
 // skipped with a reason.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -33,7 +33,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repo = dirname(here);
 const astgen = join(repo, "astgen.js");
 const exe = process.platform === "win32" ? ".exe" : "";
-const builtBinary = join(repo, "native", "_deps", "bin", `atom-parsetools-native${exe}`);
+const builtBinary = join(repo, "parsa", "_deps", "bin", `parsa${exe}`);
 const haveBinary = existsSync(builtBinary);
 const root = mkdtempSync(join(tmpdir(), "astgen-native-"));
 let failures = 0;
@@ -107,7 +107,7 @@ test("findNativeBinary: ASTGEN_NATIVE_BIN, then next to astgen.js, then PATH", (
   const a = mkdtempSync(join(root, "bin-a-"));
   const b = mkdtempSync(join(root, "bin-b-"));
   const c = mkdtempSync(join(root, "bin-c-"));
-  const name = `atom-parsetools-native${exe}`;
+  const name = `parsa${exe}`;
   const put = (d) => {
     writeFileSync(join(d, name), "x");
     return join(d, name);

@@ -149,7 +149,7 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 			}
 		}
 	}
-	rep := &Report{Tool: "atom-parsetools-native typemap", TypeScript: TypeScriptPin(), Files: len(discovered)}
+	rep := &Report{Tool: "parsa js --types-only", TypeScript: TypeScriptPin(), Files: len(discovered)}
 	rep.Warnings = append(rep.Warnings, disc.Diagnostics...)
 
 	workers := o.Workers

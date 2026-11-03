@@ -2704,7 +2704,7 @@ const runTypeGenerationInWorkers = (
   ).then((results) => results.every(Boolean));
 };
 
-// ASTGEN_TYPES=native: the type map comes from atom-parsetools-native, run once for the project, and
+// ASTGEN_TYPES=native: the type map comes from parsa, run once for the project, and
 // this process only parses (Babel). Set once the native phase has written the .typemap files, so that
 // collectSeenTypesForFile does not type anything a second time.
 let nativeTypesWritten = false;

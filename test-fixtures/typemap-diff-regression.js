@@ -374,7 +374,7 @@ test("the option does nothing for a file without a byte order mark", () => {
 
 // ---- the fixtures: TypeScript 6 output against the native expected maps ----
 
-const rules = join(here, "..", "native", "testdata", "typemap", "rules");
+const rules = join(here, "..", "parsa", "testdata", "typemap", "rules");
 const allowList = JSON.parse(readFileSync(join(here, "typemap-allow.json"), "utf8"));
 
 test("native fixture maps against TypeScript 6 output: only reviewed classes", () => {

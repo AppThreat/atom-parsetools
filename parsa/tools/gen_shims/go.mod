@@ -1,4 +1,4 @@
-module github.com/AppThreat/atom-parsetools/native/tools/gen_shims
+module github.com/AppThreat/atom-parsetools/parsa/tools/gen_shims
 
 go 1.27
 

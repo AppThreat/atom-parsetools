@@ -1,6 +1,6 @@
 #!/bin/sh
 # Fetch microsoft/TypeScript at the pinned commit (only the tsc/ directory)
-# into native/_deps/TypeScript and apply native/patches/*.patch on top.
+# into parsa/_deps/TypeScript and apply parsa/patches/*.patch on top.
 # Idempotent: does nothing when the checkout is already at the pin with the
 # patches applied. Needs git and network access on first use.
 set -eu
