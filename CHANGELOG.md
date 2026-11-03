@@ -42,6 +42,9 @@ astgen behaves as in 1.10.6 apart from the breaking changes below.
 - `astgen_manifest.jsonl` (native runs only): one record per run with the engine used, the reason
   for a fallback, the TypeScript commit `parsa` was built from, the checker count, the tsconfig it
   used, the files that hit a budget and why, and the number of types given up.
+- `parsa` binaries for Linux, macOS and Windows on x64 and arm64, attached to each GitHub release with
+  a `.sha256` file and build provenance, and published to `ghcr.io/appthreat/parsa` (see
+  `docs/PACKAGING.md`). The npm package does not include them.
 - `lib/typemap/diff.mjs` compares two type map trees after normalizing member order and quote
   style, and fails on any difference class not on its allow-list (`test-fixtures/typemap-allow.json`).
 

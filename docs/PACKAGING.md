@@ -54,6 +54,19 @@ The CI ruby matrix builds the bundle once with the oldest supported Ruby (3.4) a
 
 The main CI job exercises the whole surface under both runtimes: `npm test` and the php and ruby suites, then `npm install -g .` and the four bin commands, a Bun compatibility pass over the astgen suite, `npm publish --dry-run` on every push, and the real publish (with provenance) on tags.
 
+## The parsa binaries
+
+`parsa` is not part of the npm package. `.github/workflows/parsa-release.yml` cross-compiles it on one Linux machine with `parsa/scripts/build-release.sh`, which needs no cgo yet: Linux, macOS and Windows on x64 and arm64, six files of about 19 MB, each with a `.sha256` file. The Linux binaries are static, so the same file runs on glibc and musl. The build is reproducible (`-trimpath`, no build id, no VCS stamp): building the same commit twice gives the same bytes. The job then runs the Linux arm64 and Windows x64 binaries on their own runners, and for a release every binary, macOS included.
+
+Each push to main that touches `parsa/` publishes the binaries to `ghcr.io/appthreat/parsa` with oras, tagged `<os>-<arch>-<commit>` and `<os>-<arch>-main`, so atom, chen and cdxgen-plugins-bin can test a build before it is released:
+
+```shell
+oras pull ghcr.io/appthreat/parsa:linux-amd64-main
+sha256sum -c parsa-linux-amd64.sha256
+```
+
+A published GitHub release gets the binaries and their `.sha256` files as assets, with build provenance (`gh attestation verify parsa-linux-amd64 --repo AppThreat/atom-parsetools`), and on ghcr.io the tags `<os>-<arch>-<version>`. cdxgen-plugins-bin downloads the release assets, checks the hashes and bakes the binaries into its platform packages. Once cgo arrives (the Prism parser for `parsa rb`), each target has to build on its own runner instead.
+
 ## Publishing this documentation site
 
 The docs site is plain [docsify](https://docsify.js.org) under `docs/`, served by GitHub Pages from the `docs` folder of the default branch, the same model cdxgen uses. The `.nojekyll` file must stay: Pages would otherwise run the files through Jekyll, which drops the underscore-prefixed `_sidebar.md` and `_coverpage.md` that docsify needs. If the site 404s after a merge, check the repository's Pages settings first: source should be the default branch with `/docs`.
