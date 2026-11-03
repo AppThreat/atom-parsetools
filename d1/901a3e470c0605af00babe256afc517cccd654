@@ -1,0 +1,23 @@
+lib/typemap/canon.mjs
+  s_79a7c562b49300::t_89113aaedb5f82 25-27,32-35,40-41,43,51,67-68,122-128,204-237,295-296,310,312-313,336-348,363-364,366-367,390-448
+lib/typemap/diff.mjs
+  s_79a7c562b49300::t_1ddfba1108de6c 17,30-39,44-55,92,96-97,107-114,119-126,130-131,363-364,390-396
+test-fixtures/typemap-diff-regression.js
+  s_79a7c562b49300::t_62983741d7131d 185,190,192,212-227,298-306
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d1901a3e470c0605af00babe256afc517cccd654",
+  "prompts": {},
+  "sessions": {
+    "s_79a7c562b49300": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e06ad8c2-0767-47dd-913e-35689e5f05ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
