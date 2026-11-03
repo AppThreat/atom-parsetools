@@ -1,0 +1,747 @@
+test-fixtures/babel-fixtures-regression.js
+  s_a2a8ffc18882d7::t_5ba691b37098b3 70-71
+  s_a2a8ffc18882d7::t_e617ebbc6e4513 1-69,72-113,115-123
+  s_a2a8ffc18882d7::t_3e6e12a03b8121 114
+.gitattributes
+  s_a2a8ffc18882d7::t_8b6d4e11a6d8e9 1-2
+package.json
+  s_a2a8ffc18882d7::t_7871f08074123d 9,37-39
+parsa/testdata/babel-regenerate.mjs
+  s_a2a8ffc18882d7::t_5674331de5f206 1-81
+parsa/testdata/babel/expected/src/array-expression.js.json
+  s_a2a8ffc18882d7::t_7cb12a4df2a29e 1
+parsa/testdata/babel/expected/src/array-pattern.js.json
+  s_a2a8ffc18882d7::t_c5ccac5f94cde3 1
+parsa/testdata/babel/expected/src/arrow-function-expression.js.json
+  s_a2a8ffc18882d7::t_79262edfcb03bb 1
+parsa/testdata/babel/expected/src/assignment-expression.js.json
+  s_a2a8ffc18882d7::t_3b039c14a160ef 1
+parsa/testdata/babel/expected/src/assignment-pattern.js.json
+  s_a2a8ffc18882d7::t_81a5abd3b75038 1
+parsa/testdata/babel/expected/src/await-expression.js.json
+  s_a2a8ffc18882d7::t_ecdb937395bc0e 1
+parsa/testdata/babel/expected/src/bigint-literal.js.json
+  s_a2a8ffc18882d7::t_f001150de0e1e9 1
+parsa/testdata/babel/expected/src/binary-expression.js.json
+  s_a2a8ffc18882d7::t_5dfbc6c81ae3ba 1
+parsa/testdata/babel/expected/src/block-statement.js.json
+  s_a2a8ffc18882d7::t_e53a6bde005bdf 1
+parsa/testdata/babel/expected/src/boolean-literal.js.json
+  s_a2a8ffc18882d7::t_6312df2ba8a608 1
+parsa/testdata/babel/expected/src/break-statement.js.json
+  s_a2a8ffc18882d7::t_692e4d980dd044 1
+parsa/testdata/babel/expected/src/call-expression.js.json
+  s_a2a8ffc18882d7::t_695cfe1f93b186 1
+parsa/testdata/babel/expected/src/catch-clause.js.json
+  s_a2a8ffc18882d7::t_003088b891025b 1
+parsa/testdata/babel/expected/src/class-body.js.json
+  s_a2a8ffc18882d7::t_573eb1515e1d64 1
+parsa/testdata/babel/expected/src/class-declaration.js.json
+  s_a2a8ffc18882d7::t_36d8ebb1fbbb49 1
+parsa/testdata/babel/expected/src/class-expression.js.json
+  s_a2a8ffc18882d7::t_044fb5689e3500 1
+parsa/testdata/babel/expected/src/class-method.js.json
+  s_a2a8ffc18882d7::t_327c4eb4d4e556 1
+parsa/testdata/babel/expected/src/class-private-method.js.json
+  s_a2a8ffc18882d7::t_c292a34e2512a3 1
+parsa/testdata/babel/expected/src/class-private-property.js.json
+  s_a2a8ffc18882d7::t_632220aee00484 1
+parsa/testdata/babel/expected/src/class-property.js.json
+  s_a2a8ffc18882d7::t_064d3c74802e3c 1
+parsa/testdata/babel/expected/src/conditional-expression.js.json
+  s_a2a8ffc18882d7::t_b9d2f888fd90fb 1
+parsa/testdata/babel/expected/src/continue-statement.js.json
+  s_a2a8ffc18882d7::t_4463e8e3a85965 1
+parsa/testdata/babel/expected/src/debugger-statement.js.json
+  s_a2a8ffc18882d7::t_4be21faffa59fb 1
+parsa/testdata/babel/expected/src/decorator.js.json
+  s_a2a8ffc18882d7::t_2993ea0baa0580 1
+parsa/testdata/babel/expected/src/directive-literal.js.json
+  s_a2a8ffc18882d7::t_b27a7a508bf5f7 1
+parsa/testdata/babel/expected/src/directive.js.json
+  s_a2a8ffc18882d7::t_d549f703958dc3 1
+parsa/testdata/babel/expected/src/do-expression.js.json
+  s_a2a8ffc18882d7::t_0eb8b696ed20e6 1
+parsa/testdata/babel/expected/src/do-while-statement.js.json
+  s_a2a8ffc18882d7::t_15481efe917035 1
+parsa/testdata/babel/expected/src/empty-statement.js.json
+  s_a2a8ffc18882d7::t_bae97a0260d7cb 1
+parsa/testdata/babel/expected/src/export-all-declaration.js.json
+  s_a2a8ffc18882d7::t_84cd76c4439823 1
+parsa/testdata/babel/expected/src/export-default-declaration.js.json
+  s_a2a8ffc18882d7::t_c96aec4f9ab572 1
+parsa/testdata/babel/expected/src/export-default-specifier.js.json
+  s_a2a8ffc18882d7::t_ec9794a8961e34 1
+parsa/testdata/babel/expected/src/export-named-declaration.js.json
+  s_a2a8ffc18882d7::t_ccb7f3933c3b97 1
+parsa/testdata/babel/expected/src/export-namespace-specifier.js.json
+  s_a2a8ffc18882d7::t_cbfeae1ff6f496 1
+parsa/testdata/babel/expected/src/export-specifier.js.json
+  s_a2a8ffc18882d7::t_e4dde9589bb60c 1
+parsa/testdata/babel/expected/src/expression-statement.js.json
+  s_a2a8ffc18882d7::t_dd61d71f5e33d3 1
+parsa/testdata/babel/expected/src/file.js.json
+  s_a2a8ffc18882d7::t_31a5a1546cdecc 1
+parsa/testdata/babel/expected/src/for-in-statement.js.json
+  s_a2a8ffc18882d7::t_1f4a870c4e8cba 1
+parsa/testdata/babel/expected/src/for-of-statement.js.json
+  s_a2a8ffc18882d7::t_0782e1cf344e15 1
+parsa/testdata/babel/expected/src/for-statement.js.json
+  s_a2a8ffc18882d7::t_ec9ab2cf6bb3ed 1
+parsa/testdata/babel/expected/src/function-declaration.js.json
+  s_a2a8ffc18882d7::t_5037cd8349b7f6 1
+parsa/testdata/babel/expected/src/function-expression.js.json
+  s_a2a8ffc18882d7::t_9ce566cd81f1e5 1
+parsa/testdata/babel/expected/src/identifier.js.json
+  s_a2a8ffc18882d7::t_6a372d6301dd58 1
+parsa/testdata/babel/expected/src/if-statement.js.json
+  s_a2a8ffc18882d7::t_38e262545450c6 1
+parsa/testdata/babel/expected/src/import-attribute.js.json
+  s_a2a8ffc18882d7::t_0104077985ea14 1
+parsa/testdata/babel/expected/src/import-declaration.js.json
+  s_a2a8ffc18882d7::t_781d8e97037ec7 1
+parsa/testdata/babel/expected/src/import-default-specifier.js.json
+  s_a2a8ffc18882d7::t_404a00bc38feb6 1
+parsa/testdata/babel/expected/src/import-expression.js.json
+  s_a2a8ffc18882d7::t_03b2fc490fed9a 1
+parsa/testdata/babel/expected/src/import-namespace-specifier.js.json
+  s_a2a8ffc18882d7::t_e603f1c5821b15 1
+parsa/testdata/babel/expected/src/import-specifier.js.json
+  s_a2a8ffc18882d7::t_97e72051e2eaae 1
+parsa/testdata/babel/expected/src/interpreter-directive.js.json
+  s_a2a8ffc18882d7::t_18c00863d7848e 1
+parsa/testdata/babel/expected/src/jsx-attribute.jsx.json
+  s_a2a8ffc18882d7::t_946c20c34688c7 1
+parsa/testdata/babel/expected/src/jsx-closing-element.jsx.json
+  s_a2a8ffc18882d7::t_384a34b8307b9b 1
+parsa/testdata/babel/expected/src/jsx-closing-fragment.jsx.json
+  s_a2a8ffc18882d7::t_003aa9bc053e7b 1
+parsa/testdata/babel/expected/src/jsx-element.jsx.json
+  s_a2a8ffc18882d7::t_a93c3ec38e2a67 1
+parsa/testdata/babel/expected/src/jsx-empty-expression.jsx.json
+  s_a2a8ffc18882d7::t_ab6198f42377f1 1
+parsa/testdata/babel/expected/src/jsx-expression-container.jsx.json
+  s_a2a8ffc18882d7::t_e166780e3216be 1
+parsa/testdata/babel/expected/src/jsx-fragment.jsx.json
+  s_a2a8ffc18882d7::t_ba3b37b2d657cb 1
+parsa/testdata/babel/expected/src/jsx-identifier.jsx.json
+  s_a2a8ffc18882d7::t_57007827982f6f 1
+parsa/testdata/babel/expected/src/jsx-member-expression.jsx.json
+  s_a2a8ffc18882d7::t_7e2b769ad92161 1
+parsa/testdata/babel/expected/src/jsx-namespaced-name.jsx.json
+  s_a2a8ffc18882d7::t_5ea041bdcf59aa 1
+parsa/testdata/babel/expected/src/jsx-opening-element.jsx.json
+  s_a2a8ffc18882d7::t_49f958ef440525 1
+parsa/testdata/babel/expected/src/jsx-opening-fragment.jsx.json
+  s_a2a8ffc18882d7::t_ac548dc4f735d8 1
+parsa/testdata/babel/expected/src/jsx-spread-attribute.jsx.json
+  s_a2a8ffc18882d7::t_bdc0d776df006d 1
+parsa/testdata/babel/expected/src/jsx-spread-child.jsx.json
+  s_a2a8ffc18882d7::t_905ed667423553 1
+parsa/testdata/babel/expected/src/jsx-text.jsx.json
+  s_a2a8ffc18882d7::t_00a0b72dbb16cd 1
+parsa/testdata/babel/expected/src/labeled-statement.js.json
+  s_a2a8ffc18882d7::t_c3dec3aeed1832 1
+parsa/testdata/babel/expected/src/logical-expression.js.json
+  s_a2a8ffc18882d7::t_4a3d4aae70d97d 1
+parsa/testdata/babel/expected/src/member-expression.js.json
+  s_a2a8ffc18882d7::t_4584180a26cd52 1
+parsa/testdata/babel/expected/src/meta-property.js.json
+  s_a2a8ffc18882d7::t_13ff2fbbc527ff 1
+parsa/testdata/babel/expected/src/new-expression.js.json
+  s_a2a8ffc18882d7::t_dc6d72798ac3af 1
+parsa/testdata/babel/expected/src/null-literal.js.json
+  s_a2a8ffc18882d7::t_72554af6565fce 1
+parsa/testdata/babel/expected/src/numeric-literal.js.json
+  s_a2a8ffc18882d7::t_fab2b1d9f652b5 1
+parsa/testdata/babel/expected/src/object-expression.js.json
+  s_a2a8ffc18882d7::t_8a1ebea49898ab 1
+parsa/testdata/babel/expected/src/object-method.js.json
+  s_a2a8ffc18882d7::t_376469fb77ef15 1
+parsa/testdata/babel/expected/src/object-pattern.js.json
+  s_a2a8ffc18882d7::t_a56184e9f6f807 1
+parsa/testdata/babel/expected/src/object-property.js.json
+  s_a2a8ffc18882d7::t_468d60bcd55cad 1
+parsa/testdata/babel/expected/src/offsets/bom.js.json
+  s_a2a8ffc18882d7::t_a57cb0dbb5452b 1
+parsa/testdata/babel/expected/src/offsets/cr-eol.js.json
+  s_a2a8ffc18882d7::t_26b5e105630d01 1
+parsa/testdata/babel/expected/src/offsets/crlf.js.json
+  s_a2a8ffc18882d7::t_51f96b25cac1f4 1
+parsa/testdata/babel/expected/src/offsets/four-byte.js.json
+  s_a2a8ffc18882d7::t_98045f1f4f102d 1
+parsa/testdata/babel/expected/src/offsets/no-final-newline.js.json
+  s_a2a8ffc18882d7::t_f8c25516bf1ce4 1
+parsa/testdata/babel/expected/src/offsets/three-byte.js.json
+  s_a2a8ffc18882d7::t_d642c8b62b19f6 1
+parsa/testdata/babel/expected/src/offsets/two-byte.js.json
+  s_a2a8ffc18882d7::t_6173fffbe9a284 1
+parsa/testdata/babel/expected/src/offsets/u2028.js.json
+  s_a2a8ffc18882d7::t_347a859ef16857 1
+parsa/testdata/babel/expected/src/optional-call-expression.js.json
+  s_a2a8ffc18882d7::t_fd066208eb95bf 1
+parsa/testdata/babel/expected/src/optional-member-expression.js.json
+  s_a2a8ffc18882d7::t_234eec0bf7c201 1
+parsa/testdata/babel/expected/src/private-name.js.json
+  s_a2a8ffc18882d7::t_eee6a97c1b5548 1
+parsa/testdata/babel/expected/src/program.js.json
+  s_a2a8ffc18882d7::t_d97285903572dd 1
+parsa/testdata/babel/expected/src/regexp-literal.js.json
+  s_a2a8ffc18882d7::t_a3604b7a04350e 1
+parsa/testdata/babel/expected/src/rest-element.js.json
+  s_a2a8ffc18882d7::t_3fde0a456d447c 1
+parsa/testdata/babel/expected/src/return-statement.js.json
+  s_a2a8ffc18882d7::t_cde1b698b9a1b3 1
+parsa/testdata/babel/expected/src/sequence-expression.js.json
+  s_a2a8ffc18882d7::t_2243ea09cf1a07 1
+parsa/testdata/babel/expected/src/spread-element.js.json
+  s_a2a8ffc18882d7::t_a08cae5f875547 1
+parsa/testdata/babel/expected/src/static-block.js.json
+  s_a2a8ffc18882d7::t_ca2a5a82043155 1
+parsa/testdata/babel/expected/src/string-literal.js.json
+  s_a2a8ffc18882d7::t_18d64abfbc1e35 1
+parsa/testdata/babel/expected/src/super.js.json
+  s_a2a8ffc18882d7::t_690a42cdfdab8f 1
+parsa/testdata/babel/expected/src/switch-case.js.json
+  s_a2a8ffc18882d7::t_c69114f3be0c83 1
+parsa/testdata/babel/expected/src/switch-statement.js.json
+  s_a2a8ffc18882d7::t_68046d1410c0e0 1
+parsa/testdata/babel/expected/src/tagged-template-expression.js.json
+  s_a2a8ffc18882d7::t_4eb1a236b61fcd 1
+parsa/testdata/babel/expected/src/template-element.js.json
+  s_a2a8ffc18882d7::t_ecde8be88824da 1
+parsa/testdata/babel/expected/src/template-literal.js.json
+  s_a2a8ffc18882d7::t_57189efe41a147 1
+parsa/testdata/babel/expected/src/this-expression.js.json
+  s_a2a8ffc18882d7::t_3272e21478bc6b 1
+parsa/testdata/babel/expected/src/throw-statement.js.json
+  s_a2a8ffc18882d7::t_1184dcedfae6d3 1
+parsa/testdata/babel/expected/src/try-statement.js.json
+  s_a2a8ffc18882d7::t_d11b30b72135f8 1
+parsa/testdata/babel/expected/src/ts-any-keyword.ts.json
+  s_a2a8ffc18882d7::t_ff43bb0e86acb9 1
+parsa/testdata/babel/expected/src/ts-array-type.ts.json
+  s_a2a8ffc18882d7::t_b9282dbc117e52 1
+parsa/testdata/babel/expected/src/ts-as-expression.ts.json
+  s_a2a8ffc18882d7::t_02a6a786abadf3 1
+parsa/testdata/babel/expected/src/ts-bigint-keyword.ts.json
+  s_a2a8ffc18882d7::t_c7d97cd6b90df8 1
+parsa/testdata/babel/expected/src/ts-boolean-keyword.ts.json
+  s_a2a8ffc18882d7::t_26a8e0899a862e 1
+parsa/testdata/babel/expected/src/ts-call-signature-declaration.ts.json
+  s_a2a8ffc18882d7::t_9c474ab40a2034 1
+parsa/testdata/babel/expected/src/ts-class-implements.ts.json
+  s_a2a8ffc18882d7::t_77609d29859a67 1
+parsa/testdata/babel/expected/src/ts-conditional-type.ts.json
+  s_a2a8ffc18882d7::t_4eb548440bf766 1
+parsa/testdata/babel/expected/src/ts-construct-signature-declaration.ts.json
+  s_a2a8ffc18882d7::t_01ba7fee6b108b 1
+parsa/testdata/babel/expected/src/ts-constructor-type.ts.json
+  s_a2a8ffc18882d7::t_b5fde98023fc2a 1
+parsa/testdata/babel/expected/src/ts-declare-function.ts.json
+  s_a2a8ffc18882d7::t_f676f918028340 1
+parsa/testdata/babel/expected/src/ts-declare-method.ts.json
+  s_a2a8ffc18882d7::t_b895c8ff78154a 1
+parsa/testdata/babel/expected/src/ts-enum-body.ts.json
+  s_a2a8ffc18882d7::t_36687d83cb674c 1
+parsa/testdata/babel/expected/src/ts-enum-declaration.ts.json
+  s_a2a8ffc18882d7::t_d27c71c0b158f2 1
+parsa/testdata/babel/expected/src/ts-enum-member.ts.json
+  s_a2a8ffc18882d7::t_9213942c275494 1
+parsa/testdata/babel/expected/src/ts-export-assignment.ts.json
+  s_a2a8ffc18882d7::t_5fee78d302a58a 1
+parsa/testdata/babel/expected/src/ts-external-module-reference.ts.json
+  s_a2a8ffc18882d7::t_c3dbcec5e67c59 1
+parsa/testdata/babel/expected/src/ts-function-type.ts.json
+  s_a2a8ffc18882d7::t_73c6217b4c1b36 1
+parsa/testdata/babel/expected/src/ts-import-equals-declaration.ts.json
+  s_a2a8ffc18882d7::t_06d8137151a1e5 1
+parsa/testdata/babel/expected/src/ts-import-type.ts.json
+  s_a2a8ffc18882d7::t_29ed4cee9c2b25 1
+parsa/testdata/babel/expected/src/ts-index-signature.ts.json
+  s_a2a8ffc18882d7::t_bac56ca10dd1df 1
+parsa/testdata/babel/expected/src/ts-indexed-access-type.ts.json
+  s_a2a8ffc18882d7::t_6608ec4958e7f7 1
+parsa/testdata/babel/expected/src/ts-infer-type.ts.json
+  s_a2a8ffc18882d7::t_ddbcb23407f10e 1
+parsa/testdata/babel/expected/src/ts-instantiation-expression.ts.json
+  s_a2a8ffc18882d7::t_eabbec86e6c0e2 1
+parsa/testdata/babel/expected/src/ts-interface-body.ts.json
+  s_a2a8ffc18882d7::t_a077d7280d1b51 1
+parsa/testdata/babel/expected/src/ts-interface-declaration.ts.json
+  s_a2a8ffc18882d7::t_780498f8c9585c 1
+parsa/testdata/babel/expected/src/ts-interface-heritage.ts.json
+  s_a2a8ffc18882d7::t_4be4df65bb7475 1
+parsa/testdata/babel/expected/src/ts-intersection-type.ts.json
+  s_a2a8ffc18882d7::t_679d80f6df83c8 1
+parsa/testdata/babel/expected/src/ts-intrinsic-keyword.ts.json
+  s_a2a8ffc18882d7::t_45aab5011b2564 1
+parsa/testdata/babel/expected/src/ts-literal-type.ts.json
+  s_a2a8ffc18882d7::t_ee32774eaf765e 1
+parsa/testdata/babel/expected/src/ts-mapped-type.ts.json
+  s_a2a8ffc18882d7::t_07227fbc9ff1bb 1
+parsa/testdata/babel/expected/src/ts-method-signature.ts.json
+  s_a2a8ffc18882d7::t_16c25022d2d92b 1
+parsa/testdata/babel/expected/src/ts-module-block.ts.json
+  s_a2a8ffc18882d7::t_11a1bfa162dc87 1
+parsa/testdata/babel/expected/src/ts-module-declaration.ts.json
+  s_a2a8ffc18882d7::t_4798db59de64b9 1
+parsa/testdata/babel/expected/src/ts-named-tuple-member.ts.json
+  s_a2a8ffc18882d7::t_6f662fd28a9ee9 1
+parsa/testdata/babel/expected/src/ts-namespace-export-declaration.ts.json
+  s_a2a8ffc18882d7::t_89202614fcc971 1
+parsa/testdata/babel/expected/src/ts-never-keyword.ts.json
+  s_a2a8ffc18882d7::t_43ce08645906f1 1
+parsa/testdata/babel/expected/src/ts-non-null-expression.ts.json
+  s_a2a8ffc18882d7::t_2f292ff7f16c2b 1
+parsa/testdata/babel/expected/src/ts-null-keyword.ts.json
+  s_a2a8ffc18882d7::t_c1ea27a2ee5242 1
+parsa/testdata/babel/expected/src/ts-number-keyword.ts.json
+  s_a2a8ffc18882d7::t_8408b02e8dfaee 1
+parsa/testdata/babel/expected/src/ts-object-keyword.ts.json
+  s_a2a8ffc18882d7::t_a0155d7ae67bc3 1
+parsa/testdata/babel/expected/src/ts-optional-type.ts.json
+  s_a2a8ffc18882d7::t_063f17227aa88a 1
+parsa/testdata/babel/expected/src/ts-parameter-property.ts.json
+  s_a2a8ffc18882d7::t_fa681876b6888e 1
+parsa/testdata/babel/expected/src/ts-property-signature.ts.json
+  s_a2a8ffc18882d7::t_fc84ec12499de5 1
+parsa/testdata/babel/expected/src/ts-qualified-name.ts.json
+  s_a2a8ffc18882d7::t_ecb71d9e709cd6 1
+parsa/testdata/babel/expected/src/ts-rest-type.ts.json
+  s_a2a8ffc18882d7::t_a0ca5f3c8c34b9 1
+parsa/testdata/babel/expected/src/ts-satisfies-expression.ts.json
+  s_a2a8ffc18882d7::t_f1355b1ba9fdb0 1
+parsa/testdata/babel/expected/src/ts-string-keyword.ts.json
+  s_a2a8ffc18882d7::t_2b1cb46a4dc3af 1
+parsa/testdata/babel/expected/src/ts-symbol-keyword.ts.json
+  s_a2a8ffc18882d7::t_8fdeaaf94147b2 1
+parsa/testdata/babel/expected/src/ts-template-literal-type.ts.json
+  s_a2a8ffc18882d7::t_c2146579bffabf 1
+parsa/testdata/babel/expected/src/ts-this-type.ts.json
+  s_a2a8ffc18882d7::t_79c12990317dc4 1
+parsa/testdata/babel/expected/src/ts-tuple-type.ts.json
+  s_a2a8ffc18882d7::t_5295a6fbfbbea2 1
+parsa/testdata/babel/expected/src/ts-type-alias-declaration.ts.json
+  s_a2a8ffc18882d7::t_9e859fcf638ab1 1
+parsa/testdata/babel/expected/src/ts-type-annotation.ts.json
+  s_a2a8ffc18882d7::t_a480fba83163b9 1
+parsa/testdata/babel/expected/src/ts-type-assertion.ts.json
+  s_a2a8ffc18882d7::t_88fd6085cbcd2e 1
+parsa/testdata/babel/expected/src/ts-type-literal.ts.json
+  s_a2a8ffc18882d7::t_547ea503b9e5ac 1
+parsa/testdata/babel/expected/src/ts-type-operator.ts.json
+  s_a2a8ffc18882d7::t_d7897d5f5988ea 1
+parsa/testdata/babel/expected/src/ts-type-parameter-declaration.ts.json
+  s_a2a8ffc18882d7::t_4917fdb98e6c92 1
+parsa/testdata/babel/expected/src/ts-type-parameter-instantiation.ts.json
+  s_a2a8ffc18882d7::t_065b420ddb7939 1
+parsa/testdata/babel/expected/src/ts-type-parameter.ts.json
+  s_a2a8ffc18882d7::t_49dbc4ec862f87 1
+parsa/testdata/babel/expected/src/ts-type-predicate.ts.json
+  s_a2a8ffc18882d7::t_27823e22171ac9 1
+parsa/testdata/babel/expected/src/ts-type-query.ts.json
+  s_a2a8ffc18882d7::t_f471a5d97560a5 1
+parsa/testdata/babel/expected/src/ts-type-reference.ts.json
+  s_a2a8ffc18882d7::t_53cfe7b6d01459 1
+parsa/testdata/babel/expected/src/ts-undefined-keyword.ts.json
+  s_a2a8ffc18882d7::t_75883a396a2804 1
+parsa/testdata/babel/expected/src/ts-union-type.ts.json
+  s_a2a8ffc18882d7::t_1b29c6151c75e0 1
+parsa/testdata/babel/expected/src/ts-unknown-keyword.ts.json
+  s_a2a8ffc18882d7::t_c15ad3ec791ca1 1
+parsa/testdata/babel/expected/src/ts-void-keyword.ts.json
+  s_a2a8ffc18882d7::t_7417835c945ea6 1
+parsa/testdata/babel/expected/src/unary-expression.js.json
+  s_a2a8ffc18882d7::t_79dd0100796412 1
+parsa/testdata/babel/expected/src/update-expression.js.json
+  s_a2a8ffc18882d7::t_9d308839675477 1
+parsa/testdata/babel/expected/src/variable-declaration.js.json
+  s_a2a8ffc18882d7::t_037ecb69e55903 1
+parsa/testdata/babel/expected/src/variable-declarator.js.json
+  s_a2a8ffc18882d7::t_d8989171fff612 1
+parsa/testdata/babel/expected/src/while-statement.js.json
+  s_a2a8ffc18882d7::t_34bd9dc33d8761 1
+parsa/testdata/babel/expected/src/with-statement.js.json
+  s_a2a8ffc18882d7::t_35fcd273ac12c1 1
+parsa/testdata/babel/expected/src/yield-expression.js.json
+  s_a2a8ffc18882d7::t_d5a15513dcc1d6 1
+parsa/testdata/babel/manifest.json
+  s_a2a8ffc18882d7::t_9e0f9b8bfc3551 1-611
+parsa/testdata/babel/package.json
+  s_a2a8ffc18882d7::t_9059b36e64416f 1
+parsa/testdata/babel/src/array-expression.js
+  s_a2a8ffc18882d7::t_0da9ef6a69669e 1
+parsa/testdata/babel/src/array-pattern.js
+  s_a2a8ffc18882d7::t_feba0a966f0c21 1
+parsa/testdata/babel/src/arrow-function-expression.js
+  s_a2a8ffc18882d7::t_cebf896f8566b5 1
+parsa/testdata/babel/src/assignment-expression.js
+  s_a2a8ffc18882d7::t_4691caf4af9a8c 1-3
+parsa/testdata/babel/src/assignment-pattern.js
+  s_a2a8ffc18882d7::t_f3411049e2d77e 1
+parsa/testdata/babel/src/await-expression.js
+  s_a2a8ffc18882d7::t_c9997984483126 1
+parsa/testdata/babel/src/bigint-literal.js
+  s_a2a8ffc18882d7::t_7d995a5aa14a24 1
+parsa/testdata/babel/src/binary-expression.js
+  s_a2a8ffc18882d7::t_71c554d6c520b2 1
+parsa/testdata/babel/src/block-statement.js
+  s_a2a8ffc18882d7::t_30d2796f68a6d9 1
+parsa/testdata/babel/src/boolean-literal.js
+  s_a2a8ffc18882d7::t_6562b0ca3789c7 1
+parsa/testdata/babel/src/break-statement.js
+  s_a2a8ffc18882d7::t_d2006d0c0b02d6 1
+parsa/testdata/babel/src/call-expression.js
+  s_a2a8ffc18882d7::t_3da4bf3570666d 1-2
+parsa/testdata/babel/src/catch-clause.js
+  s_a2a8ffc18882d7::t_03603612c90d15 1
+parsa/testdata/babel/src/class-body.js
+  s_a2a8ffc18882d7::t_ac24a2b7a04b25 1
+parsa/testdata/babel/src/class-declaration.js
+  s_a2a8ffc18882d7::t_9c4889b73249c7 1
+parsa/testdata/babel/src/class-expression.js
+  s_a2a8ffc18882d7::t_d0b27a202c9259 1
+parsa/testdata/babel/src/class-method.js
+  s_a2a8ffc18882d7::t_1f2679dd0fbd4e 1
+parsa/testdata/babel/src/class-private-method.js
+  s_a2a8ffc18882d7::t_ee0535d5c8c7f5 1
+parsa/testdata/babel/src/class-private-property.js
+  s_a2a8ffc18882d7::t_ee25a8305c4bdc 1
+parsa/testdata/babel/src/class-property.js
+  s_a2a8ffc18882d7::t_7e9cef8d8d6025 1
+parsa/testdata/babel/src/conditional-expression.js
+  s_a2a8ffc18882d7::t_caa3335c51871f 1
+parsa/testdata/babel/src/continue-statement.js
+  s_a2a8ffc18882d7::t_bf20095564d997 1
+parsa/testdata/babel/src/debugger-statement.js
+  s_a2a8ffc18882d7::t_3cea0fb7e56344 1
+parsa/testdata/babel/src/decorator.js
+  s_a2a8ffc18882d7::t_d649dec32b2859 1-2
+parsa/testdata/babel/src/directive-literal.js
+  s_a2a8ffc18882d7::t_ead56a7567f3ab 1-3
+parsa/testdata/babel/src/directive.js
+  s_a2a8ffc18882d7::t_23aa6aea309394 1-2
+parsa/testdata/babel/src/do-expression.js
+  s_a2a8ffc18882d7::t_967a367acb9f76 1
+parsa/testdata/babel/src/do-while-statement.js
+  s_a2a8ffc18882d7::t_d188b1882c5dc4 1
+parsa/testdata/babel/src/empty-statement.js
+  s_a2a8ffc18882d7::t_f73dad3168c5ad 1
+parsa/testdata/babel/src/export-all-declaration.js
+  s_a2a8ffc18882d7::t_3a97a3beb4c7c5 1-2
+parsa/testdata/babel/src/export-default-declaration.js
+  s_a2a8ffc18882d7::t_246766af617542 1
+parsa/testdata/babel/src/export-default-specifier.js
+  s_a2a8ffc18882d7::t_acc9d1b47997af 1
+parsa/testdata/babel/src/export-named-declaration.js
+  s_a2a8ffc18882d7::t_05c290ca0ed01c 1-3
+parsa/testdata/babel/src/export-namespace-specifier.js
+  s_a2a8ffc18882d7::t_029192ccb92589 1
+parsa/testdata/babel/src/export-specifier.js
+  s_a2a8ffc18882d7::t_fa6cf9a52e4785 1-2
+parsa/testdata/babel/src/expression-statement.js
+  s_a2a8ffc18882d7::t_8b2d4920b07563 1
+parsa/testdata/babel/src/file.js
+  s_a2a8ffc18882d7::t_36a86923713b58 1
+parsa/testdata/babel/src/for-in-statement.js
+  s_a2a8ffc18882d7::t_ab40b356b276ba 1
+parsa/testdata/babel/src/for-of-statement.js
+  s_a2a8ffc18882d7::t_3738346e188f88 1
+parsa/testdata/babel/src/for-statement.js
+  s_a2a8ffc18882d7::t_153ba1ec1b1e7c 1
+parsa/testdata/babel/src/function-declaration.js
+  s_a2a8ffc18882d7::t_80df23c7a50edd 1
+parsa/testdata/babel/src/function-expression.js
+  s_a2a8ffc18882d7::t_291834ef3b54ca 1
+parsa/testdata/babel/src/identifier.js
+  s_a2a8ffc18882d7::t_18394b4b5a2dc7 1
+parsa/testdata/babel/src/if-statement.js
+  s_a2a8ffc18882d7::t_a7739f14fdef41 1
+parsa/testdata/babel/src/import-attribute.js
+  s_a2a8ffc18882d7::t_d12977dc7e279b 1
+parsa/testdata/babel/src/import-declaration.js
+  s_a2a8ffc18882d7::t_2b346aee435319 1-2
+parsa/testdata/babel/src/import-default-specifier.js
+  s_a2a8ffc18882d7::t_bb26393f37ffe1 1
+parsa/testdata/babel/src/import-expression.js
+  s_a2a8ffc18882d7::t_f9b4606e7f9d98 1-2
+parsa/testdata/babel/src/import-namespace-specifier.js
+  s_a2a8ffc18882d7::t_82e5c43f86fb55 1
+parsa/testdata/babel/src/import-specifier.js
+  s_a2a8ffc18882d7::t_cfd7fabfb30237 1
+parsa/testdata/babel/src/interpreter-directive.js
+  s_a2a8ffc18882d7::t_183b63baf721b0 1-2
+parsa/testdata/babel/src/jsx-attribute.jsx
+  s_a2a8ffc18882d7::t_c8bae2adda0649 1
+parsa/testdata/babel/src/jsx-closing-element.jsx
+  s_a2a8ffc18882d7::t_c3fed2eacf97c5 1
+parsa/testdata/babel/src/jsx-closing-fragment.jsx
+  s_a2a8ffc18882d7::t_97f2ca1ca7d173 1
+parsa/testdata/babel/src/jsx-element.jsx
+  s_a2a8ffc18882d7::t_f250315e12cee4 1
+parsa/testdata/babel/src/jsx-empty-expression.jsx
+  s_a2a8ffc18882d7::t_4016f587a00bf0 1
+parsa/testdata/babel/src/jsx-expression-container.jsx
+  s_a2a8ffc18882d7::t_ccef9c7ea97e60 1
+parsa/testdata/babel/src/jsx-fragment.jsx
+  s_a2a8ffc18882d7::t_3d24a882342bde 1
+parsa/testdata/babel/src/jsx-identifier.jsx
+  s_a2a8ffc18882d7::t_2930714bdd4fc2 1
+parsa/testdata/babel/src/jsx-member-expression.jsx
+  s_a2a8ffc18882d7::t_03a0c8b08ef9fc 1
+parsa/testdata/babel/src/jsx-namespaced-name.jsx
+  s_a2a8ffc18882d7::t_e91bd2b7bbd6f4 1
+parsa/testdata/babel/src/jsx-opening-element.jsx
+  s_a2a8ffc18882d7::t_6509919de16c99 1
+parsa/testdata/babel/src/jsx-opening-fragment.jsx
+  s_a2a8ffc18882d7::t_810b44873857de 1
+parsa/testdata/babel/src/jsx-spread-attribute.jsx
+  s_a2a8ffc18882d7::t_53fbd69a73f124 1
+parsa/testdata/babel/src/jsx-spread-child.jsx
+  s_a2a8ffc18882d7::t_4bc834a5d7ca92 1
+parsa/testdata/babel/src/jsx-text.jsx
+  s_a2a8ffc18882d7::t_f91d463b8f8333 1
+parsa/testdata/babel/src/labeled-statement.js
+  s_a2a8ffc18882d7::t_5e6d028761ea72 1
+parsa/testdata/babel/src/logical-expression.js
+  s_a2a8ffc18882d7::t_cb1d018981f0de 1-3
+parsa/testdata/babel/src/member-expression.js
+  s_a2a8ffc18882d7::t_48ffa339e95d0e 1
+parsa/testdata/babel/src/meta-property.js
+  s_a2a8ffc18882d7::t_cdb90a1bdfbb7e 1-2
+parsa/testdata/babel/src/new-expression.js
+  s_a2a8ffc18882d7::t_8e37e4bd4e1436 1
+parsa/testdata/babel/src/null-literal.js
+  s_a2a8ffc18882d7::t_92e31eabe33aca 1
+parsa/testdata/babel/src/numeric-literal.js
+  s_a2a8ffc18882d7::t_a2707219467705 1
+parsa/testdata/babel/src/object-expression.js
+  s_a2a8ffc18882d7::t_812869c6be66c5 1
+parsa/testdata/babel/src/object-method.js
+  s_a2a8ffc18882d7::t_e859c12e0e4edd 1
+parsa/testdata/babel/src/object-pattern.js
+  s_a2a8ffc18882d7::t_c51c19376ebb6f 1
+parsa/testdata/babel/src/object-property.js
+  s_a2a8ffc18882d7::t_2e0ac230a52f5e 1-2
+parsa/testdata/babel/src/offsets/bom.js
+  s_a2a8ffc18882d7::t_76e0f871c28ae3 1-2
+parsa/testdata/babel/src/offsets/cr-eol.js
+  s_a2a8ffc18882d7::t_3ae979f63b42e7 1
+parsa/testdata/babel/src/offsets/crlf.js
+  s_a2a8ffc18882d7::t_3299c8ffcbb3e7 1-4
+parsa/testdata/babel/src/offsets/four-byte.js
+  s_a2a8ffc18882d7::t_e6e26b0091e234 1-4
+parsa/testdata/babel/src/offsets/no-final-newline.js
+  s_a2a8ffc18882d7::t_38f2815cc04d9d 1-2
+parsa/testdata/babel/src/offsets/three-byte.js
+  s_a2a8ffc18882d7::t_3b9fa1ff452e57 1-4
+parsa/testdata/babel/src/offsets/two-byte.js
+  s_a2a8ffc18882d7::t_ffd16abe0c6cc3 1-4
+parsa/testdata/babel/src/offsets/u2028.js
+  s_a2a8ffc18882d7::t_f33cf361ee1f59 1
+parsa/testdata/babel/src/optional-call-expression.js
+  s_a2a8ffc18882d7::t_ee19fca33bcafe 1
+parsa/testdata/babel/src/optional-member-expression.js
+  s_a2a8ffc18882d7::t_d5e7dc40e74cb6 1
+parsa/testdata/babel/src/private-name.js
+  s_a2a8ffc18882d7::t_91ca132286dc2c 1
+parsa/testdata/babel/src/program.js
+  s_a2a8ffc18882d7::t_a3b619f6080154 1
+parsa/testdata/babel/src/regexp-literal.js
+  s_a2a8ffc18882d7::t_ce10f16c634fd3 1
+parsa/testdata/babel/src/rest-element.js
+  s_a2a8ffc18882d7::t_8681ac6a90c8dc 1
+parsa/testdata/babel/src/return-statement.js
+  s_a2a8ffc18882d7::t_cda8bcb211bfca 1
+parsa/testdata/babel/src/sequence-expression.js
+  s_a2a8ffc18882d7::t_15bd320ec782e0 1
+parsa/testdata/babel/src/spread-element.js
+  s_a2a8ffc18882d7::t_233d7e15976d82 1-2
+parsa/testdata/babel/src/static-block.js
+  s_a2a8ffc18882d7::t_48f81caccaf5b3 1
+parsa/testdata/babel/src/string-literal.js
+  s_a2a8ffc18882d7::t_e345e2ab00778a 1
+parsa/testdata/babel/src/super.js
+  s_a2a8ffc18882d7::t_0012572b97612f 1
+parsa/testdata/babel/src/switch-case.js
+  s_a2a8ffc18882d7::t_6af68f24bf1d34 1
+parsa/testdata/babel/src/switch-statement.js
+  s_a2a8ffc18882d7::t_37a496c29e1164 1
+parsa/testdata/babel/src/tagged-template-expression.js
+  s_a2a8ffc18882d7::t_f10ebe5e78932f 1-2
+parsa/testdata/babel/src/template-element.js
+  s_a2a8ffc18882d7::t_1154cff7d7a5ca 1-2
+parsa/testdata/babel/src/template-literal.js
+  s_a2a8ffc18882d7::t_31b90ccefc90fa 1
+parsa/testdata/babel/src/this-expression.js
+  s_a2a8ffc18882d7::t_29632e6221754f 1
+parsa/testdata/babel/src/throw-statement.js
+  s_a2a8ffc18882d7::t_e0b48f1c10a715 1
+parsa/testdata/babel/src/try-statement.js
+  s_a2a8ffc18882d7::t_9dfbaf930cafed 1
+parsa/testdata/babel/src/ts-any-keyword.ts
+  s_a2a8ffc18882d7::t_73e0a78f9e2974 1
+parsa/testdata/babel/src/ts-array-type.ts
+  s_a2a8ffc18882d7::t_2573a6a63ac263 1
+parsa/testdata/babel/src/ts-as-expression.ts
+  s_a2a8ffc18882d7::t_718487ee3ee27f 1-2
+parsa/testdata/babel/src/ts-bigint-keyword.ts
+  s_a2a8ffc18882d7::t_b2bf06f1ade9e8 1
+parsa/testdata/babel/src/ts-boolean-keyword.ts
+  s_a2a8ffc18882d7::t_7b1ddcf3dad3fb 1
+parsa/testdata/babel/src/ts-call-signature-declaration.ts
+  s_a2a8ffc18882d7::t_730e6cb4d1eae0 1
+parsa/testdata/babel/src/ts-class-implements.ts
+  s_a2a8ffc18882d7::t_a18b0cccfe0100 1
+parsa/testdata/babel/src/ts-conditional-type.ts
+  s_a2a8ffc18882d7::t_1e84bee62b68bf 1
+parsa/testdata/babel/src/ts-construct-signature-declaration.ts
+  s_a2a8ffc18882d7::t_2ff67e3c09572e 1
+parsa/testdata/babel/src/ts-constructor-type.ts
+  s_a2a8ffc18882d7::t_e7285c3630a484 1
+parsa/testdata/babel/src/ts-declare-function.ts
+  s_a2a8ffc18882d7::t_c9470f57779b65 1-3
+parsa/testdata/babel/src/ts-declare-method.ts
+  s_a2a8ffc18882d7::t_3f2d6ea129dc8b 1
+parsa/testdata/babel/src/ts-enum-body.ts
+  s_a2a8ffc18882d7::t_bdfc34578b1403 1
+parsa/testdata/babel/src/ts-enum-declaration.ts
+  s_a2a8ffc18882d7::t_dc44bd8f24d6ff 1-3
+parsa/testdata/babel/src/ts-enum-member.ts
+  s_a2a8ffc18882d7::t_1e0d6098aa5204 1
+parsa/testdata/babel/src/ts-export-assignment.ts
+  s_a2a8ffc18882d7::t_7bd91c4446beff 1-2
+parsa/testdata/babel/src/ts-external-module-reference.ts
+  s_a2a8ffc18882d7::t_37de9655b59bb8 1-2
+parsa/testdata/babel/src/ts-function-type.ts
+  s_a2a8ffc18882d7::t_f3c7421499851e 1
+parsa/testdata/babel/src/ts-import-equals-declaration.ts
+  s_a2a8ffc18882d7::t_d7a90c9dde5b8b 1-2
+parsa/testdata/babel/src/ts-import-type.ts
+  s_a2a8ffc18882d7::t_82e4d75c50bbba 1
+parsa/testdata/babel/src/ts-index-signature.ts
+  s_a2a8ffc18882d7::t_d42646b71f1af5 1
+parsa/testdata/babel/src/ts-indexed-access-type.ts
+  s_a2a8ffc18882d7::t_5282ea84e452a2 1
+parsa/testdata/babel/src/ts-infer-type.ts
+  s_a2a8ffc18882d7::t_b9ddc972576d3e 1
+parsa/testdata/babel/src/ts-instantiation-expression.ts
+  s_a2a8ffc18882d7::t_026ceb6711784d 1
+parsa/testdata/babel/src/ts-interface-body.ts
+  s_a2a8ffc18882d7::t_c8d5d98e0ad6ff 1
+parsa/testdata/babel/src/ts-interface-declaration.ts
+  s_a2a8ffc18882d7::t_0a5f1c73975c26 1
+parsa/testdata/babel/src/ts-interface-heritage.ts
+  s_a2a8ffc18882d7::t_711391355cc084 1
+parsa/testdata/babel/src/ts-intersection-type.ts
+  s_a2a8ffc18882d7::t_4631ee77440020 1
+parsa/testdata/babel/src/ts-intrinsic-keyword.ts
+  s_a2a8ffc18882d7::t_48561b2601d0bc 1
+parsa/testdata/babel/src/ts-literal-type.ts
+  s_a2a8ffc18882d7::t_25cdf238d64782 1
+parsa/testdata/babel/src/ts-mapped-type.ts
+  s_a2a8ffc18882d7::t_b4db2be4be66c3 1-2
+parsa/testdata/babel/src/ts-method-signature.ts
+  s_a2a8ffc18882d7::t_b494da8a0272b2 1
+parsa/testdata/babel/src/ts-module-block.ts
+  s_a2a8ffc18882d7::t_fdcfa718801d58 1
+parsa/testdata/babel/src/ts-module-declaration.ts
+  s_a2a8ffc18882d7::t_b34cc8c5f5fd0e 1-3
+parsa/testdata/babel/src/ts-named-tuple-member.ts
+  s_a2a8ffc18882d7::t_65bb712d66bd27 1
+parsa/testdata/babel/src/ts-namespace-export-declaration.ts
+  s_a2a8ffc18882d7::t_812d3f5caefd63 1
+parsa/testdata/babel/src/ts-never-keyword.ts
+  s_a2a8ffc18882d7::t_5e7ee539bde2e2 1
+parsa/testdata/babel/src/ts-non-null-expression.ts
+  s_a2a8ffc18882d7::t_63abd8d337b63b 1
+parsa/testdata/babel/src/ts-null-keyword.ts
+  s_a2a8ffc18882d7::t_fe4d61ffc22d81 1
+parsa/testdata/babel/src/ts-number-keyword.ts
+  s_a2a8ffc18882d7::t_182566365d0243 1
+parsa/testdata/babel/src/ts-object-keyword.ts
+  s_a2a8ffc18882d7::t_c561af3385eeff 1
+parsa/testdata/babel/src/ts-optional-type.ts
+  s_a2a8ffc18882d7::t_d9f6467430e9a7 1
+parsa/testdata/babel/src/ts-parameter-property.ts
+  s_a2a8ffc18882d7::t_28ffa69105a056 1
+parsa/testdata/babel/src/ts-property-signature.ts
+  s_a2a8ffc18882d7::t_c857fc02bc0ceb 1
+parsa/testdata/babel/src/ts-qualified-name.ts
+  s_a2a8ffc18882d7::t_63b6daa6dc4194 1
+parsa/testdata/babel/src/ts-rest-type.ts
+  s_a2a8ffc18882d7::t_e0c68487797b20 1
+parsa/testdata/babel/src/ts-satisfies-expression.ts
+  s_a2a8ffc18882d7::t_69c5e972f5a232 1
+parsa/testdata/babel/src/ts-string-keyword.ts
+  s_a2a8ffc18882d7::t_143b7eea987f8a 1
+parsa/testdata/babel/src/ts-symbol-keyword.ts
+  s_a2a8ffc18882d7::t_eb706783754a21 1
+parsa/testdata/babel/src/ts-template-literal-type.ts
+  s_a2a8ffc18882d7::t_682379a3e16496 1
+parsa/testdata/babel/src/ts-this-type.ts
+  s_a2a8ffc18882d7::t_c1cb324ca88fde 1
+parsa/testdata/babel/src/ts-tuple-type.ts
+  s_a2a8ffc18882d7::t_e80ae568bbce63 1
+parsa/testdata/babel/src/ts-type-alias-declaration.ts
+  s_a2a8ffc18882d7::t_3a6f08b8031773 1
+parsa/testdata/babel/src/ts-type-annotation.ts
+  s_a2a8ffc18882d7::t_d6a7448df3a362 1
+parsa/testdata/babel/src/ts-type-assertion.ts
+  s_a2a8ffc18882d7::t_08aa0457a73755 1
+parsa/testdata/babel/src/ts-type-literal.ts
+  s_a2a8ffc18882d7::t_84bc640b71807d 1
+parsa/testdata/babel/src/ts-type-operator.ts
+  s_a2a8ffc18882d7::t_171ed94313c361 1-3
+parsa/testdata/babel/src/ts-type-parameter-declaration.ts
+  s_a2a8ffc18882d7::t_d13b6189fddf23 1
+parsa/testdata/babel/src/ts-type-parameter-instantiation.ts
+  s_a2a8ffc18882d7::t_21accea9ed7a35 1
+parsa/testdata/babel/src/ts-type-parameter.ts
+  s_a2a8ffc18882d7::t_2ba2a9560fe704 1
+parsa/testdata/babel/src/ts-type-predicate.ts
+  s_a2a8ffc18882d7::t_2324dd0995372b 1-2
+parsa/testdata/babel/src/ts-type-query.ts
+  s_a2a8ffc18882d7::t_642f648b068fb8 1-2
+parsa/testdata/babel/src/ts-type-reference.ts
+  s_a2a8ffc18882d7::t_ecb8d7bcf69a1f 1
+parsa/testdata/babel/src/ts-undefined-keyword.ts
+  s_a2a8ffc18882d7::t_af7e398049e953 1
+parsa/testdata/babel/src/ts-union-type.ts
+  s_a2a8ffc18882d7::t_03b7c4b0fc6237 1
+parsa/testdata/babel/src/ts-unknown-keyword.ts
+  s_a2a8ffc18882d7::t_3f682c248a1eb7 1
+parsa/testdata/babel/src/ts-void-keyword.ts
+  s_a2a8ffc18882d7::t_615c450f9dbbe0 1
+parsa/testdata/babel/src/unary-expression.js
+  s_a2a8ffc18882d7::t_48ecb1a6e5731b 1
+parsa/testdata/babel/src/update-expression.js
+  s_a2a8ffc18882d7::t_403fd36aa69093 1
+parsa/testdata/babel/src/variable-declaration.js
+  s_a2a8ffc18882d7::t_595a6253fecdd2 1
+parsa/testdata/babel/src/variable-declarator.js
+  s_a2a8ffc18882d7::t_acb387ed2e14a8 1
+parsa/testdata/babel/src/while-statement.js
+  s_a2a8ffc18882d7::t_f3baf220bd351b 1
+parsa/testdata/babel/src/with-statement.js
+  s_a2a8ffc18882d7::t_b17943fd28fd53 1
+parsa/testdata/babel/src/yield-expression.js
+  s_a2a8ffc18882d7::t_b63fcedd632af7 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3b80de29a318e75956c1e49dee14cfd50f14b355",
+  "prompts": {},
+  "sessions": {
+    "s_a2a8ffc18882d7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_9ded2235-3998-439b-ba81-f938d30f9fe4",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
