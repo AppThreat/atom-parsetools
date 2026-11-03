@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/microsoft/TypeScript/tsc/shim/ast"
+	"github.com/microsoft/TypeScript/tsc/shim/checker"
 )
 
 // Options configures one type map run.
@@ -163,22 +164,35 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 		diag                    *FileReport
 	}
 	results := make([]result, len(targets))
-	jobs := make(chan int)
+
+	// Deterministic schedule. The pool ties every file to one checker, so the files are grouped by
+	// that checker first (taking and releasing the checker at once), and each checker then types
+	// its files one after the other in sorted order. A checker's answers can depend on what it
+	// resolved before (a circular reference is cut at a different place), so the order of the files
+	// on a checker must not depend on timing. Handing files to whichever goroutine is free, as a
+	// work queue does, changes that order from run to run.
+	groups := map[*checker.Checker][]int{}
+	var order []*checker.Checker
+	for i, sf := range targets {
+		c, done := setup.Program.GetTypeCheckerForFileExclusive(ctx, sf)
+		done()
+		if _, ok := groups[c]; !ok {
+			order = append(order, c)
+		}
+		groups[c] = append(groups[c], i)
+	}
 	var wg sync.WaitGroup
-	for w := 0; w < workers; w++ {
+	for _, c := range order {
+		list := groups[c]
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for i := range jobs {
+			for _, i := range list {
 				k, st, d := typeFile(ctx, setup, targets[i], filepath.FromSlash(rels[i]), outDir, o.Budget, rels[i])
 				results[i] = result{k, st.gaveUp, st.recovered, d}
 			}
 		}()
 	}
-	for i := range targets {
-		jobs <- i
-	}
-	close(jobs)
 	wg.Wait()
 
 	rep.Typed = len(targets)
