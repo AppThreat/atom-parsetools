@@ -1,0 +1,24 @@
+astgen.js
+  h_0926447d100ad2 28-34,1255,2707-2766,2792-2798
+docs/ASTGEN.md
+  h_0926447d100ad2 189-203,209-210
+docs/ENV.md
+  h_0926447d100ad2 10-11
+lib/typemap/native.mjs
+  h_0926447d100ad2 1-156
+package.json
+  h_0926447d100ad2 9,11
+test-fixtures/astgen-native-types-regression.js
+  h_0926447d100ad2 1-264
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "684c9eec0eb806ff24ba5e5048038df15f3d33da",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
