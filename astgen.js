@@ -431,7 +431,7 @@ const shouldIncludeTestFiles =
 const TEST_FILE_EXT = "(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)";
 const TEST_FILE_PATTERN = new RegExp(
   `(?:\\.(?:poku|test|spec|e2e|integration|it)\\.${TEST_FILE_EXT}$` +
-    `|[\\\\/]__(?:tests|mocks)__[\\\\/])`,
+    `|(?:^|[\\\\/])__(?:tests|mocks)__[\\\\/])`,
   "i"
 );
 

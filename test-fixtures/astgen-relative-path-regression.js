@@ -12,7 +12,7 @@ const astgen = join(dirname(fileURLToPath(import.meta.url)), "..", "astgen.js");
 const root = mkdtempSync(join(tmpdir(), "astgen-relpath-"));
 try {
   writeFileSync(join(root, "package.json"), '{"name":"relpath"}');
-  for (const rel of ["a/b.js", "ab/c.js", "top.js"]) {
+  for (const rel of ["a/b.js", "ab/c.js", "top.js", "__mocks__/m.js"]) {
     mkdirSync(join(root, dirname(rel)), { recursive: true });
     writeFileSync(join(root, rel), "export const x = 1;\n");
   }
@@ -24,7 +24,9 @@ try {
     assert.equal(JSON.parse(readFileSync(p, "utf8")).relativeName.split("\\").join("/"), rel);
   }
   assert.ok(!existsSync(join(out, "b.js.json")), "a/b.js must not be written as b.js");
-  console.log("ok - output names are relative to the source directory");
+  // a top-level __mocks__ directory is a test directory whatever form the source path has
+  assert.ok(!existsSync(join(out, "__mocks__", "m.js.json")), "__mocks__/m.js is a test file");
+  console.log("ok - output names are relative to the source directory, and test directories at the top are left out");
 } finally {
   rmSync(root, { recursive: true, force: true });
 }

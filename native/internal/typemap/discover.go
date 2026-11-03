@@ -37,7 +37,7 @@ var (
 	// astgen.js getAllSrcJSAndTSFiles: no "i" flag.
 	sourceFilePattern  = regexp.MustCompile(`\.(js|jsx|cjs|mjs|ts|tsx|mts|cts|vue|svelte|astro|html|hbs|gjs|gts|xsjs|xsjslib|ejs)$`)
 	bundledNMPattern   = regexp.MustCompile(`node_modules[\\/].*[\\/](?:.*\.)?(bundle|dist|index|min|app)\.(js|cjs|mjs)$`)
-	testFilePattern    = regexp.MustCompile(`(?i)(?:\.(?:poku|test|spec|e2e|integration|it)\.(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)$|[\\/]__(?:tests|mocks)__[\\/])`)
+	testFilePattern    = regexp.MustCompile(`(?i)(?:\.(?:poku|test|spec|e2e|integration|it)\.(?:js|jsx|cjs|mjs|ts|tsx|mts|cts)$|(?:^|[\\/])__(?:tests|mocks)__[\\/])`)
 	minifiedPattern    = regexp.MustCompile(`(?i)[.-]min\.(js|cjs|mjs)$`)
 	nodeModulesInPath  = regexp.MustCompile(`node_modules[\\/]`)
 	declarationPattern = regexp.MustCompile(`(?i)\.d\.[cm]?ts$`)
