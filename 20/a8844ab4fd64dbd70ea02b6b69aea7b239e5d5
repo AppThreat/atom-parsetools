@@ -1,0 +1,16 @@
+native/internal/typemap/hostile_test.go
+  h_0926447d100ad2 1-143
+native/internal/typemap/run.go
+  h_0926447d100ad2 17,396,420-421,449-502
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "20a8844ab4fd64dbd70ea02b6b69aea7b239e5d5",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
