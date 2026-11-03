@@ -18,10 +18,13 @@ import {
 import { tmpdir } from "node:os";
 import { delimiter, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { EventEmitter } from "node:events";
 import {
   MANIFEST_FILENAME,
   findNativeBinary,
+  nativeLimits,
   requestedEngine,
+  runNativeTypes,
   typesRecord,
   writeManifestRecord
 } from "../lib/typemap/native.mjs";
@@ -35,6 +38,12 @@ const haveBinary = existsSync(builtBinary);
 const root = mkdtempSync(join(tmpdir(), "astgen-native-"));
 let failures = 0;
 let skipped = 0;
+
+// CI's native job builds the binary first and sets ASTGEN_NATIVE_REQUIRED, so there a missing binary fails.
+if (process.env.ASTGEN_NATIVE_REQUIRED && !haveBinary) {
+  console.error(`not ok - ASTGEN_NATIVE_REQUIRED is set and there is no binary at ${builtBinary}`);
+  process.exit(1);
+}
 
 const test = (name, fn, { needsBinary = false } = {}) => {
   if (needsBinary && !haveBinary) {
@@ -181,6 +190,58 @@ test("a binary that fails leaves no partial type maps, warns once, and falls bac
   assert.ok(listFiles(r.out, ".typemap").length > 0, "TypeScript 6 types are written instead");
   rmSync(r.out, { recursive: true, force: true });
 });
+
+test("a binary that does not finish within the shared timeout is stopped and astgen falls back", () => {
+  if (process.platform === "win32") return;
+  const project = join(here, "projects", "simple-js");
+  const slow = join(mkdtempSync(join(root, "slow-")), "slow-native");
+  writeFileSync(slow, "#!/bin/sh\nexec sleep 60\n");
+  chmodSync(slow, 0o755);
+  const started = Date.now();
+  const r = runAstgen(project, { ASTGEN_TYPES: "native", ASTGEN_NATIVE_BIN: slow, ASTGEN_TIMEOUT: "1500" });
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(Date.now() - started < 30000, "the binary must be stopped, not waited for");
+  assert.match(r.stderr, /did not finish within 1500 ms; falling back/);
+  assert.ok(listFiles(r.out, ".typemap").length > 0, "TypeScript 6 types are written instead");
+  rmSync(r.out, { recursive: true, force: true });
+});
+
+test("nativeLimits: GOMEMLIMIT and the memory cap follow ASTGEN_NATIVE_MEMORY_MB; the caller's GOMEMLIMIT wins", () => {
+  assert.equal(nativeLimits({}).env.GOMEMLIMIT, "6144MiB");
+  assert.deepEqual(nativeLimits({}).args, []);
+  const l = nativeLimits({ ASTGEN_NATIVE_MEMORY_MB: "2048", ASTGEN_TIMEOUT: "9000" });
+  assert.equal(l.env.GOMEMLIMIT, "2048MiB");
+  assert.deepEqual(l.args, ["--memory-mb", "2048"]);
+  assert.equal(l.timeoutMs, 9000);
+  assert.equal(nativeLimits({ GOMEMLIMIT: "1GiB" }).env.GOMEMLIMIT, "1GiB");
+  assert.equal(nativeLimits({ ATOM_TIMEOUT: "100", ASTGEN_TIMEOUT: "200" }).timeoutMs, 100);
+});
+
+await (async () => {
+  const name = "a type map that cannot be moved into place takes back what was moved and fails the phase";
+  try {
+    const output = mkdtempSync(join(root, "move-"));
+    // b.js.typemap cannot replace a directory of the same name
+    mkdirSync(join(output, "b.js.typemap", "x"), { recursive: true });
+    const spawnImpl = (bin, args) => {
+      const child = new EventEmitter();
+      const staging = args[args.indexOf("-o") + 1];
+      writeFileSync(join(staging, "a.js.typemap"), '{"0":"number"}');
+      writeFileSync(join(staging, "b.js.typemap"), '{"0":"string"}');
+      setImmediate(() => child.emit("exit", 0, null));
+      return child;
+    };
+    const r = await runNativeTypes({ bin: "fake", src: here, output, env: {}, spawnImpl });
+    assert.equal(r.ok, false);
+    assert.match(r.reason, /cannot move the type maps/);
+    assert.ok(!existsSync(join(output, "a.js.typemap")), "a type map moved before the failure must be taken back");
+    assert.ok(readdirSync(output).every((n) => !n.startsWith(".typemap-native-")), "the staging directory must be removed");
+    console.log(`ok - ${name}`);
+  } catch (err) {
+    failures++;
+    console.error(`not ok - ${name}\n${err.stack}`);
+  }
+})();
 
 // ---- the native run ----
 

@@ -193,11 +193,14 @@ The checker is single-threaded, so parallelism comes from sharding: files are de
 What differs from the default `ts6` path, on purpose:
 
 - Union and object member order and the quote style of literal types follow TypeScript 7 (`"ADMIN" | "USER"` where TypeScript 6 wrote `"USER" | "ADMIN"`). The output does not depend on the checker count or on the run.
-- A JavaScript function prints as its signature, not `typeof name`, and a CommonJS module prints its structure instead of `typeof import("./m")`.
+- A JavaScript function prints as its signature, not `typeof name`. A required CommonJS module is written `typeof import("./m")` everywhere outside the module itself, where TypeScript 6 used the local name in some places (`typeof morgan`).
+- `baseUrl` keeps its TypeScript 6 meaning: TypeScript 7 no longer resolves bare specifiers through it, so the binary adds the `"*"` entry to `paths` and resolves `paths` from `baseUrl`, the migration the TypeScript 7 notes describe.
 - Offsets count a leading byte order mark, like Babel's offsets do (TypeScript 6's keys did not, so keys and AST nodes did not join in such files).
 - A file whose type collection runs past a budget (checker work, wall time or memory; the cdxgen shape of an untyped array reassigned in many `if` blocks is one) keeps the entries before the point it stopped and gets none after. The budgets are reported, never silent.
 
-Fallback. If the binary cannot be found (`ASTGEN_NATIVE_BIN`, next to `astgen.js`, `PATH`) or exits with an error, astgen prints one warning and writes the TypeScript 6 type maps, so a run always has types. Nothing a failed binary wrote is kept.
+Fallback. If the binary cannot be found (`ASTGEN_NATIVE_BIN`, next to `astgen.js`, `PATH`), exits with an error, does not finish within the shared kill timeout (`ATOM_TIMEOUT`, then `ASTGEN_TIMEOUT`), or its type maps cannot be moved into the output, astgen prints one warning and writes the TypeScript 6 type maps, so a run always has types. Nothing a failed binary wrote is kept.
+
+Limits. Besides the per-file budgets, the binary caps the heap of the whole run (6,144 MB, or `ASTGEN_NATIVE_MEMORY_MB`), and astgen sets `GOMEMLIMIT` to the same figure unless it is already set. Past the cap the files being typed stop and the rest are not typed; each is reported. The cap is a backstop for projects too large for the machine, and which files were done by then depends on timing.
 
 A run that asked for `native` appends one record to `astgen_manifest.jsonl` in the output directory: the engine used, the reason for a fallback, the TypeScript commit the binary was built from, the checker count, the tsconfig it used, the files that hit a budget with the reason, the number of types it gave up on, and its warnings. The name ends in `.jsonl` because consumers read every `*.json` under the output as an AST. Without `ASTGEN_TYPES`, output is exactly what it was.
 

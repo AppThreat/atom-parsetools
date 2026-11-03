@@ -54,7 +54,7 @@ import { lowerEmberFile } from "./emberAst.js";
 // whose types recursed through conditional types (Prisma 4's client) ran
 // astgen out of memory, leaving no ASTs at all; the empty parse must not be
 // reused.
-const ASTGEN_VERSION = "4.5.2";
+const ASTGEN_VERSION = "4.6.0";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -2757,6 +2757,9 @@ const runNativeTypePhase = async (options) => {
     warnOnce(`ASTGEN_TYPES=native: ${outcome.reason}; falling back to TypeScript 6 for types.`);
     return false;
   }
+  for (const w of outcome.report?.warnings ?? []) {
+    console.error(`astgen: native types: warning: ${w}`);
+  }
   for (const d of outcome.report?.diagnostics ?? []) {
     console.error(`astgen: native types: ${d.file}: ${d.reason}${d.detail ? ` (${d.detail})` : ""}`);
   }
@@ -2876,7 +2879,7 @@ const getCircularReplacer = () => {
  * Write AST data to a json file
  */
 const writeAstFile = (file, ast, options) => {
-  const relativePath = file.replace(new RegExp("^" + options.src + "/"), "");
+  const relativePath = relative(options.src, file);
   const outAstFile = join(options.output, relativePath + ".json");
   const data = {
     fullName: file,
@@ -2897,7 +2900,7 @@ const writeAstFile = (file, ast, options) => {
 };
 
 const writeTypesFile = (file, seenTypes, options) => {
-  const relativePath = file.replace(new RegExp("^" + options.src + "/"), "");
+  const relativePath = relative(options.src, file);
   const outTypeFile = join(options.output, relativePath + ".typemap");
   mkdirSync(dirname(outTypeFile), { recursive: true });
   writeFileSync(
