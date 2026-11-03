@@ -7,9 +7,7 @@
 // component itself and names AppThreat as its supplier, marks every component required (each one is
 // linked into the binaries), and drops the properties that only describe the build machine (local
 // directories, cdxgen internals).
-//
-// It also removes the Go standard library that prune-go-sbom.js adds: the SBOM lists the modules
-// parsa depends on, and the Go release it was built with is a property of the build, not one of them.
+
 //
 // Usage: node annotate-sbom.js <sbom.cdx.json> <parsa version> [<repository url> <commit>]
 // The repository url and commit, when given, make each patch's url point at the file in that commit.
@@ -67,14 +65,7 @@ export function annotate(bom, { version, commit, commitTime, patches, repoUrl, r
   if (bom.metadata) {
     bom.metadata.supplier = { name: "Team AppThreat", url: ["https://github.com/AppThreat"] };
   }
-  const stdlib = new Set(
-    (bom.components || []).filter((c) => c.purl?.startsWith("pkg:golang/stdlib@")).map((c) => c["bom-ref"]),
-  );
-  bom.components = (bom.components || []).filter((c) => !stdlib.has(c["bom-ref"]));
-  bom.dependencies = (bom.dependencies || [])
-    .filter((d) => !stdlib.has(d.ref))
-    .map((d) => (d.dependsOn ? { ...d, dependsOn: d.dependsOn.filter((r) => !stdlib.has(r)) } : d));
-  for (const c of bom.components) {
+  for (const c of bom.components || []) {
     dropBuildMachineProperties(c);
     c.scope = "required";
     if (c.name === TSC) {

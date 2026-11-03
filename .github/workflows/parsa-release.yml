@@ -62,7 +62,7 @@ jobs:
         package-manager-cache: false
     # cdxgen reads go.mod, prune-go-sbom.js keeps the modules the binaries' build info names (adding
     # the ones cdxgen missed), and annotate-sbom.js names the pinned TypeScript commit, its patches
-    # and parsa's version, and leaves out the Go standard library. cdx-validate fails the build on a schema
+    # and parsa's version. The Go standard library is not listed. cdx-validate fails the build on a schema
     # or reference error.
     - name: post-build SBOM
       working-directory: parsa

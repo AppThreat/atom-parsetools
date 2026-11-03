@@ -7,7 +7,6 @@ const commit = "622d4f779368e3d8cc721b329f8d1fb9066b528c";
 const tscOld = "pkg:golang/github.com/microsoft/typescript/tsc@v0.0.0";
 const shimOld = "pkg:golang/github.com/microsoft/typescript/tsc/shim@v0.0.0";
 const parsaOld = "pkg:golang/github.com/appthreat/atom-parsetools/parsa";
-const stdOld = "pkg:golang/stdlib@v1.27.2";
 
 function sample() {
   return {
@@ -26,13 +25,11 @@ function sample() {
     components: [
       { name: "github.com/microsoft/TypeScript/tsc", version: "v0.0.0", purl: tscOld, "bom-ref": tscOld, scope: "optional" },
       { name: "github.com/microsoft/TypeScript/tsc/shim", version: "v0.0.0", purl: shimOld, "bom-ref": shimOld },
-      { name: "stdlib", version: "v1.27.2", purl: stdOld, "bom-ref": stdOld },
     ],
     dependencies: [
-      { ref: parsaOld, dependsOn: [shimOld, stdOld] },
+      { ref: parsaOld, dependsOn: [shimOld] },
       { ref: shimOld, dependsOn: [tscOld] },
       { ref: tscOld, dependsOn: [] },
-      { ref: stdOld, dependsOn: [] },
     ],
   };
 }
@@ -44,7 +41,7 @@ test("pseudoVersion and golangPurl follow Go and cdxgen", () => {
   assert.equal(golangPurl("github.com/AppThreat/x", "v2.0.0-dev+abc"), "pkg:golang/github.com/appthreat/x@v2.0.0-dev%2Babc");
 });
 
-test("annotate names the TypeScript commit, its patches and parsa, and drops the standard library", () => {
+test("annotate names the TypeScript commit, its patches and parsa", () => {
   const bom = annotate(sample(), {
     version: "2.0.0",
     commit,
@@ -63,7 +60,6 @@ test("annotate names the TypeScript commit, its patches and parsa, and drops the
   assert.equal(tsc.pedigree.patches[0].diff.url, "https://github.com/AppThreat/atom-parsetools/blob/abc/parsa/patches/0001-x.patch");
   assert.equal(shim.version, "v0.0.0-20261102220236-622d4f779368");
   assert.equal(shim.licenses[0].license.id, "Apache-2.0");
-  assert.ok(!JSON.stringify(bom).includes("stdlib"));
   const meta = bom.metadata.component;
   assert.equal(meta.name, "parsa");
   assert.equal(meta.purl, "pkg:golang/github.com/appthreat/atom-parsetools/parsa@v2.0.0");
