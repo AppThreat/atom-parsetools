@@ -1,0 +1,25 @@
+.github/workflows/parsa-release.yml
+  s_79a7c562b49300::t_d7d35f460335db 65
+docs/PACKAGING.md
+  s_79a7c562b49300::t_b3de47be8405a2 61
+parsa/scripts/prune-go-sbom.js
+  s_79a7c562b49300::t_115f8a8c5752bb 1,12-14,106-167,336-337,387,399
+parsa/scripts/prune-go-sbom.test.js
+  s_79a7c562b49300::t_2886b778372a5a 10-12,52-66,119,131-132,134-146,172-174,203-207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c3e73d3404ed6be82e080c1d8c593bc90d995deb",
+  "prompts": {},
+  "sessions": {
+    "s_79a7c562b49300": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e06ad8c2-0767-47dd-913e-35689e5f05ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
