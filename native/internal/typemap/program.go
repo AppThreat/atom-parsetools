@@ -303,6 +303,9 @@ func isSupportedRoot(f string) bool {
 	return false
 }
 
+// Options returns the compiler options the program was created with.
+func (s *Setup) Options() *core.CompilerOptions { return s.Program.Options() }
+
 // BuildSetup is createTscProgramConfig followed by createProgram. projectFiles
 // are the discovered files (without node_modules); checkers is the number of
 // type checkers the program may use.
@@ -380,6 +383,9 @@ func BuildSetup(src string, projectFiles []string, disc *Discovery, checkers int
 	var cfg *tsoptions.ParsedCommandLine
 	if parsed != nil {
 		parsed.SetCompilerOptions(opts)
+		// astgen passes no project references to createProgram. With them tsgo would redirect each
+		// root file to the referenced project's output and load none of the sources itself.
+		parsed.ParsedConfig.ProjectReferences = nil
 		cfg = parsed.WithFileNames(rooted)
 	} else {
 		cfg = tsoptions.NewParsedCommandLine(opts, rooted, nil, base, fs.CaseSensitivity())

@@ -29,6 +29,74 @@ func fixtureSets(t *testing.T) []string {
 	return sets
 }
 
+// configProjects lists testdata/typemap/config/<name>: each is a project with its own tsconfig.
+func configProjects(t *testing.T) []string {
+	t.Helper()
+	dirs, _ := filepath.Glob(filepath.Join("..", "..", "testdata", "typemap", "config", "*"))
+	var out []string
+	for _, d := range dirs {
+		if st, err := os.Stat(d); err == nil && st.IsDir() && filepath.Base(d) != "expected" {
+			out = append(out, d)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+func TestConfigFixtures(t *testing.T) {
+	for _, proj := range configProjects(t) {
+		proj := proj
+		t.Run(filepath.Base(proj), func(t *testing.T) {
+			out := filepath.Join(t.TempDir(), "out")
+			if _, err := Run(context.Background(), Options{Src: proj, Output: out, Workers: 1}); err != nil {
+				t.Fatal(err)
+			}
+			expDir := filepath.Join("..", "..", "testdata", "typemap", "config", "expected", filepath.Base(proj))
+			got := readMapsRaw(t, out)
+			if os.Getenv("UPDATE_TYPEMAP_FIXTURES") == "1" {
+				_ = os.RemoveAll(expDir)
+				for rel, b := range got {
+					p := filepath.Join(expDir, filepath.FromSlash(rel))
+					_ = os.MkdirAll(filepath.Dir(p), 0o755)
+					if err := os.WriteFile(p, b, 0o644); err != nil {
+						t.Fatal(err)
+					}
+				}
+				return
+			}
+			want := readMapsRaw(t, expDir)
+			if len(want) == 0 {
+				t.Fatalf("no expected files in %s", expDir)
+			}
+			for rel, b := range want {
+				if !bytes.Equal(got[rel], b) {
+					t.Errorf("%s differs\nexpected: %s\ngot:      %s", rel, b, got[rel])
+				}
+			}
+			for rel := range got {
+				if _, ok := want[rel]; !ok {
+					t.Errorf("unexpected output file %s", rel)
+				}
+			}
+		})
+	}
+}
+
+// readMapsRaw returns the bytes of every .typemap under root by relative slash path.
+func readMapsRaw(t *testing.T, root string) map[string][]byte {
+	t.Helper()
+	res := map[string][]byte{}
+	_ = filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
+		if err == nil && !info.IsDir() && strings.HasSuffix(p, ".typemap") {
+			b, _ := os.ReadFile(p)
+			rel, _ := filepath.Rel(root, p)
+			res[filepath.ToSlash(rel)] = b
+		}
+		return nil
+	})
+	return res
+}
+
 func TestFixtures(t *testing.T) {
 	for _, set := range fixtureSets(t) {
 		set := set
@@ -41,10 +109,14 @@ func TestFixtures(t *testing.T) {
 			for _, src := range srcs {
 				name := filepath.Base(src)
 				t.Run(strings.TrimSuffix(name, filepath.Ext(name)), func(t *testing.T) {
-					got, _ := os.ReadFile(filepath.Join(out, "src", name+".typemap"))
+					got, gotErr := os.ReadFile(filepath.Join(out, "src", name+".typemap"))
 					want := filepath.Join(set, "expected", name+".typemap")
 					if os.Getenv("UPDATE_TYPEMAP_FIXTURES") == "1" {
 						_ = os.MkdirAll(filepath.Dir(want), 0o755)
+						if gotErr != nil { // no type map is the expectation: no expected file
+							_ = os.Remove(want)
+							return
+						}
 						if err := os.WriteFile(want, got, 0o644); err != nil {
 							t.Fatal(err)
 						}
@@ -52,7 +124,13 @@ func TestFixtures(t *testing.T) {
 					}
 					exp, err := os.ReadFile(want)
 					if err != nil {
+						if gotErr != nil {
+							return // neither an expected file nor an output: a source without any type
+						}
 						t.Fatalf("no expected file %s: %v", want, err)
+					}
+					if gotErr != nil {
+						t.Fatalf("expected a type map for %s and the run wrote none", name)
 					}
 					if !bytes.Equal(exp, got) {
 						t.Fatalf("type map differs from %s\nexpected: %s\ngot:      %s", want, exp, got)

@@ -243,7 +243,55 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 	wg.Wait()
 	rep.Rebuilds = int(rebuilds.Load())
 
-	rep.Typed = len(targets)
+	// .vue and .svelte files are not part of the program (no source file has their extension): their
+	// script blocks are typed from a virtual source in a throwaway program, as astgen does.
+	var sfcFiles []string
+	for _, f := range files {
+		if strings.HasSuffix(f, ".vue") || strings.HasSuffix(f, ".svelte") {
+			sfcFiles = append(sfcFiles, f)
+		}
+	}
+	sfcResults := make([]result, len(sfcFiles))
+	sfcWorkers := workers
+	if sfcWorkers > 4 {
+		sfcWorkers = 4 // each one builds its own program with the default libraries
+	}
+	var sfcWG sync.WaitGroup
+	sfcJobs := make(chan int)
+	for w := 0; w < sfcWorkers; w++ {
+		sfcWG.Add(1)
+		go func() {
+			defer sfcWG.Done()
+			for i := range sfcJobs {
+				rel := mustRel(src, sfcFiles[i])
+				relSlash := filepath.ToSlash(rel)
+				start := time.Now()
+				seen, st, why, err := typeSFC(ctx, sfcFiles[i], o.Budget, watch)
+				r := result{keys: len(seen), gaveUp: st.gaveUp, recovered: st.recovered, work: st.work, ms: time.Since(start).Milliseconds()}
+				switch {
+				case err != nil:
+					r.diag = &FileReport{File: relSlash, Reason: "sfc-error", Detail: err.Error()}
+				case why != "":
+					r.diag = &FileReport{File: relSlash, Reason: why, Detail: "no further entries were written for this file", Keys: len(seen), Ms: r.ms}
+				}
+				if werr := writeTypeMap(outDir, rel, seen); werr != nil && r.diag == nil {
+					r.diag = &FileReport{File: relSlash, Reason: "write", Detail: werr.Error()}
+				}
+				sfcResults[i] = r
+			}
+		}()
+	}
+	for i := range sfcFiles {
+		sfcJobs <- i
+	}
+	close(sfcJobs)
+	sfcWG.Wait()
+	for i, r := range sfcResults {
+		results = append(results, r)
+		rels = append(rels, filepath.ToSlash(mustRel(src, sfcFiles[i])))
+	}
+
+	rep.Typed = len(targets) + len(sfcFiles)
 	if path := os.Getenv("TYPEMAP_HEAP_PROFILE"); path != "" { // diagnostic: heap profile while the program is still alive
 		runtime.GC()
 		if f, e := os.Create(path); e == nil {
@@ -355,6 +403,18 @@ func typeFile(ctx context.Context, s *Setup, w *Watch, b Budget, probe func(uint
 		diag = &FileReport{File: relSlash, Reason: u.overWhy, Detail: "no further entries were written for this file", Keys: len(u.seen), Ms: time.Since(start).Milliseconds()}
 	}
 	return len(u.seen), st, diag, u.tainted
+}
+
+// writeTypeMap writes <outDir>/<rel>.typemap when there is anything to write.
+func writeTypeMap(outDir, rel string, seen map[int]string) error {
+	if len(seen) == 0 {
+		return nil
+	}
+	out := filepath.Join(outDir, rel+".typemap")
+	if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(out, EncodeTypeMap(seen), 0o644)
 }
 
 // hasUTF8BOM reports whether the file on disk starts with a UTF-8 byte order mark.

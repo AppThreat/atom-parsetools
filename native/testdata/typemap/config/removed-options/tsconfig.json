@@ -1,0 +1,1 @@
+{"compilerOptions":{"keyofStringsOnly":true,"suppressImplicitAnyIndexErrors":true,"moduleResolution":"node10","target":"es5"},"extends":"./nope.json"}
