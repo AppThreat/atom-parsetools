@@ -101,7 +101,7 @@ func normalizeTypeString(s, currentFile string) string {
 // writeType prints t once with the given flags and reports whether the result
 // is complete: the checker did not cut it short and it is under the limit.
 func (u *unit) writeType(t *checker.Type, enclosing *ast.Node, flags checker.TypeFormatFlags) (string, bool) {
-	vc := &checker.VerbosityContext{MaxTruncationLength: MaxTypeStringLength}
+	vc := &checker.VerbosityContext{MaxTruncationLength: MaxTypeStringLength, MaxBuilderCalls: u.builderCalls}
 	u.stats.writes++
 	s := u.c.TypeToStringEx(t, enclosing, flags, vc)
 	if vc.Truncated {
@@ -143,6 +143,16 @@ func (u *unit) typeStr(t *checker.Type, enclosing *ast.Node) (res string) {
 	}
 	defer func() {
 		if r := recover(); r != nil {
+			if _, ok := r.(checker.Interrupted); ok {
+				panic(r) // not a failure of this type: the whole file is out of budget
+			}
+			if _, ok := r.(checker.BuilderBudgetExceeded); ok {
+				u.oversized[t] = typeUnwritable
+				u.stats.gaveUp++
+				res = "any"
+				return
+			}
+
 			u.noteRecovered(r)
 			res = "any"
 		}

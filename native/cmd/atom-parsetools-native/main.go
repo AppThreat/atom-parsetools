@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/AppThreat/atom-parsetools/native/internal/typemap"
 )
@@ -52,7 +53,8 @@ subcommands:
                 --tsTypes       types on (default); --no-tsTypes does nothing
                 --workers N     checkers; default ASTGEN_TYPE_WORKERS or the CPU count, at most 8
                 --report FILE   write the run manifest (JSON) to FILE
-                --file-ms N     wall time budget per file in milliseconds
+                --file-ms N     wall time budget per file in milliseconds (default 60000)
+                --file-work N   checker work budget per file (default 150000000; deterministic)
   version`)
 }
 
@@ -61,6 +63,7 @@ type args struct {
 	workers                  int
 	tsTypes                  bool
 	fileMs                   int
+	fileWork                 int
 }
 
 func parseArgs(in []string) (args, error) {
@@ -90,17 +93,20 @@ func parseArgs(in []string) (args, error) {
 			a.typ, err = val(&i, name)
 		case "--report":
 			a.report, err = val(&i, name)
-		case "--workers", "--file-ms":
+		case "--workers", "--file-ms", "--file-work":
 			var s string
 			if s, err = val(&i, name); err == nil {
 				n, e := strconv.Atoi(s)
 				if e != nil || n < 0 {
 					return a, fmt.Errorf("option %s needs a non-negative integer", name)
 				}
-				if name == "--workers" {
+				switch name {
+				case "--workers":
 					a.workers = n
-				} else {
+				case "--file-ms":
 					a.fileMs = n
+				default:
+					a.fileWork = n
 				}
 			}
 		case "-r", "--recurse", "--tsTypes":
@@ -145,7 +151,18 @@ func runTypemap(in []string) int {
 	if !a.tsTypes {
 		return 0
 	}
-	opts := typemap.Options{
+	budget := typemap.DefaultBudget()
+	if a.fileMs > 0 {
+		budget.FileWall = time.Duration(a.fileMs) * time.Millisecond
+	}
+	if a.fileWork > 0 {
+		budget.FileWork = int64(a.fileWork)
+	}
+	if v := os.Getenv("TYPEMAP_RECYCLE_AFTER"); v != "" { // experiment, off by default
+		budget.RecycleAfter, _ = strconv.Atoi(v)
+	}
+	budget.KeepPrinterCaches = os.Getenv("TYPEMAP_KEEP_PRINTER_CACHES") != "" // experiment, off by default
+	opts := typemap.Options{Budget: budget,
 		Src: a.src, Output: a.output, Workers: a.workers, Env: typemap.EnvFromProcess(), ReportPath: a.report,
 		Log: func(f string, v ...any) { fmt.Fprintf(os.Stderr, f+"\n", v...) },
 	}

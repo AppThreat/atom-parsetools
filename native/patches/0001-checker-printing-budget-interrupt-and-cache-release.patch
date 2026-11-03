@@ -1,0 +1,191 @@
+Reason: bound type printing (node builder call budget), stop a runaway query (a deterministic work limit and an interrupt flag another goroutine can set, both polled in flow analysis, expression checking and the node builder), and release the printer caches and stale builder state, none of which tsc/ offers.
+
+diff --git a/tsc/internal/checker/atom_budget.go b/tsc/internal/checker/atom_budget.go
+new file mode 100644
+index 000000000..93565e246
+--- /dev/null
++++ b/tsc/internal/checker/atom_budget.go
+@@ -0,0 +1,57 @@
++package checker
++
++import "sync/atomic"
++
++// Atom parsetools additions. Everything here is opt-in: a checker that never calls
++// SetInterrupt, and a VerbosityContext with MaxBuilderCalls == 0, behave as before.
++
++// Interrupted is the panic value used when a checker's interrupt flag is set or its work limit is
++// exceeded. It unwinds the query in progress. State the interrupted query had half built may be
++// inconsistent (a signature marked as being resolved stays marked), so a checker that was
++// interrupted must be discarded.
++type Interrupted struct {
++	WorkLimit bool // true when the work limit was exceeded, false when the flag was set
++}
++
++func (e Interrupted) Error() string {
++	if e.WorkLimit {
++		return "checker work limit exceeded"
++	}
++	return "checker interrupted"
++}
++
++// BuilderBudgetExceeded is the panic value used when printing one type takes more node builder
++// calls than VerbosityContext.MaxBuilderCalls allows.
++type BuilderBudgetExceeded struct{ Calls int }
++
++func (e BuilderBudgetExceeded) Error() string { return "type printing exceeded its node builder budget" }
++
++// SetInterrupt makes the checker poll flag in its hot paths (flow analysis and expression
++// checking). Setting the flag from another goroutine makes the running query panic with Interrupted.
++func (c *Checker) SetInterrupt(flag *atomic.Bool) { c.interrupt = flag }
++
++// SetWorkLimit resets the work counter and makes the checker panic with Interrupted{WorkLimit: true}
++// once it has polled more than limit times (one poll per expression checked, flow node visited and
++// type node built). The count depends only on the code and the checker's earlier state, not on
++// timing, so a limit stops a runaway query at the same point on every run. 0 removes the limit.
++func (c *Checker) SetWorkLimit(limit int64) {
++	c.work = 0
++	c.workLimit = limit
++}
++
++// Work returns the number of polls since SetWorkLimit.
++func (c *Checker) Work() int64 { return c.work }
++
++func (c *Checker) pollInterrupt() {
++	c.work++
++	if c.workLimit > 0 && c.work > c.workLimit {
++		panic(Interrupted{WorkLimit: true})
++	}
++	if c.interrupt != nil && c.interrupt.Load() {
++		panic(Interrupted{})
++	}
++}
++
++// ReleasePrinterCaches drops the node builder used for printing types, together with the
++// serialized type nodes it cached for every enclosing declaration it printed at.
++func (c *Checker) ReleasePrinterCaches() { c.typeToStringNodebuilder = nil }
+diff --git a/tsc/internal/checker/checker.go b/tsc/internal/checker/checker.go
+index 5cdbf4042..bfa5cc853 100644
+--- a/tsc/internal/checker/checker.go
++++ b/tsc/internal/checker/checker.go
+@@ -941,6 +941,8 @@ type Checker struct {
+ 	nonExistentProperties                       collections.Set[NonExistentPropertyKey]
+ 	deferredDiagnosticCallbacks                 []func()
+ 	typeToStringNodebuilder                     *NodeBuilder
++	interrupt                                   *atomic.Bool // see atom_budget.go
++	work, workLimit                             int64
+ 
+ 	mu     sync.Mutex
+ 	tracer *Tracer // Optional tracer for trace events and type recording (for --generateTrace)
+@@ -7771,6 +7773,7 @@ func (c *Checker) checkExpression(node *ast.Node) *Type {
+ }
+ 
+ func (c *Checker) checkExpressionEx(node *ast.Node, checkMode CheckMode) *Type {
++	c.pollInterrupt()
+ 	if tr := c.tracer; tr != nil {
+ 		defer tr.Push(tracing.PhaseCheck, "checkExpression", map[string]any{"kind": node.Kind, "pos": node.Pos(), "end": node.End(), "path": ast.GetSourceFileOfNode(node).FileName()}, false)()
+ 	}
+diff --git a/tsc/internal/checker/flow.go b/tsc/internal/checker/flow.go
+index 05daef984..5a28d0b1b 100644
+--- a/tsc/internal/checker/flow.go
++++ b/tsc/internal/checker/flow.go
+@@ -115,6 +115,7 @@ func (c *Checker) getFlowTypeOfReferenceEx(reference *ast.Node, declaredType *Ty
+ }
+ 
+ func (c *Checker) getTypeAtFlowNode(f *FlowState, flow *ast.FlowNode) FlowType {
++	c.pollInterrupt()
+ 	if f.depth == 2000 {
+ 		// We have made 2000 recursive invocations. To avoid overflowing the call stack we report an error
+ 		// and disable further control flow analysis in the containing function or module body.
+diff --git a/tsc/internal/checker/nodebuilder.go b/tsc/internal/checker/nodebuilder.go
+index a4fb793b3..25ef6faeb 100644
+--- a/tsc/internal/checker/nodebuilder.go
++++ b/tsc/internal/checker/nodebuilder.go
+@@ -23,6 +23,7 @@ type VerbosityContext struct {
+ 	MaxTruncationLength  int  // 0 = use default
+ 	CanIncreaseVerbosity bool // output: whether increasing Level would reveal more
+ 	Truncated            bool // output: whether output was truncated
++	MaxBuilderCalls      int  // 0 = no limit; more node builder calls than this panic with BuilderBudgetExceeded
+ }
+ 
+ // EmitContext implements NodeBuilderInterface.
+@@ -33,9 +34,11 @@ func (b *NodeBuilder) EmitContext() *printer.EmitContext {
+ func (b *NodeBuilder) enterContext(enclosingDeclaration *ast.Node, flags nodebuilder.Flags, internalFlags nodebuilder.InternalFlags, tracker nodebuilder.SymbolTracker) {
+ 	verbosityLevel := -1
+ 	maxTruncationLength := 0
++	maxBuilderCalls := 0
+ 	if b.verbosity != nil {
+ 		verbosityLevel = b.verbosity.Level
+ 		maxTruncationLength = b.verbosity.MaxTruncationLength
++		maxBuilderCalls = b.verbosity.MaxBuilderCalls
+ 	}
+ 	b.ctxStack = append(b.ctxStack, b.impl.ctx)
+ 	b.impl.ctx = &NodeBuilderContext{
+@@ -45,6 +48,7 @@ func (b *NodeBuilder) enterContext(enclosingDeclaration *ast.Node, flags nodebui
+ 		internalFlags:            internalFlags,
+ 		maxExpansionDepth:        verbosityLevel,
+ 		maxTruncationLength:      maxTruncationLength,
++		maxBuilderCalls:          maxBuilderCalls,
+ 		enclosingDeclaration:     enclosingDeclaration,
+ 		enclosingFile:            ast.GetSourceFileOfNode(enclosingDeclaration),
+ 		inferTypeParameters:      make([]*Type, 0),
+diff --git a/tsc/internal/checker/nodebuilderimpl.go b/tsc/internal/checker/nodebuilderimpl.go
+index 7c90f3f32..46cc1d6c1 100644
+--- a/tsc/internal/checker/nodebuilderimpl.go
++++ b/tsc/internal/checker/nodebuilderimpl.go
+@@ -66,6 +66,8 @@ type NodeBuilderContext struct {
+ 	tracker                         nodebuilder.SymbolTracker
+ 	approximateLength               int
+ 	maxTruncationLength             int
++	maxBuilderCalls                 int // see VerbosityContext.MaxBuilderCalls
++	builderCalls                    int
+ 	encounteredError                bool
+ 	truncating                      bool
+ 	reportedDiagnostic              bool
+@@ -3369,6 +3371,13 @@ func (b *NodeBuilderImpl) visitAndTransformType(t *Type, transform func(b *NodeB
+ }
+ 
+ func (b *NodeBuilderImpl) typeToTypeNode(t *Type) *ast.TypeNode {
++	if b.ctx.maxBuilderCalls > 0 {
++		b.ctx.builderCalls++
++		if b.ctx.builderCalls > b.ctx.maxBuilderCalls {
++			panic(BuilderBudgetExceeded{Calls: b.ctx.builderCalls})
++		}
++	}
++	b.ch.pollInterrupt()
+ 	inTypeAlias := b.ctx.flags & nodebuilder.FlagsInTypeAlias
+ 	b.ctx.flags &^= nodebuilder.FlagsInTypeAlias
+ 
+diff --git a/tsc/internal/checker/printer.go b/tsc/internal/checker/printer.go
+index b84c96788..f90a33e5d 100644
+--- a/tsc/internal/checker/printer.go
++++ b/tsc/internal/checker/printer.go
+@@ -74,15 +74,26 @@ func (c *Checker) typeToStringEx(t *Type, enclosingDeclaration *ast.Node, flags
+ 		combinedFlags = combinedFlags | nodebuilder.FlagsNoTruncation
+ 	}
+ 	nodeBuilder, release := c.getNodeBuilder()
+-	defer release()
++	panicking := true
++	defer func() {
++		release()
++		if panicking {
++			// The write was abandoned inside the node builder, which was left inside a context it never
++			// exited: do not reuse it. (After release, which still needs it.)
++			c.typeToStringNodebuilder = nil
++		}
++	}()
+ 	oldVerbosity := nodeBuilder.verbosity
+ 	nodeBuilder.verbosity = vc
+ 	defer func() {
+ 		nodeBuilder.verbosity = oldVerbosity
+ 	}()
+ 	c.serializationLevel++
+-	typeNode := nodeBuilder.TypeToTypeNode(t, enclosingDeclaration, combinedFlags, nodebuilder.InternalFlagsNone, nil)
+-	c.serializationLevel--
++	typeNode := func() *ast.Node {
++		defer func() { c.serializationLevel-- }()
++		return nodeBuilder.TypeToTypeNode(t, enclosingDeclaration, combinedFlags, nodebuilder.InternalFlagsNone, nil)
++	}()
++	panicking = false
+ 	if typeNode == nil {
+ 		panic("should always get typenode")
+ 	}

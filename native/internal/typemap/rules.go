@@ -13,21 +13,23 @@ import (
 // fileStats counts what happened while one file was typed.
 type fileStats struct {
 	nodes, writes, gaveUp, recovered int
+	work, ms                         int64
 }
 
 // unit is the state of typing one source file. It replaces the closure state
 // of createTsc in astgen.js; everything that astgen resets per file
 // (oversizedTypes, the result map) lives here.
 type unit struct {
-	c         *checker.Checker
-	sf        *ast.SourceFile
-	off       *Offsets
-	seen      map[int]string
-	oversized map[*checker.Type]uint8
-	stats     fileStats
-	over      func() string // returns a reason once a per-file budget is exceeded
-	overWhy   string
-	nodeCount int
+	c            *checker.Checker
+	sf           *ast.SourceFile
+	off          *Offsets
+	seen         map[int]string
+	oversized    map[*checker.Type]uint8
+	stats        fileStats
+	slot         *Slot // budget watcher registration; nil in tests that run without one
+	builderCalls int   // node builder call budget for one type write; 0 = unlimited
+	overWhy      string
+	tainted      bool // the checker was interrupted inside a query and must not be used again
 
 	memoRet       map[*ast.Node]memoStr
 	memoAsyncBody map[*ast.Node]memoStr
@@ -52,6 +54,23 @@ func newUnit(c *checker.Checker, sf *ast.SourceFile, off *Offsets) *unit {
 }
 
 func (u *unit) noteRecovered(any) { u.stats.recovered++ }
+
+// interrupted reports whether a recovered panic is the checker's interrupt, and if so ends the file.
+func (u *unit) interrupted(r any) bool {
+	if i, ok := r.(checker.Interrupted); ok {
+		u.tainted = true
+		switch {
+		case i.WorkLimit:
+			u.overWhy = ReasonWork
+		case u.slot != nil && u.slot.Reason() != "":
+			u.overWhy = u.slot.Reason()
+		default:
+			u.overWhy = ReasonWall
+		}
+		return true
+	}
+	return false
+}
 
 // start is node.getStart(): the position of the first token, without leading
 // trivia and without JSDoc, as a UTF-16 offset.
@@ -422,11 +441,9 @@ func (u *unit) addType(n *ast.Node) {
 		return
 	}
 	u.stats.nodes++
-	if u.over != nil && u.stats.nodes&0x3f == 0 {
-		if why := u.over(); why != "" {
-			u.overWhy = why
-			return
-		}
+	if u.slot != nil && u.slot.flag.Load() {
+		u.overWhy = u.slot.Reason()
+		return
 	}
 	if isStructural(n.Kind) {
 		u.recurse(n)
@@ -452,6 +469,9 @@ func (u *unit) visit(n *ast.Node) {
 		n.Parent.Kind == ast.KindCallExpression && n.Parent.Expression() == n
 	defer func() {
 		if r := recover(); r != nil {
+			if u.interrupted(r) {
+				return
+			}
 			u.noteRecovered(r) // astgen: "silently fail on type resolution errors"
 		}
 	}()
@@ -608,6 +628,9 @@ func (u *unit) functionLike(n *ast.Node) string {
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
+					if u.interrupted(r) {
+						panic(r) // end the file: visit's handler records it
+					}
 					u.noteRecovered(r)
 				}
 			}()
