@@ -1,0 +1,32 @@
+native/cmd/atom-parsetools-native/main.go
+  h_0926447d100ad2 18,56-57,66,96,103-104,106,108-109,154-165
+native/internal/typemap/budget.go
+  h_0926447d100ad2 3-8,10,12,14-34,37-92,94-164,166
+native/internal/typemap/budget_test.go
+  h_0926447d100ad2 1-211
+native/internal/typemap/print.go
+  h_0926447d100ad2 104,146-155
+native/internal/typemap/rules.go
+  h_0926447d100ad2 16,23-32,58-74,444-446,472-474,631-633
+native/internal/typemap/run.go
+  h_0926447d100ad2 11,15,29-32,44-50,53-69,114-116,183,187-188,207,213-239,244,247-257,261-263,268-278,297-314,323-331,334-335,338-344,348,351,355,357
+native/patches/0001-checker-printing-budget-interrupt-and-cache-release.patch
+  h_0926447d100ad2 1-191
+native/patches/README.md
+  h_0926447d100ad2 3-5,7-9
+native/shim/checker/shim.go
+  h_0926447d100ad2 39,247
+native/testdata/repro/gen.py
+  h_0926447d100ad2 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bf053ca519fa57e80e1e43768f7882665eafa2d7",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
