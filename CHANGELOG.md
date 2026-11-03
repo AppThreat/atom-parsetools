@@ -48,6 +48,11 @@ astgen behaves as in 1.10.6 apart from the breaking changes below.
 - `lib/typemap/diff.mjs` compares two type map trees after normalizing member order and quote
   style, and fails on any difference class not on its allow-list (`test-fixtures/typemap-allow.json`).
 
+### Removed
+
+- `plugins/log4j2.xml`. Nothing in atom-parsetools read it; atom configures logging with its own
+  `log4j2.xml`.
+
 ### Differences in native type maps
 
 Consumers that read `.typemap` files written with `ASTGEN_TYPES=native` should expect:
@@ -75,8 +80,12 @@ subcommands, with no wrappers under the old names:
 | `rbastgen` | `parsa rb` |
 | `scalasem` | `parsa scala` |
 
-`parsa` will need no Node, PHP or Ruby runtime (`parsa scala` still runs its TASTy helper on the
-JVM). It ships as a binary on GitHub releases and through `@cdxgen/cdxgen-plugins-bin` for Linux
-glibc and musl (x64, arm64), macOS (arm64, x64) and Windows (x64, arm64), and not as npm packages.
+`parsa` will need no Node runtime. The Ruby and PHP parsers do not change: `parsa rb` runs
+`ruby_ast_gen` in Ruby 3.4 or 4.0 and `parsa php` runs nikic/php-parser in PHP 8, as rbastgen and
+phpastgen do today, so Ruby and PHP projects still need those runtimes, and the gem bundle and the
+nikic tree that the npm package keeps in `plugins/` move inside the `parsa` binary. `parsa scala`
+still runs its TASTy helper on the JVM. `parsa` ships as a binary on GitHub releases and through
+`@cdxgen/cdxgen-plugins-bin` for Linux glibc and musl (x64, arm64), macOS (arm64, x64) and Windows
+(x64, arm64), and not as npm packages.
 Each release that removes or changes a command lists the replacement and every changed flag,
 environment variable and output difference here.
