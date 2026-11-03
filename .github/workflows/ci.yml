@@ -73,6 +73,40 @@ jobs:
         npm publish --provenance --access=public
       if: startsWith(github.ref, 'refs/tags/')
 
+  # The native type map binary (Go, typescript-go through a pinned shim). Builds it, runs its Go tests
+  # under the watchdog, then runs astgen's native integration tests against the built binary, which
+  # the build job skips because it has no Go toolchain.
+  native:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+      with:
+        go-version-file: native/go.mod
+        cache: false
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+      with:
+        node-version: '25.x'
+        package-manager-cache: false
+    - name: go tests
+      run: npm run test:native
+    - name: build the binary
+      working-directory: native
+      run: ./scripts/wd.sh -t 900 -m 6144 -- go build -trimpath -o _deps/bin/atom-parsetools-native ./cmd/atom-parsetools-native
+    - name: astgen with ASTGEN_TYPES=native
+      env:
+        ASTGEN_NATIVE_REQUIRED: "1"
+      run: |
+        npm ci
+        node test-fixtures/astgen-native-types-regression.js
+        node test-fixtures/typemap-diff-regression.js
+
   # The Ruby bundle is built once and has to run under every Ruby the wrapper advertises. Building
   # and testing on one interpreter cannot show that, so build with the oldest supported Ruby and
   # then run the suite against each of them in turn.
