@@ -11,6 +11,36 @@
       "id": "different:typeof-vs-structure",
       "reason": "TypeScript 6 printed the type of a CommonJS module or require() result as `typeof module.exports` or `typeof import(\"./m\")`; TypeScript 7 writes the structure of the same type. The names inside are the same; only the printer chose differently. Checked on the JSDoc fixture (r17-jsdoc.js) and node-express-boilerplate.",
       "reviewer": "glm-pt1, pending maintainer review"
+    },
+    {
+      "id": "different:structure-vs-typeof",
+      "reason": "The reverse of typeof-vs-structure: TypeScript 7 names a value with typeof where TypeScript 6 wrote its structure (1,253 keys over the corpus, 0.02%; checked on the CommonJS fixtures: `typeof import(\".\")` for a module that TypeScript 6 printed as `typeof module.exports`).",
+      "reviewer": "glm-pt1, pending maintainer review"
+    },
+    {
+      "id": "different:import-specifier",
+      "reason": "The same type with a different import(\"...\") path (8,634 keys, 0.16%). TypeScript 7 resolves package entry points through `exports` and writes the path it reached; astgen normalizes the specifier relative to the file in both.",
+      "reviewer": "glm-pt1, pending maintainer review"
+    },
+    {
+      "id": "different:parenthesization",
+      "reason": "Equal apart from parentheses around a function type in a type argument (`Meta<(<E>(a: E) => any)>` against `Meta<<E>(a: E) => any>`, 40 keys). A printer difference between the versions.",
+      "reviewer": "glm-pt1, pending maintainer review"
+    },
+    {
+      "id": "different:shadowed-type-parameter-name",
+      "reason": "TypeScript 6 renames a type parameter that shadows another (T_1); TypeScript 7 writes T (197 keys). Same type, a different name for the parameter.",
+      "reviewer": "glm-pt1, pending maintainer review"
+    },
+    {
+      "id": "different:undefined-member",
+      "reason": "Equal apart from `| undefined` on an optional property (1,724 keys, 0.03%): the two versions print optionality differently under exactOptionalPropertyTypes.",
+      "reviewer": "glm-pt1, pending maintainer review"
+    },
+    {
+      "id": "candidate-only:ExportAssignment",
+      "reason": "tsgo types `export default X` and `export =` expressions; TypeScript 6 produced no type there (1,283 keys over 14 projects). More information, not a disagreement.",
+      "reviewer": "glm-pt1, pending maintainer review"
     }
   ]
 }
