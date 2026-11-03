@@ -155,8 +155,14 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
 
+	// A short run can end before the first tick. Sample quickly at first (every 10 ms for the first
+	// 500 ms, then every -q ms), so that the peak of a run that lasts a fraction of a second is not
+	// reported as 0.
+	fast := time.NewTicker(10 * time.Millisecond)
+	defer fast.Stop()
 	tick := time.NewTicker(time.Duration(*every) * time.Millisecond)
 	defer tick.Stop()
+	fastUntil := time.Now().Add(500 * time.Millisecond)
 	var waitErr error
 loop:
 	for {
@@ -167,6 +173,15 @@ loop:
 			pids, _ := tree(snapshot(), root)
 			killAll(root, pids)
 			res.Killed, res.Reason = true, "signal"
+		case <-fast.C:
+			if time.Now().After(fastUntil) {
+				fast.Stop()
+				continue
+			}
+			_, kb := tree(snapshot(), root)
+			if m := kb / 1024; m > res.PeakRSSMB {
+				res.PeakRSSMB = m
+			}
 		case <-tick.C:
 			pids, kb := tree(snapshot(), root)
 			if m := kb / 1024; m > res.PeakRSSMB {

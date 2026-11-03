@@ -432,11 +432,18 @@ func (u *unit) addType(n *ast.Node) {
 		u.recurse(n)
 		return
 	}
-	// A node TypeScript 7 builds from a JSDoc tag has no counterpart in TypeScript 6's
-	// walk; its real children (a cast's operand) are still visited.
-	if n.Flags&ast.NodeFlagsReparsed == 0 {
-		u.visit(n)
+	if n.Flags&ast.NodeFlagsReparsed != 0 {
+		// TypeScript 7 builds nodes from JSDoc tags (@type {X}, @param {Y}) and hangs them on the
+		// declaration; TypeScript 6's walk never saw them. Only the root of such a subtree carries the
+		// flag, and everything below it lies inside the comment. A reparsed type subtree is skipped as
+		// a whole. Any other reparsed node (a cast) is not recorded, but its real children are visited.
+		if ast.IsTypeNode(n) {
+			return
+		}
+		u.recurse(n)
+		return
 	}
+	u.visit(n)
 	u.recurse(n)
 }
 

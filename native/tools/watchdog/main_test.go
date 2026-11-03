@@ -37,6 +37,14 @@ func TestMain(m *testing.M) {
 	case "sleep":
 		time.Sleep(60 * time.Second)
 		os.Exit(0)
+	case "holdshort": // allocate, touch, keep it for 40 ms, exit
+		n, _ := strconv.Atoi(os.Getenv("WD_MB"))
+		b := make([]byte, n<<20)
+		for i := 0; i < len(b); i += 4096 {
+			b[i] = 1
+		}
+		time.Sleep(40 * time.Millisecond)
+		os.Exit(int(b[0]) - 1)
 	case "exit":
 		n, _ := strconv.Atoi(os.Getenv("WD_RC"))
 		os.Exit(n)
@@ -120,5 +128,17 @@ func TestZeroExit(t *testing.T) {
 	r, rc, _ := runWD(t, "30", "1000", "WD_HELPER=exit", "WD_RC=0")
 	if r.Killed || r.RC != 0 || rc != 0 || r.Reason != "" {
 		t.Fatalf("got %+v rc=%d", r, rc)
+	}
+}
+
+func TestShortRunReportsItsPeak(t *testing.T) {
+	// The helper allocates 200 MB, touches it and exits at once: the run is much shorter than the
+	// sampling interval, and must still report a peak.
+	r, rc, _ := runWD(t, "30", "2000", "WD_HELPER=holdshort", "WD_MB=200")
+	if rc != 0 || r.Killed {
+		t.Fatalf("got %+v rc=%d", r, rc)
+	}
+	if r.PeakRSSMB < 100 {
+		t.Fatalf("a short run must report its peak, got %d MB", r.PeakRSSMB)
 	}
 }

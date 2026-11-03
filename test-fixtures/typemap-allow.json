@@ -6,6 +6,11 @@
       "id": "different:declared-vs-instantiated-reference",
       "reason": "typescript-go returns no type for the identifier of a type reference, so the identifier takes the type of its enclosing reference (getTypeFromTypeNode), as the brief requires. TypeScript 6 gave the identifier the declared type (Promise<T>) and kept the longer string at the shared offset. The reference itself is typed identically.",
       "reviewer": "glm-pt1, pending maintainer review"
+    },
+    {
+      "id": "different:typeof-vs-structure",
+      "reason": "TypeScript 6 printed the type of a CommonJS module or require() result as `typeof module.exports` or `typeof import(\"./m\")`; TypeScript 7 writes the structure of the same type. The names inside are the same; only the printer chose differently. Checked on the JSDoc fixture (r17-jsdoc.js) and node-express-boilerplate.",
+      "reviewer": "glm-pt1, pending maintainer review"
     }
   ]
 }

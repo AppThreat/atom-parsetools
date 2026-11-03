@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 import {
   DIFFERENCE_CLASSIFIERS,
   checkAllowList,
-  diffTrees
+  diffTrees,
+  externalImportNames
 } from "../lib/typemap/diff.mjs";
 import { NORMALIZATIONS, canon, equalAfterNormalization } from "../lib/typemap/canon.mjs";
 
@@ -130,10 +131,17 @@ test("every sample carries file, offset and both strings", () => {
 });
 
 test("difference classes: each classifier fires on its example and not on a plain difference", () => {
+  const ctx = { noNodeModules: true, externalNames: new Set(["useForm"]), nodeText: "useForm()" };
   const cases = {
     "import-specifier": ['import("./a").T', 'import("./b").T'],
+    "shadowed-type-parameter-name": ["Promise<T_1>", "Promise<T>"],
+    parenthesization: ["Meta<(<E>(a: E) => any)>", "Meta<<E>(a: E) => any>"],
     "declared-vs-instantiated-reference": ["Promise<T>", "Promise<any>"],
     "undefined-member": ["string | undefined", "string"],
+    "typeof-vs-structure": ['typeof import("./m")', "{ a: string; }"],
+    "structure-vs-typeof": ["{ a: string; }", "typeof module.exports"],
+    "deferred-vs-evaluated": ["T extends (...a: any) => infer R ? R : any", "{ id: any; }"],
+    "unresolved-external-type": ["Foo<string>", "Bar"],
     "any-on-one-side": ["Foo<any>", "Foo<string>"],
     "literal-vs-widened": ['"a"', "string"],
     "promise-wrapping": ["string", "Promise<string>"]
@@ -141,9 +149,42 @@ test("difference classes: each classifier fires on its example and not on a plai
   for (const k of DIFFERENCE_CLASSIFIERS) {
     if (k.id === "length-limit") continue;
     const [b, c] = cases[k.id];
-    assert.ok(k.test(b, c), `${k.id} should fire on ${b} / ${c}`);
-    assert.ok(!k.test("number", "string"), `${k.id} must not fire on number / string`);
+    assert.ok(k.test(b, c, ctx), `${k.id} should fire on ${b} / ${c}`);
+    const neutral = { noNodeModules: true, externalNames: new Set(["other"]), nodeText: "x" };
+    assert.ok(!k.test("number", "string", neutral), `${k.id} must not fire on number / string`);
   }
+  const external = DIFFERENCE_CLASSIFIERS.find((k) => k.id === "unresolved-external-type");
+  assert.ok(!external.test("A", "B", { ...ctx, noNodeModules: false }), "needs node_modules to be absent");
+  assert.ok(!external.test("A", "B", { ...ctx, nodeText: "other()" }), "needs an imported name to occur");
+});
+
+test("typeof inside a string literal is not a typeof type", () => {
+  const k = DIFFERENCE_CLASSIFIERS.find((x) => x.id === "typeof-vs-structure");
+  assert.ok(!k.test('"typeof x"', "string"));
+});
+
+test("externalImportNames reads package imports and requires, not relative ones", () => {
+  const names = externalImportNames(
+    [
+      "import { A, type B } from 'react-hook-form';",
+      "import C from \"c-pkg\";",
+      "import * as D from 'd-pkg';",
+      "import { Local } from './local';",
+      "import { Alias } from '@/alias';",
+      "const { E } = require('e-pkg');",
+      "const F = require('./f');"
+    ].join("\n")
+  );
+  assert.deepEqual([...names].sort(), ["A", "B", "C", "D", "E"]);
+});
+
+test("a difference is classified as unresolved-external only when node_modules is absent", () => {
+  const src = srcTree("ext-src", { "x.ts": "import { Foo } from 'pkg';\nconst v: Foo = 1;\n" });
+  const a = tree("ext-a", { "x.ts": { 6: "Foo<string>" } });
+  const b = tree("ext-b", { "x.ts": { 6: "Bar" } });
+  assert.ok(diffTrees({ baseline: a, candidate: b, src }).classes["different:unresolved-external-type"]);
+  mkdirSync(join(src, "node_modules"));
+  assert.ok(!diffTrees({ baseline: a, candidate: b, src }).classes["different:unresolved-external-type"]);
 });
 
 // ---- the allow-list ----
