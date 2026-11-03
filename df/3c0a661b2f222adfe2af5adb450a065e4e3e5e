@@ -1,0 +1,23 @@
+astgen.js
+  s_79a7c562b49300::t_fb42584c95f786 434
+native/internal/typemap/discover.go
+  s_79a7c562b49300::t_d34e9e46865f41 40
+test-fixtures/astgen-relative-path-regression.js
+  s_79a7c562b49300::t_257850dac230c0 15,27-29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "df3c0a661b2f222adfe2af5adb450a065e4e3e5e",
+  "prompts": {},
+  "sessions": {
+    "s_79a7c562b49300": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e06ad8c2-0767-47dd-913e-35689e5f05ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
