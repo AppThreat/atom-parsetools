@@ -132,17 +132,18 @@ func TestConfigNodeNextDetection(t *testing.T) {
 	}
 }
 
-// TypeScript 7 no longer resolves modules through baseUrl; BuildSetup keeps TypeScript 6's meaning by
-// resolving paths from baseUrl and adding a "*" entry. baseurl-paths has baseUrl at the tsconfig's
-// directory, baseurl-src points it into src/, so a paths entry relative to the tsconfig would miss.
-func TestConfigBaseUrlResolvesLikeTypeScript6(t *testing.T) {
+// TypeScript 7 takes paths relative to the tsconfig; BuildSetup keeps TypeScript 6's meaning, relative to
+// baseUrl. baseurl-src points baseUrl into src/, so a paths entry taken from the tsconfig's directory would
+// miss. A bare specifier through baseUrl alone is a known TypeScript 7 difference and is not typed.
+func TestConfigPathsResolveFromBaseUrl(t *testing.T) {
 	for _, name := range []string{"baseurl-paths", "baseurl-src"} {
 		maps, _, proj := runConfig(t, name)
 		src := read(t, proj, "src/use.ts")
-		for _, marker := range []string{"a = make()", "b = bare()"} {
-			if got := typeAt(maps["src/use.ts"], src, marker); !strings.Contains(got, "Item") {
-				t.Errorf("%s: %s has type %q, want Item", name, marker, got)
-			}
+		if got := typeAt(maps["src/use.ts"], src, "a = make()"); !strings.Contains(got, "Item") {
+			t.Errorf("%s: the paths alias must resolve, a has type %q", name, got)
+		}
+		if got := typeAt(maps["src/use.ts"], src, "b = bare()"); strings.Contains(got, "Item") {
+			t.Errorf("%s: a bare specifier through baseUrl resolved (%q); update the README if TypeScript 7 changed", name, got)
 		}
 	}
 }

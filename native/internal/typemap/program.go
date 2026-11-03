@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -92,20 +91,14 @@ func overlayDefaults(o *core.CompilerOptions, d *core.CompilerOptions, nodeNext 
 	}
 }
 
-// emulateBaseURL keeps TypeScript 6's meaning of `baseUrl`, which TypeScript 7
-// no longer uses to resolve modules: `paths` entries are relative to it, and a
-// bare specifier is looked up under it after them. This is the migration the
-// TypeScript 7 release notes give (`"paths": {"*": ["./*"]}` next to baseUrl).
+// emulateBaseURL keeps TypeScript 6's meaning of `baseUrl` for `paths`: their entries are relative to
+// it, where TypeScript 7 takes them relative to the tsconfig. A bare specifier resolved through
+// `baseUrl` alone (`import "src/lib/x"`) is not emulated: the `"*"` entry that would do it also makes
+// the printer write package types through it (`import("node_modules/rxjs/dist/types")` instead of
+// `import("rxjs")`), which changes the type names chen derives.
 func emulateBaseURL(o *core.CompilerOptions) {
-	if o.BaseUrl == "" {
+	if o.BaseUrl == "" || o.Paths == nil || o.Paths.Size() == 0 {
 		return
-	}
-	if o.Paths == nil {
-		field := reflect.ValueOf(o).Elem().FieldByName("Paths")
-		field.Set(reflect.New(field.Type().Elem()))
-	}
-	if !o.Paths.Has("*") {
-		o.Paths.Set("*", []string{"*"})
 	}
 	o.PathsBasePath = o.BaseUrl
 }

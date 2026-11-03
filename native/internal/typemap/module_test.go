@@ -21,6 +21,24 @@ func TestCommonJSModuleIsNamedByImport(t *testing.T) {
 	}
 }
 
+// A module that exports a function or a class is not renamed: the function keeps its signature and the
+// class `typeof Name`, as TypeScript 6 wrote them.
+func TestCommonJSFunctionAndClassExportsKeepTheirTypes(t *testing.T) {
+	app := "const fn = require('./fn');\nconst Err = require('./err');\nfn(1);\nnew Err();\n"
+	files := map[string]string{
+		"app.js": app,
+		"fn.js":  "module.exports = (x) => x;\n",
+		"err.js": "class Err extends Error {}\nmodule.exports = Err;\n",
+	}
+	maps, _ := runProject(t, files, 1, Env{}, Budget{})
+	if got := typeAt(maps["app.js"], app, "fn = require"); got != "(x: any) => any" {
+		t.Errorf("fn: got %q", got)
+	}
+	if got := typeAt(maps["app.js"], app, "Err = require"); got != "typeof Err" {
+		t.Errorf("Err: got %q", got)
+	}
+}
+
 // `this` at the top level of a CommonJS module is its exports: TypeScript 6 wrote the module's type,
 // and chen links the helpers compiled code reads through it. Inside a function it stays as it is.
 func TestCommonJSTopLevelThisIsTheModule(t *testing.T) {

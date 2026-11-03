@@ -168,7 +168,7 @@ func (u *unit) typeStr(t *checker.Type, enclosing *ast.Node) (res string) {
 	return normalizeTypeString(u.typeToBounded(t, enclosing), string(u.sf.FileName()))
 }
 
-// moduleTypeName names the type a CommonJS module exports (`module.exports = {...}`)
+// moduleTypeName names the object a CommonJS module exports (`module.exports = {...}`)
 // as `typeof import("<file>")`, which is what TypeScript 6 wrote for most uses of a
 // required module and what chen turns into a link to that module. TypeScript 7
 // prints the exported object's structure instead, which loses the module. Inside
@@ -179,6 +179,10 @@ func (u *unit) moduleTypeName(t *checker.Type) string {
 	}
 	sym := t.Symbol()
 	if sym == nil || sym.ValueDeclaration() == nil {
+		return ""
+	}
+	// an exported function or class keeps its signature or `typeof Name`, as in TypeScript 6
+	if len(u.c.GetSignaturesOfType(t, checker.SignatureKindCall)) > 0 || len(u.c.GetSignaturesOfType(t, checker.SignatureKindConstruct)) > 0 {
 		return ""
 	}
 	sf := ast.GetSourceFileOfNode(sym.ValueDeclaration())

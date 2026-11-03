@@ -193,8 +193,8 @@ The checker is single-threaded, so parallelism comes from sharding: files are de
 What differs from the default `ts6` path, on purpose:
 
 - Union and object member order and the quote style of literal types follow TypeScript 7 (`"ADMIN" | "USER"` where TypeScript 6 wrote `"USER" | "ADMIN"`). The output does not depend on the checker count or on the run.
-- A JavaScript function prints as its signature, not `typeof name`. A required CommonJS module is written `typeof import("./m")` everywhere outside the module itself, where TypeScript 6 used the local name in some places (`typeof morgan`).
-- `baseUrl` keeps its TypeScript 6 meaning: TypeScript 7 no longer resolves bare specifiers through it, so the binary adds the `"*"` entry to `paths` and resolves `paths` from `baseUrl`, the migration the TypeScript 7 notes describe.
+- A JavaScript function prints as its signature, not `typeof name`. A required CommonJS module that exports an object is written `typeof import("./m")` everywhere outside the module itself, where TypeScript 6 used the local name in some places (`typeof morgan`) and the structure in others; a module that exports a function or a class keeps its signature or `typeof Name`. A `this` at the top level of a CommonJS file is the module too, as in TypeScript 6 (TypeScript 7 says `typeof globalThis`).
+- `paths` entries are resolved from `baseUrl`, as TypeScript 6 read them (TypeScript 7 takes them from the tsconfig's directory). A bare specifier resolved through `baseUrl` alone (`import "src/lib/x"`) is not typed: TypeScript 7 no longer resolves it, and emulating it with a `"*"` paths entry would make package types print through `node_modules` paths.
 - Offsets count a leading byte order mark, like Babel's offsets do (TypeScript 6's keys did not, so keys and AST nodes did not join in such files).
 - A file whose type collection runs past a budget (checker work, wall time or memory; the cdxgen shape of an untyped array reassigned in many `if` blocks is one) keeps the entries before the point it stopped and gets none after. The budgets are reported, never silent.
 
