@@ -47,7 +47,7 @@ function srcTree(name, files) {
 for (const n of NORMALIZATIONS) {
   test(`normalization ${n.id} has a description, a justification and examples`, () => {
     assert.ok(n.description && n.justification);
-    if (n.id !== "bom-shift") {
+    if (!["bom-shift", "typeof-require-alias", "module-self"].includes(n.id)) {
       assert.ok(n.equal.length > 0 && n.different.length > 0, "needs positive and negative examples");
     }
   });
@@ -180,7 +180,7 @@ test("every sample carries file, offset and both strings", () => {
 });
 
 test("difference classes: each classifier fires on its example and not on a plain difference", () => {
-  const ctx = { noNodeModules: true, externalNames: new Set(["useForm"]), nodeText: "useForm()" };
+  const ctx = { noNodeModules: true, externalNames: new Set(["useForm"]), nodeText: "useForm()", minified: true };
   const cases = {
     "import-specifier": ['import("../node_modules/zod/lib/index").T', 'import("zod").T'],
     "shadowed-type-parameter-name": ["Promise<T_1>", "Promise<T>"],
@@ -193,7 +193,20 @@ test("difference classes: each classifier fires on its example and not on a plai
     "structure-vs-typeof": ["{ a: string; }", "typeof module.exports"],
     "deferred-vs-evaluated": ["T extends (...a: any) => infer R ? R : any", "{ id: any; }"],
     "unresolved-external-type": ["Foo<string>", "Bar"],
-    "any-on-one-side": ["Foo<any>", "Foo<string>"],
+    "alias-vs-expansion": ["HttpInterceptorFn", "(req: Request) => Response"],
+    "candidate-refines-any": ["Promise<any>", "Promise<Array<User>>"],
+    "candidate-refines-unknown": ["Observer<unknown>", "Observer<boolean>"],
+    "candidate-fewer-any": ["() => Promise<any>", "(() => Promise<Array<User>>) | (() => Promise<void>)"],
+    "readonly-wrapper": ["(id: string) => Record<string, boolean>", "(id: string) => Readonly<Record<string, boolean>>"],
+    "qualifier-path": ["zod_1.z.core.$ZodStringParams", "zod_1.core.$ZodStringParams"],
+    "enum-member-keys": ["{ app?: boolean; chat?: boolean; }", "{ [Channel.App]?: boolean; [Channel.Chat]?: boolean; }"],
+    "method-vs-property": ["{ (c: any): any; reset(): void; }", "{ (c: any): any; reset: () => void; }"],
+    "qualifier-dropped": ["(code: number) => express.Response<any>", "(code: number) => Response<any>"],
+    "minified-source": ["boolean", "void"],
+    "parameter-names": ["(maxLength: number, fillString?: string) => string", "(targetLength: number, padString?: string) => string"],
+    "baseline-refines-any": ["Promise<Array<User>>", "Promise<any>"],
+    "recursion-elided": ["{ add(s: any): any; }", "{ add(s: any): ...; }"],
+    "any-on-one-side": ["Foo<any>", "Bar<string>"],
     "literal-vs-widened": ['"a"', "string"],
     "promise-wrapping": ["string", "Promise<string>"]
   };
@@ -201,7 +214,7 @@ test("difference classes: each classifier fires on its example and not on a plai
     if (k.id === "length-limit") continue;
     const [b, c] = cases[k.id];
     assert.ok(k.test(b, c, ctx), `${k.id} should fire on ${b} / ${c}`);
-    const neutral = { noNodeModules: true, externalNames: new Set(["other"]), nodeText: "x" };
+    const neutral = { noNodeModules: true, externalNames: new Set(["other"]), nodeText: "x", minified: false };
     assert.ok(!k.test("number", "string", neutral), `${k.id} must not fire on number / string`);
   }
   const external = DIFFERENCE_CLASSIFIERS.find((k) => k.id === "unresolved-external-type");
@@ -209,17 +222,45 @@ test("difference classes: each classifier fires on its example and not on a plai
   assert.ok(!external.test("A", "B", { ...ctx, nodeText: "other()" }), "needs an imported name to occur");
 });
 
+test("typeof of a require alias equals typeof import of its specifier, only with that require in the file", () => {
+  const file = "const morgan = require('./config/morgan');\nconst other = require('./other.js');\n";
+  assert.deepEqual(equalAfterNormalization("typeof morgan", 'typeof import("./config/morgan")', { fileText: file }), ["typeof-require-alias"]);
+  assert.deepEqual(equalAfterNormalization("typeof other", 'typeof import("./other")', { fileText: file }), ["typeof-require-alias"]);
+  assert.equal(equalAfterNormalization("typeof morgan", 'typeof import("./config/other")', { fileText: file }), undefined);
+  assert.equal(equalAfterNormalization("typeof morgan", 'typeof import("./config/morgan")', { fileText: "import morgan from './x';" }), undefined);
+  assert.equal(equalAfterNormalization("typeof morgan", 'typeof import("./config/morgan")'), undefined, "never without the source");
+});
+
+test("module-self equates typeof module.exports with the file's own import, only in that file", () => {
+  assert.deepEqual(equalAfterNormalization("typeof module.exports", 'typeof import(".")', { file: "src/models/index.js" }), ["module-self"]);
+  assert.deepEqual(equalAfterNormalization("{ exports: typeof module.exports; }", '{ exports: typeof import("./roles"); }', { file: "src/config/roles.js" }), ["module-self"]);
+  assert.equal(equalAfterNormalization("typeof module.exports", 'typeof import("./other")', { file: "src/config/roles.js" }), undefined);
+  assert.equal(equalAfterNormalization("typeof module.exports", 'typeof import(".")'), undefined, "never without the file name");
+});
+
+test("refinesAny needs every any of one side to be a piece of the other", () => {
+  const k = (id) => DIFFERENCE_CLASSIFIERS.find((x) => x.id === id);
+  assert.ok(k("candidate-refines-any").test("(a: any) => Promise<any>", "(a: string) => Promise<Array<User>>"));
+  assert.ok(!k("candidate-refines-any").test("(a: any) => Promise<any>", "(a: string) => Set<User>"));
+  assert.ok(!k("candidate-refines-any").test("Promise<any>", "Promise<any>"));
+  assert.ok(k("candidate-refines-any").test("any", "string"), "a whole any refined to a type counts");
+});
+
 test("difference classes do not name differences that change the type", () => {
   const cls = (b, c) => DIFFERENCE_CLASSIFIERS.find((k) => k.test(b, c, {}))?.id;
   // each pair names different types; none may land in a class that is allow-listed as harmless
-  const harmless = ["import-specifier", "shadowed-type-parameter-name", "parenthesization", "undefined-member", "typeof-vs-structure", "structure-vs-typeof", "typeof-alias-vs-import"];
+  const harmless = ["import-specifier", "shadowed-type-parameter-name", "parenthesization", "undefined-member", "typeof-vs-structure", "structure-vs-typeof", "typeof-alias-vs-import", "readonly-wrapper", "parameter-names", "qualifier-path", "enum-member-keys"];
   for (const [b, c] of [
     ["(A | B)[]", "A | B[]"],
     ["{ a: typeof x; }", "number"],
     ['import("lodash").Foo', 'import("./local").Foo'],
     ["Error_1", "Error_2"],
     ["{ a: string | undefined; b: number; }", "{ a: string; b: number | undefined; }"],
-    ["typeof x", "number"]
+    ["typeof x", "number"],
+    ["(a: string) => void", "(b: number) => void"],
+    ["Readonly<A>", "B"],
+    ["a.b.C", "a.b.D"],
+    ["{ app?: boolean; }", "{ [Channel.App]?: string; }"]
   ]) {
     assert.ok(!harmless.includes(cls(b, c)), `${b} / ${c} classified as ${cls(b, c)}`);
   }

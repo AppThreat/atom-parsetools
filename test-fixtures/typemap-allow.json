@@ -1,46 +1,678 @@
 {
   "version": 1,
-  "description": "Reviewed difference classes between astgen 1.10.6 (TypeScript 6) type maps and the native binary (TypeScript 7). A class not listed here fails lib/typemap/diff.mjs. Normalizations (union and object member order, quote style, typeof against a signature) live in lib/typemap/canon.mjs with their own tests and need no entry.",
+  "description": "Reviewed difference classes between astgen 1.10.6 (TypeScript 6) type maps and the native binary (TypeScript 7). A class not listed here fails lib/typemap/diff.mjs, and so does a class over its maxShare (its share of all keys, one and a half times the largest share seen on the corpus in parsetools-native.corpus.json). Normalizations live in lib/typemap/canon.mjs with their own tests and need no entry. different:unclassified can never be listed.",
   "classes": [
     {
+      "id": "different:alias-vs-expansion",
+      "reason": "TypeScript 6 wrote a type alias by name (HttpInterceptorFn) where TypeScript 7, given the same InTypeAlias flag, writes its expansion. Dropping the flag or preferring alias names lowered agreement on every project measured (bulletproof-react 97.5 to 92.1 percent), so the flag stays.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0113
+    },
+    {
+      "id": "different:any-on-one-side",
+      "reason": "One side mentions `any` and the other does not, in a shape the refines-any classes cannot line up. Mostly TypeScript 7 resolving a library type TypeScript 6 left as any.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0049
+    },
+    {
+      "id": "different:baseline-refines-any",
+      "reason": "TypeScript 6 had a type where the native binary has `any` in that position. Mostly in compiled and minified JavaScript; reviewed on juice-shop's build output.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0046
+    },
+    {
+      "id": "different:candidate-fewer-any",
+      "reason": "The native type has fewer `any` than the baseline and keeps every other name in it: more precise, in a shape where an `any` became a union.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0015
+    },
+    {
+      "id": "different:candidate-refines-any",
+      "reason": "The native type is the baseline with an `any` replaced by a type (`Promise<any>` against `Promise<User>`): TypeScript 7 knows more.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0309
+    },
+    {
+      "id": "different:candidate-refines-unknown",
+      "reason": "The native type is the baseline with an `unknown` replaced by a type (`Observer<unknown>` against `Observer<boolean>`).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0212
+    },
+    {
       "id": "different:declared-vs-instantiated-reference",
-      "reason": "typescript-go returns no type for the identifier of a type reference, so the identifier takes the type of its enclosing reference (getTypeFromTypeNode), as the brief requires. TypeScript 6 gave the identifier the declared type (Promise<T>) and kept the longer string at the shared offset. The reference itself is typed identically.",
-      "reviewer": "glm-pt1, pending maintainer review"
+      "reason": "typescript-go returns no type for the identifier of a type reference, so the identifier takes the type of its enclosing reference (getTypeFromTypeNode): `Promise<any>` where TypeScript 6 kept the declared `Promise<T>`. The reference itself is typed identically.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0095
     },
     {
-      "id": "different:typeof-vs-structure",
-      "reason": "TypeScript 6 printed the type of a CommonJS module or require() result as `typeof module.exports` or `typeof import(\"./m\")`; TypeScript 7 writes the structure of the same type. The names inside are the same; only the printer chose differently. Checked on the JSDoc fixture (r17-jsdoc.js) and node-express-boilerplate.",
-      "reviewer": "glm-pt1, pending maintainer review"
+      "id": "different:deferred-vs-evaluated",
+      "reason": "A conditional or mapped type left unevaluated on one side (infer, [P in K]) and evaluated on the other: the checkers stop evaluating at different points.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0108
     },
     {
-      "id": "different:structure-vs-typeof",
-      "reason": "The reverse of typeof-vs-structure: TypeScript 7 names a value with typeof where TypeScript 6 wrote its structure (1,253 keys over the corpus, 0.02%; checked on the CommonJS fixtures: `typeof import(\".\")` for a module that TypeScript 6 printed as `typeof module.exports`).",
-      "reviewer": "glm-pt1, pending maintainer review"
+      "id": "different:enum-member-keys",
+      "reason": "The same object members keyed by enum members (`[TeamPreference.SeamlessEdit]`) in TypeScript 7 and by their values in TypeScript 6.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0018
     },
     {
       "id": "different:import-specifier",
-      "reason": "The same type with a different import(\"...\") path (8,634 keys, 0.16%). TypeScript 7 resolves package entry points through `exports` and writes the path it reached; astgen normalizes the specifier relative to the file in both.",
-      "reviewer": "glm-pt1, pending maintainer review"
+      "reason": "The same type reached through another import path to the same module (a package entry against its file, `sequelize/types/utils` against `sequelize/lib/utils`). TypeScript 7 resolves package entry points through `exports` and writes the path it reached.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0103
+    },
+    {
+      "id": "different:literal-vs-widened",
+      "reason": "A literal type against its widened primitive: the checkers widen at different points.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "different:method-vs-property",
+      "reason": "A member written as a method (`reset(): void`) on one side and as a property of function type on the other. A printer difference.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "different:minified-source",
+      "reason": "Differences no other class names, in minified files (an average line over 300 characters), where one-letter names are reused across scopes and the two checkers resolve them differently.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0068
+    },
+    {
+      "id": "different:module-object",
+      "reason": "The CommonJS `module` object: TypeScript 6 writes its exports as `typeof module.exports`, the native binary writes their structure.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0135
+    },
+    {
+      "id": "different:parameter-names",
+      "reason": "Equal apart from parameter names, which the library declarations of the two versions spell differently (`maxLength` against `targetLength`).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0007
     },
     {
       "id": "different:parenthesization",
-      "reason": "Equal apart from parentheses around a function type in a type argument (`Meta<(<E>(a: E) => any)>` against `Meta<<E>(a: E) => any>`, 40 keys). A printer difference between the versions.",
-      "reviewer": "glm-pt1, pending maintainer review"
+      "reason": "Equal apart from parentheses around a function type in a type argument or union position (`Meta<(<E>(a: E) => any)>`). A printer difference.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0008
+    },
+    {
+      "id": "different:qualifier-dropped",
+      "reason": "Equal apart from a namespace qualifier one side writes (`express.Response` against `Response`).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0027
+    },
+    {
+      "id": "different:qualifier-path",
+      "reason": "The same declaration reached through another namespace path (`zod_1.z.core.$ZodStringParams` against `zod_1.core.$ZodStringParams`).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0036
+    },
+    {
+      "id": "different:readonly-wrapper",
+      "reason": "Equal apart from `Readonly<...>` wrappers or `readonly` modifiers that TypeScript 7 keeps from the declaration.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0019
+    },
+    {
+      "id": "different:recursion-elided",
+      "reason": "TypeScript 7 writes `...` for a recursive type one level earlier than TypeScript 6.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0012
     },
     {
       "id": "different:shadowed-type-parameter-name",
-      "reason": "TypeScript 6 renames a type parameter that shadows another (T_1); TypeScript 7 writes T (197 keys). Same type, a different name for the parameter.",
-      "reviewer": "glm-pt1, pending maintainer review"
+      "reason": "TypeScript 6 renames a type parameter that shadows another (T_1); TypeScript 7 writes T. Same type, another name for the parameter.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0042
+    },
+    {
+      "id": "different:structure-vs-typeof",
+      "reason": "The native binary names a required CommonJS module `typeof import(\"./m\")` where TypeScript 6 wrote its structure, so that chen links it to the module (deliberate, see docs/ASTGEN.md).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0325
+    },
+    {
+      "id": "different:typeof-alias-vs-import",
+      "reason": "TypeScript 6 named a module by a local alias or `typeof module.exports`; the native binary names it by its file (`typeof import(\"./config/morgan\")`), which is what chen links to the module.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0065
+    },
+    {
+      "id": "different:typeof-vs-structure",
+      "reason": "The whole baseline names a module object (`typeof module.exports`, `typeof import(\"./m\")`) and the candidate writes its structure; inside the exporting file the native binary keeps the structure, as TypeScript 6 did in some places.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0135
     },
     {
       "id": "different:undefined-member",
-      "reason": "Equal apart from `| undefined` on an optional property (1,724 keys, 0.03%): the two versions print optionality differently under exactOptionalPropertyTypes.",
-      "reviewer": "glm-pt1, pending maintainer review"
+      "reason": "Equal apart from `| undefined` as the last member of the type or of an optional member's type: the two versions print optionality differently under exactOptionalPropertyTypes.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0087
+    },
+    {
+      "id": "different:unresolved-external-type",
+      "reason": "The project has no node_modules and a name imported from a package is involved: the engines answer differently for a type they cannot resolve.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0143
+    },
+    {
+      "id": "baseline-only:ArrayLiteralExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:ArrowFunction",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:AwaitExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:BinaryExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0043
+    },
+    {
+      "id": "baseline-only:BindingElement",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:CallExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0042
+    },
+    {
+      "id": "baseline-only:ConditionalExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:DeleteExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:ElementAccessExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0007
+    },
+    {
+      "id": "baseline-only:ExportSpecifier",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:ExpressionWithTypeArguments",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:FunctionDeclaration",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:FunctionExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0006
+    },
+    {
+      "id": "baseline-only:GetAccessor",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:Identifier",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0099
+    },
+    {
+      "id": "baseline-only:ImportClause",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:ImportSpecifier",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:IndexedAccessType",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:IntersectionType",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:MethodDeclaration",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:NewExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0008
+    },
+    {
+      "id": "baseline-only:NullKeyword",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:NumberKeyword",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:ObjectLiteralExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:OmittedExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0071
+    },
+    {
+      "id": "baseline-only:Parameter",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:ParenthesizedExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:PropertyAccessExpression",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.004
+    },
+    {
+      "id": "baseline-only:PropertyAssignment",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0009
+    },
+    {
+      "id": "baseline-only:PropertyDeclaration",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:ShorthandPropertyAssignment",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:StringKeyword",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:StringLiteral",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:TemplateSpan",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:ThisKeyword",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0016
+    },
+    {
+      "id": "baseline-only:TypeReference",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0018
+    },
+    {
+      "id": "baseline-only:UnionType",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:VariableDeclaration",
+      "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.001
+    },
+    {
+      "id": "candidate-only:ArrayLiteralExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:ArrayType",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:ArrowFunction",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0013
+    },
+    {
+      "id": "candidate-only:AsExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:AwaitExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0159
+    },
+    {
+      "id": "candidate-only:BinaryExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0006
+    },
+    {
+      "id": "candidate-only:BindingElement",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0065
+    },
+    {
+      "id": "candidate-only:BooleanKeyword",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:CallExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0129
+    },
+    {
+      "id": "candidate-only:ConditionalExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:ElementAccessExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0013
     },
     {
       "id": "candidate-only:ExportAssignment",
-      "reason": "tsgo types `export default X` and `export =` expressions; TypeScript 6 produced no type there (1,283 keys over 14 projects). More information, not a disagreement.",
-      "reviewer": "glm-pt1, pending maintainer review"
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0166
+    },
+    {
+      "id": "candidate-only:ExportSpecifier",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:ExpressionWithTypeArguments",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:FalseKeyword",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:FirstLiteralToken",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:FirstTemplateToken",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:FunctionDeclaration",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0033
+    },
+    {
+      "id": "candidate-only:FunctionExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:GetAccessor",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:Identifier",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0419
+    },
+    {
+      "id": "candidate-only:ImportClause",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0033
+    },
+    {
+      "id": "candidate-only:ImportDeclaration",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:ImportSpecifier",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0113
+    },
+    {
+      "id": "candidate-only:MethodDeclaration",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0033
+    },
+    {
+      "id": "candidate-only:NewExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:ObjectLiteralExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0009
+    },
+    {
+      "id": "candidate-only:Parameter",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0033
+    },
+    {
+      "id": "candidate-only:ParenthesizedExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0033
+    },
+    {
+      "id": "candidate-only:PrefixUnaryExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:PropertyAccessExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0061
+    },
+    {
+      "id": "candidate-only:PropertyAssignment",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0011
+    },
+    {
+      "id": "candidate-only:PropertyDeclaration",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0033
+    },
+    {
+      "id": "candidate-only:PropertySignature",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:RegularExpressionLiteral",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:ShorthandPropertyAssignment",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0008
+    },
+    {
+      "id": "candidate-only:SpreadElement",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:StringKeyword",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:StringLiteral",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0065
+    },
+    {
+      "id": "candidate-only:TemplateExpression",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:TemplateSpan",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:ThisKeyword",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:TrueKeyword",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:TupleType",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:TypeLiteral",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "candidate-only:TypeReference",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0006
+    },
+    {
+      "id": "candidate-only:VariableDeclaration",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0111
+    },
+    {
+      "id": "candidate-only:unknown",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
     }
   ]
 }
