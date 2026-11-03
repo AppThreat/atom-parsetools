@@ -44,7 +44,7 @@ test("pseudoVersion and golangPurl follow Go and cdxgen", () => {
   assert.equal(golangPurl("github.com/AppThreat/x", "v2.0.0-dev+abc"), "pkg:golang/github.com/appthreat/x@v2.0.0-dev%2Babc");
 });
 
-test("annotate names the TypeScript commit, its patches, parsa and the standard library", () => {
+test("annotate names the TypeScript commit, its patches and parsa, and drops the standard library", () => {
   const bom = annotate(sample(), {
     version: "2.0.0",
     commit,
@@ -54,7 +54,8 @@ test("annotate names the TypeScript commit, its patches, parsa and the standard 
     repoCommit: "abc",
   });
   const tscRef = "pkg:golang/github.com/microsoft/typescript/tsc@v0.0.0-20261102220236-622d4f779368";
-  const [tsc, shim, std] = bom.components;
+  assert.equal(bom.components.length, 2);
+  const [tsc, shim] = bom.components;
   assert.equal(tsc.purl, tscRef);
   assert.equal(tsc.scope, "required");
   assert.equal(tsc.pedigree.commits[0].uid, commit);
@@ -62,9 +63,7 @@ test("annotate names the TypeScript commit, its patches, parsa and the standard 
   assert.equal(tsc.pedigree.patches[0].diff.url, "https://github.com/AppThreat/atom-parsetools/blob/abc/parsa/patches/0001-x.patch");
   assert.equal(shim.version, "v0.0.0-20261102220236-622d4f779368");
   assert.equal(shim.licenses[0].license.id, "Apache-2.0");
-  assert.equal(std.purl, undefined);
-  assert.equal(std.cpe, "cpe:2.3:a:golang:go:1.27.2:*:*:*:*:*:*:*");
-  assert.equal(std["bom-ref"], "go-stdlib@1.27.2");
+  assert.ok(!JSON.stringify(bom).includes("stdlib"));
   const meta = bom.metadata.component;
   assert.equal(meta.name, "parsa");
   assert.equal(meta.purl, "pkg:golang/github.com/appthreat/atom-parsetools/parsa@v2.0.0");

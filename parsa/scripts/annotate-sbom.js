@@ -8,9 +8,8 @@
 // linked into the binaries), and drops the properties that only describe the build machine (local
 // directories, cdxgen internals).
 //
-// The Go standard library gets the NVD CPE for Go and no purl: prune-go-sbom.js names it
-// pkg:golang/stdlib, which Go's vulnerability tools use but the purl golang definition rejects
-// (it requires a namespace), so cdxgen's validator fails the whole SBOM on it.
+// It also removes the Go standard library that prune-go-sbom.js adds: the SBOM lists the modules
+// parsa depends on, and the Go release it was built with is a property of the build, not one of them.
 //
 // Usage: node annotate-sbom.js <sbom.cdx.json> <parsa version> [<repository url> <commit>]
 // The repository url and commit, when given, make each patch's url point at the file in that commit.
@@ -43,16 +42,14 @@ function dropBuildMachineProperties(component) {
   if (!component.properties.length) delete component.properties;
 }
 
-// Moves a component to a new bom-ref and purl (none when purl is undefined), and every dependency
-// entry with it.
-function rename(bom, component, purl, ref = purl) {
+// Moves a component to a new bom-ref and purl, and every dependency entry with it.
+function rename(bom, component, purl) {
   const old = component["bom-ref"];
-  if (purl) component.purl = purl;
-  else delete component.purl;
-  component["bom-ref"] = ref;
+  component.purl = purl;
+  component["bom-ref"] = purl;
   for (const dep of bom.dependencies || []) {
-    if (dep.ref === old) dep.ref = ref;
-    if (dep.dependsOn) dep.dependsOn = dep.dependsOn.map((r) => (r === old ? ref : r));
+    if (dep.ref === old) dep.ref = purl;
+    if (dep.dependsOn) dep.dependsOn = dep.dependsOn.map((r) => (r === old ? purl : r));
   }
 }
 
@@ -70,7 +67,14 @@ export function annotate(bom, { version, commit, commitTime, patches, repoUrl, r
   if (bom.metadata) {
     bom.metadata.supplier = { name: "Team AppThreat", url: ["https://github.com/AppThreat"] };
   }
-  for (const c of bom.components || []) {
+  const stdlib = new Set(
+    (bom.components || []).filter((c) => c.purl?.startsWith("pkg:golang/stdlib@")).map((c) => c["bom-ref"]),
+  );
+  bom.components = (bom.components || []).filter((c) => !stdlib.has(c["bom-ref"]));
+  bom.dependencies = (bom.dependencies || [])
+    .filter((d) => !stdlib.has(d.ref))
+    .map((d) => (d.dependsOn ? { ...d, dependsOn: d.dependsOn.filter((r) => !stdlib.has(r)) } : d));
+  for (const c of bom.components) {
     dropBuildMachineProperties(c);
     c.scope = "required";
     if (c.name === TSC) {
@@ -90,12 +94,6 @@ export function annotate(bom, { version, commit, commitTime, patches, repoUrl, r
         })),
         notes: "Built from the tsc/ directory of microsoft/TypeScript at the pinned commit with the patches in parsa/patches applied.",
       };
-    } else if (c.purl?.startsWith("pkg:golang/stdlib@")) {
-      const goVersion = c.version.replace(/^v/, "");
-      c.group = "golang.org";
-      c.description = "Go standard library";
-      c.cpe = `cpe:2.3:a:golang:go:${goVersion}:*:*:*:*:*:*:*`;
-      rename(bom, c, undefined, `go-stdlib@${goVersion}`);
     } else if (c.name === SHIM) {
       c.version = tscVersion;
       rename(bom, c, golangPurl(SHIM, tscVersion));
