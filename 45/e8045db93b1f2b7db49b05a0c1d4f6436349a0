@@ -1,0 +1,84 @@
+native/internal/typemap/budget_test.go
+  h_0926447d100ad2 212-249
+native/internal/typemap/program.go
+  h_0926447d100ad2 306-313
+native/internal/typemap/run.go
+  h_0926447d100ad2 56,73-82,158,163,190,219,225-226
+native/testdata/typemap/arborist/LICENSE.md
+  h_0926447d100ad2 1-20
+native/testdata/typemap/arborist/README.md
+  h_0926447d100ad2 1-10
+native/testdata/typemap/arborist/lib/arborist/index.js
+  h_0926447d100ad2 1-258
+native/testdata/typemap/arborist/lib/arborist/load-actual.js
+  h_0926447d100ad2 1-605
+native/testdata/typemap/arborist/lib/arborist/load-virtual.js
+  h_0926447d100ad2 1-300
+native/testdata/typemap/arborist/lib/bin-links.js
+  h_0926447d100ad2 1-120
+native/testdata/typemap/arborist/lib/calc-dep-flags.js
+  h_0926447d100ad2 1-130
+native/testdata/typemap/arborist/lib/case-insensitive-map.js
+  h_0926447d100ad2 1-51
+native/testdata/typemap/arborist/lib/consistent-resolve.js
+  h_0926447d100ad2 1-42
+native/testdata/typemap/arborist/lib/debug.js
+  h_0926447d100ad2 1-50
+native/testdata/typemap/arborist/lib/dep-valid.js
+  h_0926447d100ad2 1-190
+native/testdata/typemap/arborist/lib/edge.js
+  h_0926447d100ad2 1-417
+native/testdata/typemap/arborist/lib/from-path.js
+  h_0926447d100ad2 1-36
+native/testdata/typemap/arborist/lib/gather-dep-set.js
+  h_0926447d100ad2 1-43
+native/testdata/typemap/arborist/lib/index.js
+  h_0926447d100ad2 1-22
+native/testdata/typemap/arborist/lib/inventory.js
+  h_0926447d100ad2 1-138
+native/testdata/typemap/arborist/lib/link.js
+  h_0926447d100ad2 1-169
+native/testdata/typemap/arborist/lib/node.js
+  h_0926447d100ad2 1-1673
+native/testdata/typemap/arborist/lib/npm-extension.js
+  h_0926447d100ad2 1-45
+native/testdata/typemap/arborist/lib/override-resolves.js
+  h_0926447d100ad2 1-11
+native/testdata/typemap/arborist/lib/override-set.js
+  h_0926447d100ad2 1-319
+native/testdata/typemap/arborist/lib/package-extensions.js
+  h_0926447d100ad2 1-289
+native/testdata/typemap/arborist/lib/printable.js
+  h_0926447d100ad2 1-210
+native/testdata/typemap/arborist/lib/proc-log.js
+  h_0926447d100ad2 1-30
+native/testdata/typemap/arborist/lib/realpath.js
+  h_0926447d100ad2 1-100
+native/testdata/typemap/arborist/lib/relpath.js
+  h_0926447d100ad2 1-4
+native/testdata/typemap/arborist/lib/shrinkwrap.js
+  h_0926447d100ad2 1-1291
+native/testdata/typemap/arborist/lib/spec-from-lock.js
+  h_0926447d100ad2 1-34
+native/testdata/typemap/arborist/lib/tree-check.js
+  h_0926447d100ad2 1-165
+native/testdata/typemap/arborist/lib/validate-npm-package-name.js
+  h_0926447d100ad2 1-107
+native/testdata/typemap/arborist/lib/version-from-tgz.js
+  h_0926447d100ad2 1-51
+native/testdata/typemap/arborist/lib/yarn-lock.js
+  h_0926447d100ad2 1-397
+native/testdata/typemap/arborist/package.json
+  h_0926447d100ad2 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "45e8045db93b1f2b7db49b05a0c1d4f6436349a0",
+  "prompts": {},
+  "humans": {
+    "h_0926447d100ad2": {
+      "author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
