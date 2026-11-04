@@ -669,6 +669,12 @@
       "maxShare": 0.0005
     },
     {
+      "id": "different:alias-prefixed-union",
+      "reason": "A union that on one side carries its own alias as an extra first member (juice-shop's tool approval stream).",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0001
+    },
+    {
       "id": "different:alias-vs-expansion",
       "reason": "TypeScript 6 wrote a type alias by name (HttpInterceptorFn) where TypeScript 7, given the same InTypeAlias flag, writes its expansion. Dropping the flag or preferring alias names lowered agreement on every project measured (bulletproof-react 97.5 to 92.1 percent), so the flag stays.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
@@ -759,6 +765,12 @@
       "maxShare": 2e-05
     },
     {
+      "id": "different:duplicate-union-member",
+      "reason": "A union with one member printed twice by TypeScript 6; the printer of 7 collapses the duplicate. Seen on juice-shop's compiled data creator before later classes took its pairs.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 2e-05
+    },
+    {
       "id": "different:enum-keyed-record",
       "reason": "A mapped record keyed by the enum's members on one side and by its values on the other, the values instantiated differently per member (outline's unfurl resources). Largest share seen: 7.034597429174394e-05 on js-outline.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
@@ -769,6 +781,18 @@
       "reason": "The same object members keyed by enum members (`[TeamPreference.SeamlessEdit]`) in TypeScript 7 and by their values in TypeScript 6.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
       "maxShare": 0.0018
+    },
+    {
+      "id": "different:expansion-vs-alias",
+      "reason": "The baseline writes a structure the candidate names by its alias; the reverse of alias-vs-expansion. Seen on juice-shop's AI SDK unions before alias-prefixed-union took its pairs.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0001
+    },
+    {
+      "id": "different:generic-instantiated-to-unknown",
+      "reason": "TypeScript 7 evaluated `InstanceType<P>` of an unresolved parameter to `unknown` where TypeScript 6 kept the reference (a policy callback in outline).",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0001
     },
     {
       "id": "different:import-specifier",
@@ -835,6 +859,12 @@
       "reason": "Two object types where one has the other's members and a few more: an intersection TypeScript 7 resolved further (the base model's `deletedAt` and `archivedAt`). Largest share seen: 0.007142857142857143 on fe-vue-router-playground.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
       "maxShare": 0.01071
+    },
+    {
+      "id": "different:object-sibling-declaration",
+      "reason": "Two object types whose shared members are equal (or `any`) and whose unshared members are few: the engines kept different branches of one intersection.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0001
     },
     {
       "id": "different:overload-added",
@@ -949,6 +979,12 @@
       "reason": "Equal apart from the name of a type parameter (`Promise<T_1>` against `Promise<R>`, `TypedPropertyDescriptor<T>` against `TypedPropertyDescriptor<F>`): the checkers name the parameter differently, one with the numeric suffix of a shadowed parameter or another scope's name. Largest share seen: 0.0031317283225680173 on js-vue3-realworld.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
       "maxShare": 0.0047
+    },
+    {
+      "id": "different:typeof-alias-name",
+      "reason": "Both name a module namespace with `typeof`, through the alias each engine's import binding got (`typeof node_stream_1.promises` against `typeof promises_1`).",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0001
     },
     {
       "id": "different:typeof-alias-vs-import",

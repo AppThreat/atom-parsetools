@@ -326,6 +326,18 @@ await (async () => {
   }
 })();
 
+// the version contract: the manifest names the same version --version prints, and the default
+// change bumped it off 4.6.0 so caches keyed on it are rebuilt
+test("the manifest version is what --version prints, and no longer 4.6.0", () => {
+  const v = spawnSync(process.execPath, [astgen, "--version"], { encoding: "utf8" }).stdout.trim();
+  assert.match(v, /^\d+\.\d+\.\d+$/);
+  assert.notEqual(v, "4.6.0", "the native default changes the type strings; ASTGEN_VERSION must move with it");
+  const out = mkdtempSync(join(root, "ver-"));
+  const file = writeManifestRecord(out, typesRecord({ engine: "ts6", requested: "native", requestedBy: "default", version: v }));
+  assert.equal(JSON.parse(readFileSync(file, "utf8").trim()).astgen_version, v);
+  rmSync(out, { recursive: true, force: true });
+});
+
 // ---- the native run ----
 
 test("native types land in the same .typemap files and the manifest records the run", () => {

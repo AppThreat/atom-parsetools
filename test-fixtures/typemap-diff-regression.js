@@ -201,6 +201,40 @@ test("every sample carries file, offset and both strings", () => {
   assert.deepEqual(s, { file: "x.ts", pos: 7, baseline: "number", candidate: "string" });
 });
 
+test("every class the tranche-3 corpus run reviewed is bounded on the allow-list", () => {
+  const allow = JSON.parse(readFileSync(join(here, "typemap-allow.json"), "utf8"));
+  const listed = new Set(allow.classes.map((e) => e.id));
+  const reviewed = [
+    "different:array-form", "different:duplicate-union-member", "different:union-narrowed", "different:import-wrapped-name",
+    "different:reexported-entry-point", "different:dollar-alias", "different:typeof-instantiated", "different:generic-instantiated-to-unknown",
+    "different:indexed-access-evaluated", "different:return-literal-narrowed", "different:union-of-refinements", "different:union-member-instantiated",
+    "different:object-member-superset", "different:contextual-answer", "different:module-vs-alias", "different:member-chain-neighbor",
+    "different:overload-added", "different:type-parameter-name", "different:record-vs-index-signature", "different:bare-fallback-answer",
+    "different:defaulted-vs-resolved", "different:predicate-signature-narrowed", "different:expansion-vs-alias", "different:object-member-differs",
+    "different:typeof-alias-name", "different:this-vs-literal", "different:compiled-bundle", "different:return-name-differs",
+    "different:alias-prefixed-union", "different:object-sibling-declaration", "different:typeof-name-vs-name", "different:enum-keyed-record",
+    "different:primitive-on-one-side", "different:class-structure-vs-signature", "different:rest-parameter-dropped", "different:spelling-combination"
+  ];
+  const missing = reviewed.filter((id) => !listed.has(id));
+  assert.deepEqual(missing, [], "a class that fired on the corpus without its bound would fail the corpus run the moment it fires again");
+});
+
+test("no allow-list entry names a classifier that no longer exists", () => {
+  const allow = JSON.parse(readFileSync(join(here, "typemap-allow.json"), "utf8"));
+  const ids = new Set(DIFFERENCE_CLASSIFIERS.map((k) => `different:${k.id}`));
+  const stale = allow.classes.filter(
+    (e) => e.id.startsWith("different:") && !ids.has(e.id.replace(/\+spelling$/, "")) && e.id !== "different:spelling-combination"
+  );
+  assert.deepEqual(stale.map((e) => e.id), [], "entries whose classifier was removed leave differences unclassified with no one to name them");
+});
+
+test("a pair that differs only in spellings no single class covers is spelling-combination", () => {
+  const a = tree("spell-a", { "x.js": { 0: "(options: object, context?: { isSecureMode?: boolean | undefined; }) => import(\"../lib/cli/cliOptions\").OptionsWarning[]" } });
+  const b = tree("spell-b", { "x.js": { 0: "(options: object, context: { isSecureMode?: boolean; }) => OptionsWarning[]" } });
+  const r = diffTrees({ baseline: a, candidate: b });
+  assert.ok(r.classes["different:spelling-combination"], JSON.stringify(Object.keys(r.classes)));
+});
+
 test("difference classes: each classifier fires on its example and not on a plain difference", () => {
   const ctx = { noNodeModules: true, externalNames: new Set(["useForm"]), nodeText: "useForm()", minified: true };
   const cases = {
