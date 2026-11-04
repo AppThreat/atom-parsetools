@@ -105,7 +105,9 @@ jobs:
       run: |
         npm ci
         node test-fixtures/astgen-native-types-regression.js
+        node test-fixtures/astgen-native-recovered-syntax.js
         node test-fixtures/typemap-diff-regression.js
+        npm run test:hostile
 
   # The Ruby bundle is built once and has to run under every Ruby the wrapper advertises. Building
   # and testing on one interpreter cannot show that, so build with the oldest supported Ruby and
