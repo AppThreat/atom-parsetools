@@ -2851,6 +2851,19 @@ const processFile = (file, options, ts) => {
     }
   } catch (err) {
     console.error("Failure:", file, err?.message);
+    // a file that yields nothing is part of the run's record, not only a line on stderr: the
+    // manifest (written on runs with types on) says which file failed and why
+    if (options.tsTypes) {
+      try {
+        writeManifestRecord(options.output, {
+          kind: "file_error",
+          file,
+          reason: String(err?.message || err).slice(0, 500)
+        });
+      } catch {
+        // a manifest that cannot be written must not turn a parse failure into a crash
+      }
+    }
   }
 };
 
