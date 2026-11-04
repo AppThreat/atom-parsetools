@@ -53,8 +53,12 @@ import { lowerEmberFile } from "./emberAst.js";
 // packages again when the project does not set `types`. 4.5.2: a project
 // whose types recursed through conditional types (Prisma 4's client) ran
 // astgen out of memory, leaving no ASTs at all; the empty parse must not be
-// reused.
-const ASTGEN_VERSION = "4.6.0";
+// reused. 4.6.0: names are relative to the source directory with `-i .`, and
+// top-level __tests__/__mocks__ are skipped. 4.7.0: native type maps are the
+// default (ASTGEN_TYPES=ts6 chooses TypeScript 6), so every consumer that did
+// not set ASTGEN_TYPES gets TypeScript 7's type strings, and every run with
+// types on records its type phase in astgen_manifest.jsonl.
+const ASTGEN_VERSION = "4.7.0";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -2704,20 +2708,41 @@ const runTypeGenerationInWorkers = (
   ).then((results) => results.every(Boolean));
 };
 
-// ASTGEN_TYPES=native: the type map comes from parsa, run once for the project, and
-// this process only parses (Babel). Set once the native phase has written the .typemap files, so that
-// collectSeenTypesForFile does not type anything a second time.
+// The type phase: with native types (the default, or ASTGEN_TYPES=native) the type map comes
+// from parsa, run once for the project, and this process only parses (Babel). Set once the native
+// phase has written the .typemap files, so that collectSeenTypesForFile does not type anything a
+// second time.
 let nativeTypesWritten = false;
 
 /**
  * The native type phase. Returns true when the native binary produced the type maps. On any problem
- * (no binary, a failing run) it warns once and returns false, and the caller carries on with the
- * TypeScript 6 path, so the user gets types either way.
+ * (no binary, a failing run) it reports once and returns false, and the caller carries on with the
+ * TypeScript 6 path, so the user gets types either way. A run that asked for ts6, by environment or
+ * because ASTGEN_TYPES holds an unknown value, never starts the binary. Every run with types on
+ * appends one manifest record saying which engine was asked for, by whom, and which ran.
  */
 const runNativeTypePhase = async (options) => {
   const warnOnce = (message) => console.error(`astgen: ${message}`);
-  const requested = requestedEngine(process.env, warnOnce);
+  const { engine: requested, requestedBy } = requestedEngine(process.env, warnOnce);
+  const writeRecord = (engine, fallbackReason, extra = {}) => {
+    try {
+      writeManifestRecord(
+        options.output,
+        typesRecord({
+          engine,
+          requested,
+          requestedBy,
+          fallbackReason,
+          version: ASTGEN_VERSION,
+          ...extra
+        })
+      );
+    } catch (err) {
+      console.error("astgen: cannot write the manifest:", err?.message);
+    }
+  };
   if (requested !== "native") {
+    writeRecord("ts6");
     return false;
   }
   const found = findNativeBinary({
@@ -2737,24 +2762,17 @@ const runNativeTypePhase = async (options) => {
       onFile: (rel, dest) => console.log("Converted types for", rel, "to", dest)
     });
   }
-  try {
-    writeManifestRecord(
-      options.output,
-      typesRecord({
-        engine: outcome.ok ? "native" : "ts6",
-        requested,
-        fallbackReason: outcome.ok ? undefined : outcome.reason,
-        bin: found.path,
-        report: outcome.report,
-        files: outcome.files,
-        version: ASTGEN_VERSION
-      })
-    );
-  } catch (err) {
-    console.error("astgen: cannot write the manifest:", err?.message);
-  }
+  writeRecord(outcome.ok ? "native" : "ts6", outcome.ok ? undefined : outcome.reason, {
+    bin: found.path,
+    report: outcome.report,
+    files: outcome.files
+  });
   if (!outcome.ok) {
-    warnOnce(`ASTGEN_TYPES=native: ${outcome.reason}; falling back to TypeScript 6 for types.`);
+    warnOnce(
+      requestedBy === "env"
+        ? `ASTGEN_TYPES=native: ${outcome.reason}; falling back to TypeScript 6 for types.`
+        : `${outcome.reason}; using TypeScript 6 for types.`
+    );
     return false;
   }
   for (const w of outcome.report?.warnings ?? []) {
