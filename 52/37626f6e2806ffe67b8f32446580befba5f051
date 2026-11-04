@@ -1,0 +1,26 @@
+astgen.js
+  s_3f5c428a173daa::t_1ad5b5bc2d0595 56-61
+  s_3f5c428a173daa::t_1d44f8db18ac06 2711-2714,2719-2722,2726-2743,2745,2765-2769,2771-2775
+test-fixtures/astgen-native-types-regression.js
+  s_3f5c428a173daa::t_5e67b2ca7df797 95-102,104
+  s_3f5c428a173daa::t_1eea551ac554c8 136,141-142,145,148-149,154,156,158,160-232,253,272-273
+lib/typemap/native.mjs
+  s_3f5c428a173daa::t_75c4c02158f916 27-29,33-35,37
+  s_3f5c428a173daa::t_21635d75c009c0 185-186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5237626f6e2806ffe67b8f32446580befba5f051",
+  "prompts": {},
+  "sessions": {
+    "s_3f5c428a173daa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_ad4eb6a9-5992-45ab-9fb8-5cb4fd12fb71",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
