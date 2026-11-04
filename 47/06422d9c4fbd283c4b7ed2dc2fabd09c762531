@@ -1,0 +1,23 @@
+CHANGELOG.md
+  s_79a7c562b49300::t_7ab62b285e73a8 9,12-19,45-46
+docs/PACKAGING.md
+  s_79a7c562b49300::t_851639acf7903d 70
+parsa/cmd/parsa/main.go
+  s_79a7c562b49300::t_bf30c2ea25732f 1-2,6-8,49,143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4706422d9c4fbd283c4b7ed2dc2fabd09c762531",
+  "prompts": {},
+  "sessions": {
+    "s_79a7c562b49300": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e06ad8c2-0767-47dd-913e-35689e5f05ba",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
