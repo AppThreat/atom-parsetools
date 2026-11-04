@@ -56,31 +56,20 @@ const modes = [
 ];
 
 // One hostile input, checked in both modes. expects: { status, stderrTest, records, outTest }.
-function hostileCase(name, prepare, { wantStatus = 0, stderrTest, fileError, outTest, timeoutMs, mayHitCap = false } = {}) {
+function hostileCase(name, prepare, { wantStatus = 0, stderrTest, fileError, outTest, timeoutMs, env: caseEnv = {}, ts6Budget } = {}) {
   for (const mode of modes) {
     test(`${name} (${mode.name})`, (t) => {
       const target = join(inputDir, `case-${name.replace(/[^a-z0-9]+/gi, "-")}-${mode.name}`);
       mkdirSync(target, { recursive: true });
       prepare(target);
       const out = mkdtempSync(join(root, "out-"));
-      const env = { ...process.env, ...mode.env };
+      const env = { ...process.env, ...caseEnv, ...mode.env };
       delete env.ATOM_PARENT_PID;
       const r = spawnSync(process.execPath, [astgen, "-i", target, "-o", out, "-t", "ts"], {
         env,
         encoding: "utf8",
         timeout: t
       });
-      if (mayHitCap && mode.name === "ts6" && r.signal) {
-        // TypeScript 6 type generation has no budget of its own (the plan notes it): on an input
-        // this size it can still be running at the caller's cap. Being stopped there by the
-        // caller is the accepted end of the case, and is reported as a finding, not a hang.
-        assert.equal(r.signal, "SIGTERM", `stopped by ${r.signal}`);
-        assert.ok(!crashPattern.test(r.stderr ?? ""), r.stderr?.slice(0, 800));
-        console.log(`     reported: TypeScript 6 did not finish ${name} within its ${Math.round(t / 1000)}s cap`);
-        rmSync(target, { recursive: true, force: true });
-        rmSync(out, { recursive: true, force: true });
-        return;
-      }
       assert.ok(r.status === wantStatus, `exit status ${r.status} (signal ${r.signal}), stderr:\n${r.stderr?.slice(0, 2000)}`);
       assert.ok(!r.signal, `killed by ${r.signal}; the case must end, not hang`);
       if (stderrTest) stderrTest(r.stderr ?? "");
@@ -90,6 +79,10 @@ function hostileCase(name, prepare, { wantStatus = 0, stderrTest, fileError, out
       const types = records.filter((rec) => rec.kind === "types");
       assert.equal(types.length, 1, `one types record, got ${JSON.stringify(types)}`);
       assert.equal(types[0].engine, mode.name === "native" ? "native" : "ts6");
+      if (ts6Budget && mode.name === "ts6") {
+        const budgets = records.filter((rec) => rec.kind === "type_budget");
+        assert.ok(budgets.some((rec) => rec.reason === ts6Budget), `a ${ts6Budget} type_budget record is expected, records: ${JSON.stringify(records)}`);
+      }
       if (fileError !== undefined) {
         const errors = records.filter((rec) => rec.kind === "file_error");
         if (fileError) {
@@ -171,7 +164,9 @@ if (runAll) {
       size += chunk.length;
     }
     writeFileSync(join(dir, "bundle.js"), parts.join(""));
-  }, { timeoutMs: 110000, mayHitCap: true, fileError: true, stderrTest: (s) => assert.ok(!crashPattern.test(s), s.slice(0, 800)) });
+    // TypeScript 6 takes minutes to set up its checker for this many redeclared names; the program
+    // budget ends that, and the run keeps its ASTs without types
+  }, { timeoutMs: 110000, env: { ASTGEN_TYPE_PROGRAM_TIMEOUT_MS: "20000" }, ts6Budget: "program-wall-time", fileError: true, stderrTest: (s) => assert.ok(!crashPattern.test(s), s.slice(0, 800)) });
 
   hostileCase("a 100,000-element array literal", (dir) => {
     const elements = [];
