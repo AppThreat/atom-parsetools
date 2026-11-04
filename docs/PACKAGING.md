@@ -67,7 +67,7 @@ oras pull ghcr.io/appthreat/parsa:linux-amd64-main
 sha256sum -c parsa-linux-amd64.sha256
 ```
 
-A published GitHub release gets the binaries, their `.sha256` files and the SBOM as assets, with build provenance (`gh attestation verify parsa-linux-amd64 --repo AppThreat/atom-parsetools`), and on ghcr.io the tags `<os>-<arch>-<version>`. cdxgen-plugins-bin downloads the release assets, checks the hashes and bakes the binaries into its platform packages. Once cgo arrives (the Prism parser for `parsa rb`), each target has to build on its own runner instead.
+A published GitHub release gets the binaries, their `.sha256` files and the SBOM as assets, with build provenance (`gh attestation verify parsa-linux-amd64 --repo AppThreat/atom-parsetools`), and on ghcr.io the tags `<os>-<arch>-<version>`. cdxgen-plugins-bin downloads the release assets, checks the hashes and bakes the binaries into its platform packages.
 
 ## Publishing this documentation site
 
