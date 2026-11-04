@@ -78,6 +78,28 @@ for (const [input, want] of CANONICAL_FORMS) {
   });
 }
 
+// The engines pad member lists differently (TypeScript 6 kept the line breaks of a JSDoc type
+// literal, TypeScript 7 prints one line), and with object-member-order on the padding is canonical
+// so a padded list meets its equal. These pairs all normalize to the same string.
+const PADDING_PAIRS = [
+  ["{ a: A; b: B; }", "{\n    a: A;\n    b: B;\n}"],
+  ["(o: { x?: number; }) => void", "(o: {    x?: number;}) => void"],
+  ["{ a: A; }", "{ a: A; }"],
+  ["{ a: 'x'; b: 2; }", "{ b: 2;\n a: 'x'; }"]
+];
+for (const [one, two] of PADDING_PAIRS) {
+  test(`object member padding is canonical: ${JSON.stringify(one)} equals ${JSON.stringify(two)}`, () => {
+    const ids = ["object-member-order"];
+    assert.equal(canon(one, ids), canon(two, ids));
+  });
+}
+
+// without the normalization the members keep their written order; only the padding collapses
+test("object member padding without the order normalization is collapsed, not reordered", () => {
+  assert.equal(canon("{ a: A;\n b: B; }", []), "{ a: A; b: B; }");
+  assert.notEqual(canon("{ a: A; b: B; }", []), canon("{ b: B; a: A; }", []));
+});
+
 // A normalizer that is switched off must not change a string. Real type maps showed that a normalizer that
 // printed strings again from tokens respelled 15 percent of them (`Array <string>`, `({ a; }: T)`), so this
 // runs the normalizer with nothing on over strings built from the shapes that occur in type maps.
