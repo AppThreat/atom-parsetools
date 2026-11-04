@@ -73,5 +73,7 @@ Consumers that read `.typemap` files written with `ASTGEN_TYPES=native` should e
 A later 2.x release makes native type maps astgen's default, with TypeScript 6 kept as the fallback
 when `parsa` is missing or fails and `ASTGEN_TYPES=ts6` to choose it, and changes `ASTGEN_VERSION`
 so that caches keyed on it are rebuilt. The `astgen`, `phpastgen`, `rbastgen` and `scalasem` commands
-stay, Babel and `hermes-parser` keep writing the AST, and Node stays a requirement. That release
-lists here how `npm install` brings the `parsa` binary.
+stay, Babel and `hermes-parser` keep writing the AST, and Node stays a requirement. The npm package
+does not carry `parsa` and there are no npm packages for it: it comes with the platform packages of
+`@cdxgen/cdxgen-plugins-bin`, where astgen will also look for it, and with atom's container images.
+After a plain `npm install`, astgen keeps TypeScript 6.
