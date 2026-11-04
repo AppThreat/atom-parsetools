@@ -1,0 +1,23 @@
+test-fixtures/astgen-native-types-regression.js
+  s_3f5c428a173daa::t_59220243324d9e 329-340
+test-fixtures/typemap-allow.json
+  s_3f5c428a173daa::t_61135a4a74c794 671-676,767-772,785-796,863-868,983-988
+test-fixtures/typemap-diff-regression.js
+  s_3f5c428a173daa::t_316165f5e19d0c 204-237
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a81faf79278deb6341c0df7caf7fd687f945bc5b",
+  "prompts": {},
+  "sessions": {
+    "s_3f5c428a173daa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_ad4eb6a9-5992-45ab-9fb8-5cb4fd12fb71",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
