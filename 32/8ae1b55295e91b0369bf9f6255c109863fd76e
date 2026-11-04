@@ -1,0 +1,24 @@
+astgen.js
+  s_3f5c428a173daa::t_992f9944529a6d 2854-2866
+test-fixtures/astgen-hostile-inputs.js
+  s_3f5c428a173daa::t_6b2779261e9583 1-177,182-183,188
+  s_3f5c428a173daa::t_16e0823352cbed 178-181,184-187
+package.json
+  s_3f5c428a173daa::t_901474f785eb95 9,36-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "328ae1b55295e91b0369bf9f6255c109863fd76e",
+  "prompts": {},
+  "sessions": {
+    "s_3f5c428a173daa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_ad4eb6a9-5992-45ab-9fb8-5cb4fd12fb71",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
