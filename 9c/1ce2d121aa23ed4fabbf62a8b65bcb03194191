@@ -1,0 +1,32 @@
+test-fixtures/astgen-native-recovered-syntax.js
+  s_3f5c428a173daa::t_ea3bb7faf7b6f4 1-117
+  s_3f5c428a173daa::t_7015e9f7d8a7a8 118-124
+parsa/internal/typemap/run.go
+  s_3f5c428a173daa::t_8251a336d0f2d2 420-429
+  s_3f5c428a173daa::t_14c2bff2ed08c9 406-410,431
+  s_3f5c428a173daa::t_c4afd05ea74af7 430
+parsa/testdata/typemap/unparsable/files/do-expression.js
+  s_3f5c428a173daa::t_7a86739effd647 1-13
+parsa/testdata/typemap/unparsable/files/export-default-from.js
+  s_3f5c428a173daa::t_450e06e7baeb50 1-4
+parsa/testdata/typemap/unparsable/files/flow-annotations.js
+  s_3f5c428a173daa::t_63293ea2ebd334 1-16
+parsa/testdata/typemap/unparsable/package.json
+  s_3f5c428a173daa::t_2c580f743ea26b 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9c1ce2d121aa23ed4fabbf62a8b65bcb03194191",
+  "prompts": {},
+  "sessions": {
+    "s_3f5c428a173daa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_ad4eb6a9-5992-45ab-9fb8-5cb4fd12fb71",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
