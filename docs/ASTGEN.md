@@ -24,9 +24,10 @@ Three parsers sit behind one entry point, each covering what the others miss.
 | ------------------------- | --------------------------------------------------------------------------------------------- |
 | `@babel/parser` 8         | Primary. Parses modern ECMAScript, TypeScript, and JSX with error recovery.                   |
 | `hermes-parser`           | Flow. Used first when the project type is `flow`, and as the last resort for everything else. |
-| `@typescript/typescript6` | Not a parser but the checker. Produces the type map when `--tsTypes` is on.                   |
+| `parsa`                   | Not a parser but the checker. Writes the type map when `--tsTypes` is on and the binary is found. |
+| `@typescript/typescript6` | The fallback checker, used in this process when `parsa` is missing or fails.                 |
 
-The TypeScript dependency is the TS 6 engine, not TS 7. TypeScript 7 is the native Go port and currently ships without the programmatic compiler API that type maps need (`createProgram`, `getTypeChecker`, `forEachChild`, and friends), so `@typescript/typescript6` is the supported bridge until the API returns. AST shapes and type inference stay identical to TS 6 as a result.
+Type maps come from TypeScript 7's checker (the Go port, through `parsa`) when the binary is found, and from `@typescript/typescript6` in this process when it is not. AST shapes are Babel's either way; only the type strings differ between the two engines (see below).
 
 Every parse runs with error recovery enabled, so a file with syntax problems still yields a tree, with the problems recorded in the `errors` array of the output. A failed parse is logged and skipped, never fatal to the run.
 
@@ -186,11 +187,11 @@ Every package under `node_modules/@types` at or above the project is part of the
 
 The checker is single-threaded, so parallelism comes from sharding: files are dealt round-robin to workers, and each worker builds its own program over the full project file set before processing its shard. Cross-file resolution is therefore identical to the single-threaded path, with one cosmetic difference: a small number of inferred union types may print their members in a different order (`A | B` becomes `B | A`, semantically identical). Leave `ASTGEN_TYPE_WORKERS` unset for byte-identical output across machines; set it to `auto` or a number to trade that cosmetic reordering for a large speedup on big projects. If any worker fails, the run falls back to inline processing, which is safe because writes are idempotent.
 
-## Native type maps (opt-in)
+## Native type maps (the default)
 
-`ASTGEN_TYPES=native` runs `parsa js --types-only` once for the project and moves the `.typemap` files it wrote into the output directory, under the names astgen would have used. Babel still parses every file; only the type phase changes. The binary type checks with TypeScript 7's checker (typescript-go), in one process with one checker per CPU (at most 8, `ASTGEN_TYPE_WORKERS` to choose), and reads the same `ASTGEN_*` variables for discovery, so both sides see the same files.
+With `--tsTypes` on and `ASTGEN_TYPES` unset or empty (the default since 2.0.0), astgen runs `parsa js --types-only` once for the project and moves the `.typemap` files it wrote into the output directory, under the names astgen would have used. Babel still parses every file; only the type phase changes. The binary type checks with TypeScript 7's checker (typescript-go), in one process with one checker per CPU (at most 8, `ASTGEN_TYPE_WORKERS` to choose), and reads the same `ASTGEN_*` variables for discovery, so both sides see the same files. `ASTGEN_TYPES=ts6` chooses the TypeScript 6 path instead; `ASTGEN_TYPES=native` names the default explicitly.
 
-What differs from the default `ts6` path, on purpose:
+What differs from the `ts6` path, on purpose:
 
 - Union and object member order and the quote style of literal types follow TypeScript 7 (`"ADMIN" | "USER"` where TypeScript 6 wrote `"USER" | "ADMIN"`). The output does not depend on the checker count or on the run.
 - A JavaScript function prints as its signature, not `typeof name`. A required CommonJS module that exports an object is written `typeof import("./m")` everywhere outside the module itself, where TypeScript 6 used the local name in some places (`typeof morgan`) and the structure in others; a module that exports a function or a class keeps its signature or `typeof Name`. A `this` at the top level of a CommonJS file is the module too, as in TypeScript 6 (TypeScript 7 says `typeof globalThis`).
@@ -198,18 +199,18 @@ What differs from the default `ts6` path, on purpose:
 - Offsets count a leading byte order mark, like Babel's offsets do (TypeScript 6's keys did not, so keys and AST nodes did not join in such files).
 - A file whose type collection runs past a budget (checker work, wall time or memory; the cdxgen shape of an untyped array reassigned in many `if` blocks is one) keeps the entries before the point it stopped and gets none after. The budgets are reported, never silent.
 
-Fallback. If the binary cannot be found (`ASTGEN_NATIVE_BIN`, next to `astgen.js`, `PATH`), exits with an error, does not finish within the shared kill timeout (`ATOM_TIMEOUT`, then `ASTGEN_TIMEOUT`), or its type maps cannot be moved into the output, astgen prints one warning and writes the TypeScript 6 type maps, so a run always has types. Nothing a failed binary wrote is kept.
+Fallback. When the binary cannot be found (`ASTGEN_NATIVE_BIN`, next to `astgen.js`, `PATH`), exits with an error, does not finish within the shared kill timeout (`ATOM_TIMEOUT`, then `ASTGEN_TIMEOUT`), or its type maps cannot be moved into the output, astgen writes the TypeScript 6 type maps instead, so a run always has types, and keeps nothing the failed binary wrote. Under the default it says so in one line on stderr (`parsa was not found ...; using TypeScript 6 for types.`), since a plain `npm install` of atom-parsetools has no `parsa`; after an explicit `ASTGEN_TYPES=native` the line is a warning that names the setting. Consumers that ship the binary, such as cdxgen with `@cdxgen/cdxgen-plugins-bin` and atom's container images, point astgen at it through `ASTGEN_NATIVE_BIN` or place it next to `astgen.js`; astgen looks nowhere else.
 
 Limits. Besides the per-file budgets, the binary caps the heap of the whole run (6,144 MB, or `ASTGEN_NATIVE_MEMORY_MB`), and astgen sets `GOMEMLIMIT` to the same figure unless it is already set. Past the cap the files being typed stop and the rest are not typed; each is reported. The cap is a backstop for projects too large for the machine, and which files were done by then depends on timing.
 
-A run that asked for `native` appends one record to `astgen_manifest.jsonl` in the output directory: the engine used, the reason for a fallback, the TypeScript commit the binary was built from, the checker count, the tsconfig it used, the files that hit a budget with the reason, the number of types it gave up on, and its warnings. The name ends in `.jsonl` because consumers read every `*.json` under the output as an AST. Without `ASTGEN_TYPES`, output is exactly what it was.
+Every run with `--tsTypes` on appends one record to `astgen_manifest.jsonl` in the output directory, whatever engine ran: what was requested (`requested`: `native` or `ts6`) and how (`requestedBy`: `default` when `ASTGEN_TYPES` was unset or empty, `env` when it was set), which engine wrote the type maps (`engine`: `native` or `ts6`), the reason for a fallback when the requested engine did not run, and for a native run the TypeScript commit the binary was built from, the checker count, the tsconfig it used, the files that hit a budget with the reason, the number of types it gave up on, and its warnings. The name ends in `.jsonl` because consumers read every `*.json` under the output as an AST. A consumer that needs to know which engine ran reads `engine` from this record; chen's jssrc2cpg does, and falls back to its own request only when astgen wrote no record (atom-parsetools 1.x writes none). A run with `--no-tsTypes` writes none either.
 
 ## Environment variables
 
 | Variable                              | Default   | Purpose                                                                                |
 | ------------------------------------- | --------- | -------------------------------------------------------------------------------------- |
 | `ASTGEN_TYPE_WORKERS`                 | `1` (off) | Worker threads for the type-generation phase, or `auto` to derive from available CPUs. |
-| `ASTGEN_TYPES`                         | `ts6`     | `native` writes the `.typemap` files with the native binary instead of TypeScript 6; see below. |
+| `ASTGEN_TYPES`                         | `native`  | Which engine writes the `.typemap` files: `native` (the `parsa` binary, run once for the project) or `ts6` (TypeScript 6, in this process). Unset or empty means `native`; an unknown value warns and means `ts6`. |
 | `ASTGEN_NATIVE_BIN`                   | unset     | Path of the native binary; otherwise next to `astgen.js`, then on `PATH`.                |
 | `ASTGEN_INCLUDE_TEST_FILES`           | `false`   | When `true`, include test files in AST and type generation.                            |
 | `ASTGEN_CONCURRENCY`                  | `10`      | Chunk size for the in-thread file loop; bounds peak memory between `gc()` passes.      |
@@ -221,4 +222,4 @@ A run that asked for `native` appends one record to `astgen_manifest.jsonl` in t
 
 Each source file becomes `<output>/<relative-path>.json` with the shape `{"fullName", "relativeName", "ast"}`, and each type-mapped file also gets `<relative-path>.typemap`. See [Output Formats](OUTPUT_FORMATS.md).
 
-`astgen --version` prints the AST format version (currently 4.5.1). It is not decorative: downstream frontends such as chen's `jssrc2cpg` fold it into their parse-cache fingerprint, so it must be bumped whenever the emitted AST or type shape changes. A stale version number means stale cached parses get silently reused, which is the one bug this contract exists to prevent.
+`astgen --version` prints the AST format version (currently 4.7.0). It is not decorative: downstream frontends such as chen's `jssrc2cpg` fold it into their parse-cache fingerprint, so it must be bumped whenever the emitted AST or type shape changes. A stale version number means stale cached parses get silently reused, which is the one bug this contract exists to prevent.

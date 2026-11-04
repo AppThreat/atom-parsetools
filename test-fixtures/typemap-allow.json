@@ -3,166 +3,16 @@
   "description": "Reviewed difference classes between astgen 1.10.6 (TypeScript 6) type maps and the native binary (TypeScript 7). A class not listed here fails lib/typemap/diff.mjs, and so does a class over its maxShare (its share of all keys, one and a half times the largest share seen on the corpus in parsetools-native.corpus.json). Normalizations live in lib/typemap/canon.mjs with their own tests and need no entry. different:unclassified can never be listed.",
   "classes": [
     {
-      "id": "different:alias-vs-expansion",
-      "reason": "TypeScript 6 wrote a type alias by name (HttpInterceptorFn) where TypeScript 7, given the same InTypeAlias flag, writes its expansion. Dropping the flag or preferring alias names lowered agreement on every project measured (bulletproof-react 97.5 to 92.1 percent), so the flag stays.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0113
-    },
-    {
-      "id": "different:any-on-one-side",
-      "reason": "One side mentions `any` and the other does not, in a shape the refines-any classes cannot line up. Mostly TypeScript 7 resolving a library type TypeScript 6 left as any.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0049
-    },
-    {
-      "id": "different:baseline-refines-any",
-      "reason": "TypeScript 6 had a type where the native binary has `any` in that position. Mostly in compiled and minified JavaScript; reviewed on juice-shop's build output.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0046
-    },
-    {
-      "id": "different:candidate-fewer-any",
-      "reason": "The native type has fewer `any` than the baseline and keeps every other name in it: more precise, in a shape where an `any` became a union.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0015
-    },
-    {
-      "id": "different:candidate-refines-any",
-      "reason": "The native type is the baseline with an `any` replaced by a type (`Promise<any>` against `Promise<User>`): TypeScript 7 knows more.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0309
-    },
-    {
-      "id": "different:candidate-refines-unknown",
-      "reason": "The native type is the baseline with an `unknown` replaced by a type (`Observer<unknown>` against `Observer<boolean>`).",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0212
-    },
-    {
-      "id": "different:declared-vs-instantiated-reference",
-      "reason": "typescript-go returns no type for the identifier of a type reference, so the identifier takes the type of its enclosing reference (getTypeFromTypeNode): `Promise<any>` where TypeScript 6 kept the declared `Promise<T>`. The reference itself is typed identically.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0095
-    },
-    {
-      "id": "different:deferred-vs-evaluated",
-      "reason": "A conditional or mapped type left unevaluated on one side (infer, [P in K]) and evaluated on the other: the checkers stop evaluating at different points.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0108
-    },
-    {
-      "id": "different:enum-member-keys",
-      "reason": "The same object members keyed by enum members (`[TeamPreference.SeamlessEdit]`) in TypeScript 7 and by their values in TypeScript 6.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0018
-    },
-    {
-      "id": "different:import-specifier",
-      "reason": "The same type reached through another import path to the same module (a package entry against its file, `sequelize/types/utils` against `sequelize/lib/utils`). TypeScript 7 resolves package entry points through `exports` and writes the path it reached.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0103
-    },
-    {
-      "id": "different:literal-vs-widened",
-      "reason": "A literal type against its widened primitive: the checkers widen at different points.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
-    },
-    {
-      "id": "different:method-vs-property",
-      "reason": "A member written as a method (`reset(): void`) on one side and as a property of function type on the other. A printer difference.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
-    },
-    {
-      "id": "different:minified-source",
-      "reason": "Differences no other class names, in minified files (an average line over 300 characters), where one-letter names are reused across scopes and the two checkers resolve them differently.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0068
-    },
-    {
-      "id": "different:module-object",
-      "reason": "The CommonJS `module` object: TypeScript 6 writes its exports as `typeof module.exports`, the native binary writes their structure.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0135
-    },
-    {
-      "id": "different:parameter-names",
-      "reason": "Equal apart from parameter names, which the library declarations of the two versions spell differently (`maxLength` against `targetLength`).",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0007
-    },
-    {
-      "id": "different:parenthesization",
-      "reason": "Equal apart from parentheses around a function type in a type argument or union position (`Meta<(<E>(a: E) => any)>`). A printer difference.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0008
-    },
-    {
-      "id": "different:qualifier-dropped",
-      "reason": "Equal apart from a namespace qualifier one side writes (`express.Response` against `Response`).",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0027
-    },
-    {
-      "id": "different:qualifier-path",
-      "reason": "The same declaration reached through another namespace path (`zod_1.z.core.$ZodStringParams` against `zod_1.core.$ZodStringParams`).",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0036
-    },
-    {
-      "id": "different:readonly-wrapper",
-      "reason": "Equal apart from `Readonly<...>` wrappers or `readonly` modifiers that TypeScript 7 keeps from the declaration.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0019
-    },
-    {
-      "id": "different:recursion-elided",
-      "reason": "TypeScript 7 writes `...` for a recursive type one level earlier than TypeScript 6.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0012
-    },
-    {
-      "id": "different:shadowed-type-parameter-name",
-      "reason": "TypeScript 6 renames a type parameter that shadows another (T_1); TypeScript 7 writes T. Same type, another name for the parameter.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0042
-    },
-    {
-      "id": "different:structure-vs-typeof",
-      "reason": "The native binary names a required CommonJS module `typeof import(\"./m\")` where TypeScript 6 wrote its structure, so that chen links it to the module (deliberate, see docs/ASTGEN.md).",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0325
-    },
-    {
-      "id": "different:typeof-alias-vs-import",
-      "reason": "TypeScript 6 named a module by a local alias or `typeof module.exports`; the native binary names it by its file (`typeof import(\"./config/morgan\")`), which is what chen links to the module.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0065
-    },
-    {
-      "id": "different:typeof-vs-structure",
-      "reason": "The whole baseline names a module object (`typeof module.exports`, `typeof import(\"./m\")`) and the candidate writes its structure; inside the exporting file the native binary keeps the structure, as TypeScript 6 did in some places.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0135
-    },
-    {
-      "id": "different:undefined-member",
-      "reason": "Equal apart from `| undefined` as the last member of the type or of an optional member's type: the two versions print optionality differently under exactOptionalPropertyTypes.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0087
-    },
-    {
-      "id": "different:unresolved-external-type",
-      "reason": "The project has no node_modules and a name imported from a package is involved: the engines answer differently for a type they cannot resolve.",
-      "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0143
-    },
-    {
       "id": "baseline-only:ArrayLiteralExpression",
       "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
       "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:ArrayType",
+      "reason": "TypeScript 6 typed an array type node TypeScript 7 left untyped, in juice-shop's compiled output. Largest share seen: 3.37760814679085e-05 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00005
     },
     {
       "id": "baseline-only:ArrowFunction",
@@ -223,6 +73,18 @@
       "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
       "maxShare": 0.0005
+    },
+    {
+      "id": "baseline-only:FalseKeyword",
+      "reason": "TypeScript 6 typed a `false` literal TypeScript 7 left untyped. Largest share seen: 4.503477529054467e-05 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00007
+    },
+    {
+      "id": "baseline-only:FirstLiteralToken",
+      "reason": "TypeScript 6 typed a numeric literal TypeScript 7 left untyped. Largest share seen: 2.8146734556590417e-05 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00004
     },
     {
       "id": "baseline-only:FunctionDeclaration",
@@ -321,6 +183,12 @@
       "maxShare": 0.0005
     },
     {
+      "id": "baseline-only:PostfixUnaryExpression",
+      "reason": "TypeScript 6 typed a postfix expression TypeScript 7 left untyped. Largest share seen: 5.629346911318084e-06 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
+    },
+    {
       "id": "baseline-only:PropertyAccessExpression",
       "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
@@ -369,6 +237,12 @@
       "maxShare": 0.0016
     },
     {
+      "id": "baseline-only:TrueKeyword",
+      "reason": "TypeScript 6 typed a `true` literal TypeScript 7 left untyped. Largest share seen: 2.2517387645272335e-05 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00003
+    },
+    {
       "id": "baseline-only:TypeReference",
       "reason": "TypeScript 6 gave a type at this node where the native binary gives none or `any`. Sampled: `this` and names in minified bundles, nodes inside JSDoc-built subtrees that TypeScript 7 no longer walks, and mocks typed by astgen only through its `-i .` file rule (fixed in this release).",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
@@ -388,9 +262,9 @@
     },
     {
       "id": "candidate-only:ArrayLiteralExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.03526
     },
     {
       "id": "candidate-only:ArrayType",
@@ -400,9 +274,9 @@
     },
     {
       "id": "candidate-only:ArrowFunction",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0013
+      "maxShare": 0.00721
     },
     {
       "id": "candidate-only:AsExpression",
@@ -417,10 +291,16 @@
       "maxShare": 0.0159
     },
     {
+      "id": "candidate-only:BigIntLiteral",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00007
+    },
+    {
       "id": "candidate-only:BinaryExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0006
+      "maxShare": 0.14065
     },
     {
       "id": "candidate-only:BindingElement",
@@ -436,21 +316,45 @@
     },
     {
       "id": "candidate-only:CallExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0129
+      "maxShare": 0.07763
+    },
+    {
+      "id": "candidate-only:ClassExpression",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
+    },
+    {
+      "id": "candidate-only:ComputedPropertyName",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
     },
     {
       "id": "candidate-only:ConditionalExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.00847
+    },
+    {
+      "id": "candidate-only:Constructor",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0001
+    },
+    {
+      "id": "candidate-only:DeleteExpression",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0003
     },
     {
       "id": "candidate-only:ElementAccessExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0013
+      "maxShare": 0.00768
     },
     {
       "id": "candidate-only:ExportAssignment",
@@ -460,9 +364,9 @@
     },
     {
       "id": "candidate-only:ExportSpecifier",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.00096
     },
     {
       "id": "candidate-only:ExpressionWithTypeArguments",
@@ -472,15 +376,15 @@
     },
     {
       "id": "candidate-only:FalseKeyword",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.01896
     },
     {
       "id": "candidate-only:FirstLiteralToken",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.03255
     },
     {
       "id": "candidate-only:FirstTemplateToken",
@@ -490,9 +394,9 @@
     },
     {
       "id": "candidate-only:FunctionDeclaration",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0033
+      "maxShare": 0.00954
     },
     {
       "id": "candidate-only:FunctionExpression",
@@ -508,9 +412,9 @@
     },
     {
       "id": "candidate-only:Identifier",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0419
+      "maxShare": 0.28539
     },
     {
       "id": "candidate-only:ImportClause",
@@ -531,52 +435,94 @@
       "maxShare": 0.0113
     },
     {
+      "id": "candidate-only:LiteralType",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
+    },
+    {
       "id": "candidate-only:MethodDeclaration",
       "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
       "maxShare": 0.0033
     },
     {
+      "id": "candidate-only:NamedTupleMember",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
+    },
+    {
       "id": "candidate-only:NewExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.00625
+    },
+    {
+      "id": "candidate-only:NullKeyword",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00799
+    },
+    {
+      "id": "candidate-only:NumberKeyword",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00004
     },
     {
       "id": "candidate-only:ObjectLiteralExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0009
+      "maxShare": 0.06844
+    },
+    {
+      "id": "candidate-only:OmittedExpression",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00005
     },
     {
       "id": "candidate-only:Parameter",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0033
+      "maxShare": 0.01531
     },
     {
       "id": "candidate-only:ParenthesizedExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0033
+      "maxShare": 0.01432
+    },
+    {
+      "id": "candidate-only:PostfixUnaryExpression",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00441
     },
     {
       "id": "candidate-only:PrefixUnaryExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.02214
+    },
+    {
+      "id": "candidate-only:PrivateIdentifier",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00037
     },
     {
       "id": "candidate-only:PropertyAccessExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0061
+      "maxShare": 0.04773
     },
     {
       "id": "candidate-only:PropertyAssignment",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0011
+      "maxShare": 0.21384
     },
     {
       "id": "candidate-only:PropertyDeclaration",
@@ -592,21 +538,27 @@
     },
     {
       "id": "candidate-only:RegularExpressionLiteral",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.00385
+    },
+    {
+      "id": "candidate-only:SetAccessor",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00004
     },
     {
       "id": "candidate-only:ShorthandPropertyAssignment",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0008
+      "maxShare": 0.00758
     },
     {
       "id": "candidate-only:SpreadElement",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.00225
     },
     {
       "id": "candidate-only:StringKeyword",
@@ -616,21 +568,21 @@
     },
     {
       "id": "candidate-only:StringLiteral",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0065
+      "maxShare": 0.24002
     },
     {
       "id": "candidate-only:TemplateExpression",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.00937
     },
     {
       "id": "candidate-only:TemplateSpan",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.00908
     },
     {
       "id": "candidate-only:ThisKeyword",
@@ -640,9 +592,9 @@
     },
     {
       "id": "candidate-only:TrueKeyword",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0005
+      "maxShare": 0.01441
     },
     {
       "id": "candidate-only:TupleType",
@@ -657,22 +609,436 @@
       "maxShare": 0.0005
     },
     {
+      "id": "candidate-only:TypeOfExpression",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00002
+    },
+    {
+      "id": "candidate-only:TypeParameter",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
+    },
+    {
       "id": "candidate-only:TypeReference",
       "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
       "maxShare": 0.0006
     },
     {
+      "id": "candidate-only:UndefinedKeyword",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
+    },
+    {
+      "id": "candidate-only:UnionType",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00002
+    },
+    {
       "id": "candidate-only:VariableDeclaration",
-      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
+      "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement. The cdxgen share of this class grew past its old bound because the 1.10.6 baseline was killed at its 600 s cap after 60 of the project's files; every key of the remaining files is one-sided.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
-      "maxShare": 0.0111
+      "maxShare": 0.07848
+    },
+    {
+      "id": "candidate-only:VoidExpression",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
+    },
+    {
+      "id": "candidate-only:VoidKeyword",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
+    },
+    {
+      "id": "candidate-only:YieldExpression",
+      "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
     },
     {
       "id": "candidate-only:unknown",
       "reason": "TypeScript 7 gives a type at this node where TypeScript 6 gave none or `any` (which the unresolved-type filter drops); `export default X` and type-position identifiers are the main cases. More information, not a disagreement.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
       "maxShare": 0.0005
+    },
+    {
+      "id": "different:alias-prefixed-union",
+      "reason": "A union that on one side carries its own alias as an extra first member (juice-shop's tool approval stream).",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0001
+    },
+    {
+      "id": "different:alias-vs-expansion",
+      "reason": "TypeScript 6 wrote a type alias by name (HttpInterceptorFn) where TypeScript 7, given the same InTypeAlias flag, writes its expansion. Dropping the flag or preferring alias names lowered agreement on every project measured (bulletproof-react 97.5 to 92.1 percent), so the flag stays.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0113
+    },
+    {
+      "id": "different:any-on-one-side",
+      "reason": "One side mentions `any` and the other does not, in a shape the refines-any classes cannot line up. Mostly TypeScript 7 resolving a library type TypeScript 6 left as any.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0049
+    },
+    {
+      "id": "different:array-form",
+      "reason": "The same array type printed `T[]` by TypeScript 6 and `Array<T>` by TypeScript 7 (a predicate's `this is S[]`); a printer difference, the element type is identical. Largest share seen: 0.00021103792287523182 on js-outline.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00032
+    },
+    {
+      "id": "different:bare-fallback-answer",
+      "reason": "One side a fallback answer (`undefined`, `any`, `this`, `{}`, `{ exports: any; }`) and the other the resolved annotation or value: the engines' inference differs in kind. Only differences no other class name. Largest share seen: 5.774672287347693e-05 on js-bulletproof-react.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00009
+    },
+    {
+      "id": "different:baseline-refines-any",
+      "reason": "TypeScript 6 had a type where the native binary has `any` in that position. Mostly in compiled and minified JavaScript; reviewed on juice-shop's build output.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0046
+    },
+    {
+      "id": "different:candidate-fewer-any",
+      "reason": "The native type has fewer `any` than the baseline and keeps every other name in it: more precise, in a shape where an `any` became a union.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0015
+    },
+    {
+      "id": "different:candidate-refines-any",
+      "reason": "The native type is the baseline with an `any` replaced by a type (`Promise<any>` against `Promise<User>`): TypeScript 7 knows more.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0309
+    },
+    {
+      "id": "different:candidate-refines-unknown",
+      "reason": "The native type is the baseline with an `unknown` replaced by a type (`Observer<unknown>` against `Observer<boolean>`).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0212
+    },
+    {
+      "id": "different:class-structure-vs-signature",
+      "reason": "A class value typed by its constructor's signature by TypeScript 6 and by its structure (`{ (c: any): void; prototype: { ... } }`) by TypeScript 7, in a compiled promise polyfill. Largest share seen: 1.4073367278295209e-05 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00002
+    },
+    {
+      "id": "different:contextual-answer",
+      "reason": "At an arrow parameter whose type is inferred, TypeScript 6 answered a bare keyword and TypeScript 7 the contextual type; or at a member call whose receiver shares the call's offset, the receiver's name against the call's return: the engines offered different candidates at one offset and the same tie-break kept a different one. Reviewed on angular-realworld's services. Largest share seen: 0.002017872585759585 on js-angular-realworld.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00303
+    },
+    {
+      "id": "different:declared-vs-instantiated-reference",
+      "reason": "typescript-go returns no type for the identifier of a type reference, so the identifier takes the type of its enclosing reference (getTypeFromTypeNode): `Promise<any>` where TypeScript 6 kept the declared `Promise<T>`. The reference itself is typed identically.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0095
+    },
+    {
+      "id": "different:defaulted-vs-resolved",
+      "reason": "The baseline a bare primitive (or a generic of them), the declared default or a widened answer, and the candidate the resolved type; never the other way round. Largest share seen: 0.0002882675122513693 on js-angular-realworld.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00043
+    },
+    {
+      "id": "different:deferred-vs-evaluated",
+      "reason": "A conditional or mapped type left unevaluated on one side (infer, [P in K]) and evaluated on the other: the checkers stop evaluating at different points.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0108
+    },
+    {
+      "id": "different:dollar-alias",
+      "reason": "Equal apart from the `$` of a compatibility alias (`zod_1.z.core.$RefinementCtx` against `zod_1.RefinementCtx`) and the namespace path to it. Largest share seen: 1.1258693822636168e-05 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00002
+    },
+    {
+      "id": "different:duplicate-union-member",
+      "reason": "A union with one member printed twice by TypeScript 6; the printer of 7 collapses the duplicate. Seen on juice-shop's compiled data creator before later classes took its pairs.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00002
+    },
+    {
+      "id": "different:enum-keyed-record",
+      "reason": "A mapped record keyed by the enum's members on one side and by its values on the other, the values instantiated differently per member (outline's unfurl resources). Largest share seen: 7.034597429174394e-05 on js-outline.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00011
+    },
+    {
+      "id": "different:enum-member-keys",
+      "reason": "The same object members keyed by enum members (`[TeamPreference.SeamlessEdit]`) in TypeScript 7 and by their values in TypeScript 6.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0018
+    },
+    {
+      "id": "different:expansion-vs-alias",
+      "reason": "The baseline writes a structure the candidate names by its alias; the reverse of alias-vs-expansion. Seen on juice-shop's AI SDK unions before alias-prefixed-union took its pairs.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0001
+    },
+    {
+      "id": "different:function-typeof-vs-signature",
+      "reason": "A JavaScript function the baseline names `typeof f` and the candidate prints as its signature (`typeof swapBuffers` against `() => void`), as documented for native type maps. Never the other way round. Largest share seen: 0.00009569889749240742 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00014
+    },
+    {
+      "id": "different:generic-argument-differs",
+      "reason": "The same generic reference (`AsyncIterable<TextStreamPart<...>>`) whose differing type arguments each differ in a way another class names. Largest share seen: 0.00007318150984713508 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00011
+    },
+    {
+      "id": "different:generic-instantiated-to-unknown",
+      "reason": "TypeScript 7 evaluated `InstanceType<P>` of an unresolved parameter to `unknown` where TypeScript 6 kept the reference (a policy callback in outline).",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0001
+    },
+    {
+      "id": "different:import-specifier",
+      "reason": "The same type reached through another import path to the same module (a package entry against its file, `sequelize/types/utils` against `sequelize/lib/utils`). TypeScript 7 resolves package entry points through `exports` and writes the path it reached.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0103
+    },
+    {
+      "id": "different:import-wrapped-name",
+      "reason": "The same name written through its declaring file (`import(\"../lib/cli/cliOptions\").OptionsWarning[]`) by TypeScript 7 and plain by TypeScript 6: in JavaScript, TypeScript 7 resolves a JSDoc type reference to the file it came from and prints the path. Largest share seen: 0.00011358795967627432 on js-cdxgen.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00017
+    },
+    {
+      "id": "different:indexed-access-evaluated",
+      "reason": "An indexed access one engine kept (`RouteMapGeneric[Name][\"params\"]`) and the other evaluated to its members. Largest share seen: 0.00019573302016050108 on js-vue3-realworld.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00029
+    },
+    {
+      "id": "different:literal-vs-widened",
+      "reason": "A literal type against its widened primitive: the checkers widen at different points.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "different:method-vs-property",
+      "reason": "A member written as a method (`reset(): void`) on one side and as a property of function type on the other. A printer difference.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0005
+    },
+    {
+      "id": "different:minified-source",
+      "reason": "Differences no other class names, in minified files (an average line over 300 characters), where one-letter names are reused across scopes and the two checkers resolve them differently.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0068
+    },
+    {
+      "id": "different:module-object",
+      "reason": "The CommonJS `module` object: TypeScript 6 writes its exports as `typeof module.exports`, the native binary writes their structure.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0135
+    },
+    {
+      "id": "different:module-vs-alias",
+      "reason": "The CommonJS module's type written as the module (`import(\"./api.11ty\")`) on one side and as the local alias name (`Docs`) on the other. Largest share seen: 0.004750593824228029 on fe-lit-starter.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00713
+    },
+    {
+      "id": "different:object-member-differs",
+      "reason": "Two object types with the same member names where up to three members' types differ; the sample shows the member. Largest share seen: 0.006437768240343348 on ver-js.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00966
+    },
+    {
+      "id": "different:object-member-superset",
+      "reason": "Two object types where one has the other's members and a few more: an intersection TypeScript 7 resolved further (the base model's `deletedAt` and `archivedAt`). Largest share seen: 0.007142857142857143 on fe-vue-router-playground.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.01071
+    },
+    {
+      "id": "different:overload-added",
+      "reason": "One side's call signatures are the other's plus one the other engine's library does not declare (`(contextId: \"webgpu\")`, a DOM library difference at the pinned commits). Largest share seen: 2.2517387645272335e-05 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00003
+    },
+    {
+      "id": "different:parameter-names",
+      "reason": "Equal apart from parameter names, which the library declarations of the two versions spell differently (`maxLength` against `targetLength`).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0007
+    },
+    {
+      "id": "different:parenthesization",
+      "reason": "Equal apart from parentheses around a function type in a type argument or union position (`Meta<(<E>(a: E) => any)>`). A printer difference.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0008
+    },
+    {
+      "id": "different:predicate-signature-narrowed",
+      "reason": "A find-style signature whose `predicate` parameter union has fewer members in the candidate, or the same members apart from the instantiated attributes object (mobx-style stores in outline). Largest share seen: 8.313615143569738e-05 on js-outline.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00012
+    },
+    {
+      "id": "different:qualifier-dropped",
+      "reason": "Equal apart from a namespace qualifier one side writes (`express.Response` against `Response`).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0027
+    },
+    {
+      "id": "different:qualifier-path",
+      "reason": "The same declaration reached through another namespace path (`zod_1.z.core.$ZodStringParams` against `zod_1.core.$ZodStringParams`).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0036
+    },
+    {
+      "id": "different:readonly-wrapper",
+      "reason": "Equal apart from `Readonly<...>` wrappers or `readonly` modifiers that TypeScript 7 keeps from the declaration.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0019
+    },
+    {
+      "id": "different:record-vs-index-signature",
+      "reason": "A mapped record as `Record<string, T>` on one side and as the index signature `{ [x: string]: T; }` on the other. Largest share seen: 0.00011358795967627432 on js-cdxgen.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00017
+    },
+    {
+      "id": "different:recursion-elided",
+      "reason": "TypeScript 7 writes `...` for a recursive type one level earlier than TypeScript 6.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0012
+    },
+    {
+      "id": "different:reexported-entry-point",
+      "reason": "The same name through a different package entry (`import(\"playwright-core\").Locator` against `import(\"@playwright/test\").Locator`): one engine reached the type through a re-export shim. Largest share seen: 0.004501859463691525 on js-vue3-realworld.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00675
+    },
+    {
+      "id": "different:rest-parameter-dropped",
+      "reason": "Equal apart from a rest parameter one side keeps (`...args: Array<any>`). Largest share seen: 3.096140801224946e-05 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00005
+    },
+    {
+      "id": "different:return-literal-narrowed",
+      "reason": "A function type whose `boolean` return one engine narrowed to its literal (`() => boolean` against `() => true`). Largest share seen: 6.395088571976722e-06 on js-outline.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00001
+    },
+    {
+      "id": "different:return-value-name",
+      "reason": "A signature with equal parameters whose return the baseline prints as a lower-case value name (`=> vue`, the binding the plugin was imported under) and the candidate as a type name (`=> Plugin`). Never the other way round. Largest share seen: 0.00019573302016050108 on js-vue3-realworld.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00029
+    },
+    {
+      "id": "different:same-offset-neighbor",
+      "reason": "The key is shared by nested nodes that start at one offset (`profile.username === user?.username` and `profile`), and the candidate's own .typespans give another of them the baseline's type, or a type that differs from it in a way a class names: the engines differ only in which node the start-offset map kept. chen reads the .typespans of a native run, so it sees each node's own type. Largest share seen: 0.037954665260938325 on js-express-boilerplate.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.057
+    },
+    {
+      "id": "different:shadowed-type-parameter-name",
+      "reason": "TypeScript 6 renames a type parameter that shadows another (T_1); TypeScript 7 writes T. Same type, another name for the parameter.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0042
+    },
+    {
+      "id": "different:spelling-combination",
+      "reason": "The pair differs only in spellings that no single class covers (an optional member's `| undefined` next to a name reached through its file, a parenthesized union, array brackets); with every spelling normalised away the two are equal. Largest share seen: 0.0003691608689478915 on js-cdxgen.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00055
+    },
+    {
+      "id": "different:structure-vs-typeof",
+      "reason": "The native binary names a required CommonJS module `typeof import(\"./m\")` where TypeScript 6 wrote its structure, so that chen links it to the module (deliberate, see docs/ASTGEN.md).",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0325
+    },
+    {
+      "id": "different:this-vs-literal",
+      "reason": "The baseline says `this` (a polymorphic this type) and the candidate the literal the expression produces; compiled class fields of three.js in juice-shop's build output. Largest share seen: 0.0002983553862998584 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00045
+    },
+    {
+      "id": "different:type-parameter-instantiated",
+      "reason": "Equal apart from type parameters the baseline writes by name and the candidate instantiates with a type (`FormGroup<TControl>` against `FormGroup<AuthForm>`, `{ type: T; ... }` against `{ type: Hook; ... }`), anywhere in the type. Never the other way round. Largest share seen: 0.0002882675122513693 on js-angular-realworld.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00043
+    },
+    {
+      "id": "different:type-parameter-name",
+      "reason": "Equal apart from the name of a type parameter (`Promise<T_1>` against `Promise<R>`, `TypedPropertyDescriptor<T>` against `TypedPropertyDescriptor<F>`): the checkers name the parameter differently, one with the numeric suffix of a shadowed parameter or another scope's name. Largest share seen: 0.0031317283225680173 on js-vue3-realworld.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0047
+    },
+    {
+      "id": "different:typeof-alias-name",
+      "reason": "Both name a module namespace with `typeof`, through the alias each engine's import binding got (`typeof node_stream_1.promises` against `typeof promises_1`).",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.0001
+    },
+    {
+      "id": "different:typeof-alias-vs-import",
+      "reason": "TypeScript 6 named a module by a local alias or `typeof module.exports`; the native binary names it by its file (`typeof import(\"./config/morgan\")`), which is what chen links to the module.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0065
+    },
+    {
+      "id": "different:typeof-instantiated",
+      "reason": "`typeof X` against `typeof X<arguments>`: one engine kept the generic reference in the typeof, the other instantiated it (a task base class in outline). Largest share seen: 8.313615143569738e-05 on js-outline.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00012
+    },
+    {
+      "id": "different:typeof-name-vs-name",
+      "reason": "A value's type written `typeof global` by one engine and by the interface name (`Storage`) by the other. Largest share seen: 2.2517387645272335e-05 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00003
+    },
+    {
+      "id": "different:typeof-vs-structure",
+      "reason": "The whole baseline names a module object (`typeof module.exports`, `typeof import(\"./m\")`) and the candidate writes its structure; inside the exporting file the native binary keeps the structure, as TypeScript 6 did in some places.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0135
+    },
+    {
+      "id": "different:undefined-member",
+      "reason": "Equal apart from `| undefined` as the last member of the type or of an optional member's type: the two versions print optionality differently under exactOptionalPropertyTypes.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0087
+    },
+    {
+      "id": "different:union-member-instantiated",
+      "reason": "The same union members apart from object members that are the instantiated attributes of a model, typed from the outer generic by TypeScript 6 and from the concrete model by TypeScript 7 (an observable store's find predicate). Largest share seen: 0.004744333157617291 on js-express-boilerplate.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00712
+    },
+    {
+      "id": "different:union-narrowed",
+      "reason": "The candidate's union has only members of the baseline's: TypeScript 7 typed a contextually typed parameter by the branches that apply, TypeScript 6 printed the whole union. Largest share seen: 0.00018295377461783772 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00027
+    },
+    {
+      "id": "different:union-of-refinements",
+      "reason": "The candidate writes the baseline's type as a union of precise branches (`Promise<any>` against `Promise<Array<any>> | Promise<void | ComplaintModel>`): every member is the baseline with an `any` replaced. Reviewed on juice-shop's compiled data creator. Largest share seen: 0.0005765350245027386 on js-angular-realworld.",
+      "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
+      "maxShare": 0.00086
+    },
+    {
+      "id": "different:unresolved-external-type",
+      "reason": "The project has no node_modules and a name imported from a package is involved: the engines answer differently for a type they cannot resolve.",
+      "reviewer": "AI agent review of the corpus run, 2026-11-03",
+      "maxShare": 0.0143
     }
   ]
 }

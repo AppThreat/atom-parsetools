@@ -403,6 +403,11 @@ func safeBuildSetup(src string, projectFiles []string, disc *Discovery, checkers
 // typeFile types one file with its own exclusive checker and writes its map. An interrupt (a time
 // or memory budget) ends the file: what was collected before it is kept, the diagnostic says why,
 // and the checker, which may have been left half way through a query, is reported as tainted.
+//
+// A file the parser could not parse cleanly is not typed at all: the checker would work on a
+// recovered tree whose node positions are its own invention (Flow annotations, do expressions,
+// re-export defaults), and the type map is read through Babel's offsets, so an entry could name a
+// position Babel has no node for. Such a file is reported as syntax-not-parsed instead.
 func typeFile(ctx context.Context, s *Setup, w *Watch, b Budget, probe func(uint64), sf *ast.SourceFile, rel, outDir, relSlash string) (keys int, st fileStats, diag *FileReport, tainted bool) {
 	start := time.Now()
 	defer func() {
@@ -412,6 +417,18 @@ func typeFile(ctx context.Context, s *Setup, w *Watch, b Budget, probe func(uint
 			tainted = true
 		}
 	}()
+	notes := inspectText(sf.Text())
+	if len(notes) == 0 {
+		// what the text itself says about the file (binary content, broken encoding) names the
+		// reason; only a file that looks like source yet does not parse is syntax-not-parsed
+		if parseDiags := sf.Diagnostics(); len(parseDiags) > 0 {
+			detail := fmt.Sprintf("%d parse diagnostic(s)", len(parseDiags))
+			if text := parseDiags[0].MessageText(); text != "" {
+				detail += fmt.Sprintf(", first: %s", text)
+			}
+			return 0, st, &FileReport{File: relSlash, Reason: "syntax-not-parsed", Detail: detail, Ms: time.Since(start).Milliseconds()}, false
+		}
+	}
 	c, done := s.Program.GetTypeCheckerForFileExclusive(ctx, sf)
 	defer done()
 	slot := w.Begin()
@@ -424,7 +441,6 @@ func typeFile(ctx context.Context, s *Setup, w *Watch, b Budget, probe func(uint
 		defer c.ReleasePrinterCaches() // see budget.go: this halves the heap on outline and angular-realworld
 	}
 	bom := hasUTF8BOM(string(sf.FileName()))
-	notes := inspectText(sf.Text())
 	u := newUnit(c, sf, NewOffsets(sf.Text(), bom))
 	u.builderCalls = b.BuilderCalls
 	u.slot = slot

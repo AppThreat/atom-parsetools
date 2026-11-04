@@ -78,6 +78,28 @@ for (const [input, want] of CANONICAL_FORMS) {
   });
 }
 
+// The engines pad member lists differently (TypeScript 6 kept the line breaks of a JSDoc type
+// literal, TypeScript 7 prints one line), and with object-member-order on the padding is canonical
+// so a padded list meets its equal. These pairs all normalize to the same string.
+const PADDING_PAIRS = [
+  ["{ a: A; b: B; }", "{\n    a: A;\n    b: B;\n}"],
+  ["(o: { x?: number; }) => void", "(o: {    x?: number;}) => void"],
+  ["{ a: A; }", "{ a: A; }"],
+  ["{ a: 'x'; b: 2; }", "{ b: 2;\n a: 'x'; }"]
+];
+for (const [one, two] of PADDING_PAIRS) {
+  test(`object member padding is canonical: ${JSON.stringify(one)} equals ${JSON.stringify(two)}`, () => {
+    const ids = ["object-member-order"];
+    assert.equal(canon(one, ids), canon(two, ids));
+  });
+}
+
+// without the normalization the members keep their written order; only the padding collapses
+test("object member padding without the order normalization is collapsed, not reordered", () => {
+  assert.equal(canon("{ a: A;\n b: B; }", []), "{ a: A; b: B; }");
+  assert.notEqual(canon("{ a: A; b: B; }", []), canon("{ b: B; a: A; }", []));
+});
+
 // A normalizer that is switched off must not change a string. Real type maps showed that a normalizer that
 // printed strings again from tokens respelled 15 percent of them (`Array <string>`, `({ a; }: T)`), so this
 // runs the normalizer with nothing on over strings built from the shapes that occur in type maps.
@@ -179,6 +201,40 @@ test("every sample carries file, offset and both strings", () => {
   assert.deepEqual(s, { file: "x.ts", pos: 7, baseline: "number", candidate: "string" });
 });
 
+test("every class the tranche-3 corpus run reviewed is bounded on the allow-list", () => {
+  const allow = JSON.parse(readFileSync(join(here, "typemap-allow.json"), "utf8"));
+  const listed = new Set(allow.classes.map((e) => e.id));
+  const reviewed = [
+    "different:array-form", "different:duplicate-union-member", "different:union-narrowed", "different:import-wrapped-name",
+    "different:reexported-entry-point", "different:dollar-alias", "different:typeof-instantiated", "different:generic-instantiated-to-unknown",
+    "different:indexed-access-evaluated", "different:return-literal-narrowed", "different:union-of-refinements", "different:union-member-instantiated",
+    "different:object-member-superset", "different:contextual-answer", "different:module-vs-alias", "different:same-offset-neighbor",
+    "different:overload-added", "different:type-parameter-name", "different:record-vs-index-signature", "different:bare-fallback-answer",
+    "different:defaulted-vs-resolved", "different:predicate-signature-narrowed", "different:expansion-vs-alias", "different:object-member-differs",
+    "different:typeof-alias-name", "different:this-vs-literal", "different:type-parameter-instantiated",
+    "different:alias-prefixed-union", "different:return-value-name", "different:typeof-name-vs-name", "different:enum-keyed-record",
+    "different:generic-argument-differs", "different:class-structure-vs-signature", "different:rest-parameter-dropped", "different:function-typeof-vs-signature"
+  ];
+  const missing = reviewed.filter((id) => !listed.has(id));
+  assert.deepEqual(missing, [], "a class that fired on the corpus without its bound would fail the corpus run the moment it fires again");
+});
+
+test("no allow-list entry names a classifier that no longer exists", () => {
+  const allow = JSON.parse(readFileSync(join(here, "typemap-allow.json"), "utf8"));
+  const ids = new Set(DIFFERENCE_CLASSIFIERS.map((k) => `different:${k.id}`));
+  const stale = allow.classes.filter(
+    (e) => e.id.startsWith("different:") && !ids.has(e.id.replace(/\+spelling$/, "")) && e.id !== "different:spelling-combination"
+  );
+  assert.deepEqual(stale.map((e) => e.id), [], "entries whose classifier was removed leave differences unclassified with no one to name them");
+});
+
+test("a pair that differs only in spellings no single class covers is spelling-combination", () => {
+  const a = tree("spell-a", { "x.js": { 0: "(options: object, context?: { isSecureMode?: boolean | undefined; }) => import(\"../lib/cli/cliOptions\").OptionsWarning[]" } });
+  const b = tree("spell-b", { "x.js": { 0: "(options: object, context: { isSecureMode?: boolean; }) => OptionsWarning[]" } });
+  const r = diffTrees({ baseline: a, candidate: b });
+  assert.ok(r.classes["different:spelling-combination"], JSON.stringify(Object.keys(r.classes)));
+});
+
 test("difference classes: each classifier fires on its example and not on a plain difference", () => {
   const ctx = { noNodeModules: true, externalNames: new Set(["useForm"]), nodeText: "useForm()", minified: true };
   const cases = {
@@ -208,15 +264,76 @@ test("difference classes: each classifier fires on its example and not on a plai
     "recursion-elided": ["{ add(s: any): any; }", "{ add(s: any): ...; }"],
     "any-on-one-side": ["Foo<any>", "Bar<string>"],
     "literal-vs-widened": ['"a"', "string"],
-    "promise-wrapping": ["string", "Promise<string>"]
+    "promise-wrapping": ["string", "Promise<string>"],
+    "reexported-entry-point": ['import("playwright-core").Locator', 'import("@playwright/test").Locator'],
+    "dollar-alias": ["zod_1.z.core.$RefinementCtx", "zod_1.RefinementCtx"],
+    "typeof-instantiated": ["typeof BaseTask", "typeof BaseTask<object>"],
+    "generic-instantiated-to-unknown": ["(performer: InstanceType<P>) => void", "(performer: unknown) => void"],
+    "indexed-access-evaluated": ['import("vue-router").RouteMapGeneric[Name]["params"]', "{ [x: string]: string | Array<string>; }"],
+    "return-literal-narrowed": ["() => boolean", "() => true"],
+    "union-of-refinements": ["Array<() => Promise<any>>", "Array<(() => Promise<Array<any>>) | (() => Promise<void> | M)>"],
+    "union-member-instantiated": ["string | number | { a?: string; }", "{ a?: string; b?: number; } | string | number"],
+    "object-member-superset": ["{ isSaving?: boolean; data: string; }", "{ deletedAt?: string; isSaving?: boolean; data: string; }"],
+    "parenthesization": ["Array<() => void>", "Array<(() => void)>"],
+    "array-form": ["Array<() => Promise<any>>", "(() => Promise<any>)[]"],
+    "duplicate-union-member": ["Foo | Foo", "Foo"],
+    "union-narrowed": ["string | number | boolean", "string | number"],
+    "import-wrapped-name": ['import("../lib/cli/cliOptions").OptionsWarning[]', "OptionsWarning[]"],
+    "record-vs-index-signature": ["Record<string, number>", "{ [x: string]: number; }"],
+    "type-parameter-name": ["Promise<T_1>", "Promise<R>"],
+    "this-vs-literal": ["this", "1"],
+    "bare-fallback-answer": ["undefined", "string"],
+    "defaulted-vs-resolved": ["boolean", "Profile"],
+    "predicate-signature-narrowed": ["(predicate: string | number | { a?: string; }) => boolean", "(predicate: string | { b?: number; }) => boolean"],
+    "expansion-vs-alias": ['{ type: "a"; } | { type: "b"; }', "ai_1.ToolApprovalRequestOutput<{ q: string; }>"],
+    "object-member-differs": ["{ matches: () => boolean; priority: number; }", "{ matches: () => true; priority: number; }"],
+    "typeof-alias-name": ["typeof node_stream_1.promises", "typeof promises_1"],
+    "contextual-answer": ["void", "Comment"],
+    "class-structure-vs-signature": ["(c: any) => L", "{ (c: any): void; prototype: { _state: string; }; }"],
+    "rest-parameter-dropped": ["(e: any, ...args: Array<any>) => number", "(e: any) => number"],
+    "alias-prefixed-union": ["A<{ q: string; }> | { t: \"x\"; }", "{ t: \"x\"; }"],
+    "typeof-name-vs-name": ["typeof global", "Storage"],
+    "enum-keyed-record": ["{ url: { a: string; }; mention: { b: number; }; }", "{ [E.URL]: { a: string; }; [E.MENTION]: { c: boolean; }; }"],
+    "module-vs-alias": ['import("./api.11ty")', "Docs"],
+    "overload-added": ['{ (a: string): void; (b: number): void; }', '{ (a: string): void; (x: "webgpu"): C; (b: number): void; }'],
+    "same-offset-neighbor": ["boolean", "Profile"],
+    "type-parameter-instantiated": ["FormGroup<TControl>", "FormGroup<AuthForm>"],
+    "evaluated-to-object": ["(params?: P) => Promise<M>", "object"],
+    "return-value-name": ["(o?: O) => vue", "(o?: O) => Plugin"],
+    "generic-argument-differs": ["AsyncIterable<Part<{ a: any; b: string; }>>", "AsyncIterable<Part<{ a: Tool<string>; b: string; }>>"],
+    "function-typeof-vs-signature": ["typeof swapBuffers", "() => void"]
   };
+  // classes that only ever name the candidate as the more precise side
+  const oneWay = new Set([
+    "bare-fallback-answer", "defaulted-vs-resolved", "object-member-superset", "type-parameter-instantiated",
+    "evaluated-to-object", "return-value-name", "function-typeof-vs-signature", "this-vs-literal"
+  ]);
   for (const k of DIFFERENCE_CLASSIFIERS) {
     if (k.id === "length-limit") continue;
     const [b, c] = cases[k.id];
-    assert.ok(k.test(b, c, ctx), `${k.id} should fire on ${b} / ${c}`);
-    const neutral = { noNodeModules: true, externalNames: new Set(["other"]), nodeText: "x", minified: false };
+    const perCase =
+      k.id === "contextual-answer"
+        ? { ...ctx, nodeText: "comment => this.comments" }
+        : k.id === "same-offset-neighbor"
+          ? { ...ctx, neighbors: ["Profile", "string", "boolean"] }
+          : ctx;
+    assert.ok(k.test(b, c, perCase), `${k.id} should fire on ${b} / ${c}`);
+    const neutral = { noNodeModules: true, externalNames: new Set(["other"]), nodeText: "x", minified: false, jsFile: false };
     assert.ok(!k.test("number", "string", neutral), `${k.id} must not fire on number / string`);
+    if (oneWay.has(k.id)) {
+      assert.ok(!k.test(c, b, perCase), `${k.id} never fires the other way round`);
+    }
   }
+  const byId = (id) => DIFFERENCE_CLASSIFIERS.find((k) => k.id === id);
+  assert.ok(!byId("type-parameter-name").test("Promise<User>", "Promise<Order>"), "two type names are not type parameters");
+  assert.ok(!byId("same-offset-neighbor").test("boolean", "Profile", { neighbors: ["Profile"] }), "needs another node at the offset");
+  assert.ok(!byId("same-offset-neighbor").test("boolean", "Profile", { neighbors: ["Profile", "string"] }), "needs the baseline's type on another node");
+  assert.ok(!byId("object-member-differs").test("{ a: boolean; }", "{ a: string; }", {}), "a member difference no class names is not named");
+  assert.ok(
+    byId("object-member-differs").test("{ f: () => void; a?: () => Promise<void>; }", "{ f: () => void; a?: object; }", {}),
+    "the `>` of an arrow closes no bracket, so the members after a function member are split"
+  );
+  assert.ok(!byId("typeof-name-vs-name").test("Foo", "Bar"), "two plain names are not a typeof difference");
   const external = DIFFERENCE_CLASSIFIERS.find((k) => k.id === "unresolved-external-type");
   assert.ok(!external.test("A", "B", { ...ctx, noNodeModules: false }), "needs node_modules to be absent");
   assert.ok(!external.test("A", "B", { ...ctx, nodeText: "other()" }), "needs an imported name to occur");

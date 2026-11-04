@@ -7,13 +7,25 @@ the GitHub releases page.
 ## 2.0.0 (unreleased)
 
 The first release with native type maps: `parsa` ("parse for atom"), a Go binary that writes
-JavaScript and TypeScript type maps with TypeScript 7's checker (typescript-go), which astgen uses
-when asked to. Babel still parses every file, the four commands keep their names, and without
-`ASTGEN_TYPES=native` astgen behaves as in 1.10.6 apart from the breaking changes below. 1.x keeps
-getting fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x`.
+JavaScript and TypeScript type maps with TypeScript 7's checker (typescript-go). astgen calls it by
+default and falls back to TypeScript 6 in this process when the binary is missing or fails, so a
+plain `npm install` still works and always produces types. Babel still parses every file, the four
+commands keep their names, and Node stays a requirement.
+
+The npm package does not carry `parsa`, and there are no npm packages for it. The binaries are
+attached to each GitHub release (see `docs/PACKAGING.md`), and consumers that ship them, such as
+cdxgen with the platform packages of `@cdxgen/cdxgen-plugins-bin` and atom's container images,
+point astgen at the binary through `ASTGEN_NATIVE_BIN` or place it next to `astgen.js`. 1.x keeps getting
+fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x`.
 
 ### Breaking changes
 
+- **Native type maps are the default.** With `ASTGEN_TYPES` unset or empty, astgen now requests the
+  `parsa` binary instead of TypeScript 6, so every consumer that did not set `ASTGEN_TYPES` gets
+  TypeScript 7's type strings (union and object member order, quote style, function signatures;
+  see "Differences in native type maps" below) when the binary is present, and the TypeScript 6
+  strings when it is not. Set `ASTGEN_TYPES=ts6` to keep the previous output on every machine.
+  `ASTGEN_VERSION` goes to 4.7.0 so caches keyed on it, such as chen's parse cache, are rebuilt.
 - **Output file names when astgen runs with `-i .`** (how chen runs it). Names were computed with
   the regular expression `"^" + src + "/"`, which with `src` set to `.` removed the first character
   and slash of every path, so `a/b.js` was written as `b.js`. Names are now relative to the source
@@ -32,16 +44,21 @@ getting fixes on the `release/1.x` branch, published under the npm dist-tag `rel
   CPU (at most 8), and its output does not depend on the checker count. It reads the same `ASTGEN_*`
   variables as astgen for discovery. `parsa js` without `--types-only` exits with an error: astgen
   writes the AST.
-- `ASTGEN_TYPES=native` makes astgen write type maps with `parsa` instead of TypeScript 6, and fall
-  back to TypeScript 6 with one warning when the binary is missing, fails, times out or its output
-  cannot be moved into place. `ASTGEN_NATIVE_BIN` names the binary (otherwise astgen looks next to
-  `astgen.js`, then on `PATH`), and `ASTGEN_NATIVE_MEMORY_MB` caps its heap for the whole run
-  (default 6,144 MB).
+- `ASTGEN_TYPES` chooses the type map engine: unset or empty means `native` (the new default),
+  `ts6` chooses TypeScript 6, `native` names the default explicitly, and an unknown value warns and
+  means `ts6`. When the binary is missing (the normal case after a plain `npm install`), fails,
+  times out or its output cannot be moved into place, astgen types with TypeScript 6 instead: under
+  the default with one quiet line on stderr, after an explicit `ASTGEN_TYPES=native` with one
+  warning. `ASTGEN_NATIVE_BIN` names the binary (otherwise astgen looks next to `astgen.js`, then
+  on `PATH`), and `ASTGEN_NATIVE_MEMORY_MB` caps its heap for the whole run (default 6,144 MB).
 - `.typespans` (native runs only): the type of each node keyed by `"start:end"`, so a consumer can
   look a node up by its own extent instead of its start offset. See `docs/OUTPUT_FORMATS.md`.
-- `astgen_manifest.jsonl` (native runs only): one record per run with the engine used, the reason
-  for a fallback, the TypeScript commit `parsa` was built from, the checker count, the tsconfig it
-  used, the files that hit a budget and why, and the number of types given up.
+- `astgen_manifest.jsonl`: one record per run with types on, whichever engine ran. It says what was
+  requested (`requested`: `native` or `ts6`) and by whom (`requestedBy`: `default` or `env`), which
+  engine ran (`engine`), and the reason of a fallback; a native record also carries the TypeScript
+  commit `parsa` was built from, the checker count, the tsconfig it used, the files that hit a
+  budget and why, and the number of types given up. A file astgen could not parse at all gets a
+  `{"kind":"file_error"}` record with the file and the reason.
 - `parsa` binaries for Linux, macOS and Windows on x64 and arm64, attached to each GitHub release with
   a `.sha256` file, build provenance and a post-build CycloneDX SBOM, and published to `ghcr.io/appthreat/parsa` (see
   `docs/PACKAGING.md`). The npm package does not include them.
@@ -55,7 +72,8 @@ getting fixes on the `release/1.x` branch, published under the npm dist-tag `rel
 
 ### Differences in native type maps
 
-Consumers that read `.typemap` files written with `ASTGEN_TYPES=native` should expect:
+Consumers that read `.typemap` files written by `parsa` (the default when the binary is present)
+should expect:
 
 - Union and object members in TypeScript 7's order (`"ADMIN" | "USER"` where TypeScript 6 wrote
   `"USER" | "ADMIN"`) and literal types in the source's quote style. chen's `TypeStringNormalizer`
@@ -67,13 +85,10 @@ Consumers that read `.typemap` files written with `ASTGEN_TYPES=native` should e
   longer treats `baseUrl` as a module root. `paths` aliases still resolve.
 - Each file has a work, time and memory budget. A file that exceeds one has no entries after the
   point where it stopped, and is listed in `astgen_manifest.jsonl`.
-
-## Planned changes
-
-A later 2.x release makes native type maps astgen's default, with TypeScript 6 kept as the fallback
-when `parsa` is missing or fails and `ASTGEN_TYPES=ts6` to choose it, and changes `ASTGEN_VERSION`
-so that caches keyed on it are rebuilt. The `astgen`, `phpastgen`, `rbastgen` and `scalasem` commands
-stay, Babel and `hermes-parser` keep writing the AST, and Node stays a requirement. The npm package
-does not carry `parsa` and there are no npm packages for it: it comes with the platform packages of
-`@cdxgen/cdxgen-plugins-bin`, where astgen will also look for it, and with atom's container images.
-After a plain `npm install`, astgen keeps TypeScript 6.
+- A file the TypeScript 7 parser cannot parse cleanly (Flow annotations, `do` expressions,
+  `export v from "m"`) gets no entries, and is listed in `astgen_manifest.jsonl` with the reason
+  `syntax-not-parsed`: the checker would type a recovered tree whose positions need not match
+  Babel's nodes. TypeScript 6 typed such files from its own recovered tree.
+- Fewer nodes typed in JavaScript that builds classes from constructor functions assigned to an
+  untyped global (`THREE.OrbitControls = function () { this.target = ...; }`): TypeScript 7 does not
+  infer the `this` members there, so those members and the calls through them have no entries.

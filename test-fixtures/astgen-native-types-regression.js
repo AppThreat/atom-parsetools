@@ -92,13 +92,16 @@ const fixtureProjects = ["type-inference-regression", "inference-edge-cases", "s
 
 // ---- pure functions ----
 
-test("requestedEngine: ts6 by default, native on request, unknown values warn and mean ts6", () => {
-  assert.equal(requestedEngine({}), "ts6");
-  assert.equal(requestedEngine({ ASTGEN_TYPES: "" }), "ts6");
-  assert.equal(requestedEngine({ ASTGEN_TYPES: "ts6" }), "ts6");
-  assert.equal(requestedEngine({ ASTGEN_TYPES: "NATIVE" }), "native");
+test("requestedEngine: native by default, ts6 or native by environment, unknown values warn and mean ts6", () => {
+  assert.deepEqual(requestedEngine({}), { engine: "native", requestedBy: "default" });
+  assert.deepEqual(requestedEngine({ ASTGEN_TYPES: "" }), { engine: "native", requestedBy: "default" });
+  assert.deepEqual(requestedEngine({ ASTGEN_TYPES: "  " }), { engine: "native", requestedBy: "default" });
+  assert.deepEqual(requestedEngine({ ASTGEN_TYPES: "native" }), { engine: "native", requestedBy: "env" });
+  assert.deepEqual(requestedEngine({ ASTGEN_TYPES: "NATIVE" }), { engine: "native", requestedBy: "env" });
+  assert.deepEqual(requestedEngine({ ASTGEN_TYPES: "ts6" }), { engine: "ts6", requestedBy: "env" });
+  assert.deepEqual(requestedEngine({ ASTGEN_TYPES: "TS6" }), { engine: "ts6", requestedBy: "env" });
   const warned = [];
-  assert.equal(requestedEngine({ ASTGEN_TYPES: "tsgo" }, (m) => warned.push(m)), "ts6");
+  assert.deepEqual(requestedEngine({ ASTGEN_TYPES: "tsgo" }, (m) => warned.push(m)), { engine: "ts6", requestedBy: "env" });
   assert.equal(warned.length, 1);
   assert.match(warned[0], /tsgo/);
 });
@@ -130,26 +133,103 @@ test("the manifest is a .jsonl file and records the diagnostics", () => {
   assert.ok(MANIFEST_FILENAME.endsWith(".jsonl") && !MANIFEST_FILENAME.endsWith(".json"));
   const out = mkdtempSync(join(root, "man-"));
   const file = writeManifestRecord(out, typesRecord({
-    engine: "native", requested: "native", bin: "/x", version: "4.5.2", files: 3,
+    engine: "native", requested: "native", requestedBy: "default", bin: "/x", version: "4.5.2", files: 3,
     report: { typescript: "abc", workers: 2, gaveUpTypes: 4, diagnostics: [{ file: "a.js", reason: "file-work-limit" }], warnings: ["w"] }
   }));
   const rec = JSON.parse(readFileSync(file, "utf8").trim());
   assert.equal(rec.engine, "native");
+  assert.equal(rec.requested, "native");
+  assert.equal(rec.requestedBy, "default");
   assert.equal(rec.types_given_up, 4);
   assert.deepEqual(rec.diagnostics, [{ file: "a.js", reason: "file-work-limit" }]);
-  const fb = typesRecord({ engine: "ts6", requested: "native", fallbackReason: "no binary", version: "x" });
+  const fb = typesRecord({ engine: "ts6", requested: "native", requestedBy: "env", fallbackReason: "no binary", version: "x" });
   assert.equal(fb.fallback_reason, "no binary");
   assert.equal(fb.diagnostics, undefined);
+  const plain = typesRecord({ engine: "ts6", requested: "ts6", requestedBy: "env", version: "x" });
+  assert.equal(plain.fallback_reason, undefined);
 });
 
 // ---- default behaviour ----
 
-test("without ASTGEN_TYPES nothing changes: no manifest, no native run", () => {
+test("without ASTGEN_TYPES and a binary present, the native phase runs and the record says who asked", () => {
   const project = join(here, "projects", "simple-js");
-  const r = runAstgen(project, { ASTGEN_TYPES: "" });
+  const r = runAstgen(project, { ASTGEN_TYPES: "", ASTGEN_NATIVE_BIN: builtBinary });
   assert.equal(r.status, 0, r.stderr);
-  assert.ok(!existsSync(join(r.out, MANIFEST_FILENAME)), "the default run must not write a manifest");
+  assert.ok(!/using TypeScript 6/.test(r.stderr), r.stderr);
   assert.ok(listFiles(r.out, ".typemap").length > 0);
+  assert.ok(listFiles(r.out, ".typespans").length > 0, "the default requests the native binary");
+  const rec = JSON.parse(readFileSync(join(r.out, MANIFEST_FILENAME), "utf8").trim().split("\n").pop());
+  assert.equal(rec.engine, "native");
+  assert.equal(rec.requested, "native");
+  assert.equal(rec.requestedBy, "default");
+  rmSync(r.out, { recursive: true, force: true });
+}, { needsBinary: true });
+
+test("without ASTGEN_TYPES and no binary, the run falls back quietly and records requestedBy default", () => {
+  const project = join(here, "projects", "simple-js");
+  const base = runAstgen(project, { ASTGEN_TYPES: "ts6" });
+  const r = runAstgen(project, { ASTGEN_TYPES: "", ASTGEN_NATIVE_BIN: "", PATH: "" });
+  assert.equal(r.status, 0, r.stderr);
+  const lines = r.stderr.split("\n").filter((l) => l.includes("TypeScript 6"));
+  assert.equal(lines.length, 1, `one quiet line expected, got ${lines.length}:\n${r.stderr}`);
+  assert.ok(!/ASTGEN_TYPES=native/.test(lines[0]), "the user set nothing, so the line must not name ASTGEN_TYPES");
+  assert.ok(!/falling back/.test(lines[0]), "a missing binary under the default is normal, not a fallback from a request");
+  const rec = JSON.parse(readFileSync(join(r.out, MANIFEST_FILENAME), "utf8").trim().split("\n").pop());
+  assert.equal(rec.engine, "ts6");
+  assert.equal(rec.requested, "native");
+  assert.equal(rec.requestedBy, "default");
+  assert.ok(rec.fallback_reason, "the record says why TypeScript 6 ran");
+  assert.deepEqual(listFiles(r.out, ".typemap"), listFiles(base.out, ".typemap"));
+  for (const f of listFiles(base.out, ".typemap")) {
+    assert.equal(readFileSync(join(r.out, f), "utf8"), readFileSync(join(base.out, f), "utf8"), `${f} must equal the TypeScript 6 output`);
+  }
+  rmSync(r.out, { recursive: true, force: true });
+  rmSync(base.out, { recursive: true, force: true });
+});
+
+test("ASTGEN_TYPES=ts6 never starts the binary and still writes the record", () => {
+  if (process.platform === "win32") return;
+  const project = join(here, "projects", "simple-js");
+  const dir = mkdtempSync(join(root, "never-"));
+  const marker = join(dir, "started");
+  // a binary that would prove it ran by leaving a marker and failing loudly
+  const stub = join(dir, "parsa");
+  writeFileSync(stub, `#!/bin/sh\ntouch "${marker}"\nexit 3\n`);
+  chmodSync(stub, 0o755);
+  const r = runAstgen(project, { ASTGEN_TYPES: "ts6", ASTGEN_NATIVE_BIN: stub });
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(!existsSync(marker), "ts6 must never start the binary");
+  assert.ok(!/ASTGEN_TYPES=native/.test(r.stderr), r.stderr);
+  assert.deepEqual(listFiles(r.out, ".typespans"), [], "ts6 writes no span files");
+  const rec = JSON.parse(readFileSync(join(r.out, MANIFEST_FILENAME), "utf8").trim().split("\n").pop());
+  assert.equal(rec.engine, "ts6");
+  assert.equal(rec.requested, "ts6");
+  assert.equal(rec.requestedBy, "env");
+  assert.equal(rec.fallback_reason, undefined);
+  rmSync(r.out, { recursive: true, force: true });
+});
+
+test("an unknown ASTGEN_TYPES warns once, means ts6 and the record says so", () => {
+  const project = join(here, "projects", "simple-js");
+  const r = runAstgen(project, { ASTGEN_TYPES: "tsgo", ASTGEN_NATIVE_BIN: "", PATH: "" });
+  assert.equal(r.status, 0, r.stderr);
+  const warned = r.stderr.split("\n").filter((l) => /ASTGEN_TYPES=tsgo/.test(l));
+  assert.equal(warned.length, 1, r.stderr);
+  const rec = JSON.parse(readFileSync(join(r.out, MANIFEST_FILENAME), "utf8").trim().split("\n").pop());
+  assert.equal(rec.engine, "ts6");
+  assert.equal(rec.requested, "ts6");
+  assert.equal(rec.requestedBy, "env");
+  assert.equal(rec.fallback_reason, undefined);
+  assert.ok(listFiles(r.out, ".typemap").length > 0, "TypeScript 6 types are written");
+  rmSync(r.out, { recursive: true, force: true });
+});
+
+test("--no-tsTypes writes neither types nor a record", () => {
+  const project = join(here, "projects", "simple-js");
+  const r = runAstgen(project, { ASTGEN_TYPES: "" }, ["--no-tsTypes"]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(listFiles(r.out, ".typemap"), []);
+  assert.ok(!existsSync(join(r.out, MANIFEST_FILENAME)), "no types phase, no record");
   rmSync(r.out, { recursive: true, force: true });
 });
 
@@ -170,6 +250,7 @@ test("a missing binary warns once and the run still has TypeScript 6 types", () 
   const rec = JSON.parse(readFileSync(join(r.out, MANIFEST_FILENAME), "utf8").trim().split("\n").pop());
   assert.equal(rec.engine, "ts6");
   assert.equal(rec.requested, "native");
+  assert.equal(rec.requestedBy, "env");
   assert.match(rec.fallback_reason, /ASTGEN_NATIVE_BIN/);
   rmSync(r.out, { recursive: true, force: true });
   rmSync(base.out, { recursive: true, force: true });
@@ -188,6 +269,8 @@ test("a binary that fails leaves no partial type maps, warns once, and falls bac
   assert.ok(!existsSync(join(r.out, "partial.js.typemap")), "output of the failed run must not stay");
   assert.ok(readdirSync(r.out).every((n) => !n.startsWith(".typemap-native-")), "the staging directory must be removed");
   assert.ok(listFiles(r.out, ".typemap").length > 0, "TypeScript 6 types are written instead");
+  const rec = JSON.parse(readFileSync(join(r.out, MANIFEST_FILENAME), "utf8").trim().split("\n").pop());
+  assert.equal(rec.requestedBy, "env");
   rmSync(r.out, { recursive: true, force: true });
 });
 
@@ -242,6 +325,18 @@ await (async () => {
     console.error(`not ok - ${name}\n${err.stack}`);
   }
 })();
+
+// the version contract: the manifest names the same version --version prints, and the default
+// change bumped it off 4.6.0 so caches keyed on it are rebuilt
+test("the manifest version is what --version prints, and no longer 4.6.0", () => {
+  const v = spawnSync(process.execPath, [astgen, "--version"], { encoding: "utf8" }).stdout.trim();
+  assert.match(v, /^\d+\.\d+\.\d+$/);
+  assert.notEqual(v, "4.6.0", "the native default changes the type strings; ASTGEN_VERSION must move with it");
+  const out = mkdtempSync(join(root, "ver-"));
+  const file = writeManifestRecord(out, typesRecord({ engine: "ts6", requested: "native", requestedBy: "default", version: v }));
+  assert.equal(JSON.parse(readFileSync(file, "utf8").trim()).astgen_version, v);
+  rmSync(out, { recursive: true, force: true });
+});
 
 // ---- the native run ----
 

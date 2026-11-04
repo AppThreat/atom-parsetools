@@ -45,3 +45,9 @@ That gap is what `ci/verify-packed-tarball.sh` exists for; run it. The usual roo
 ## astgen type workers fell back to inline processing
 
 The message `Falling back to single-threaded type generation after worker failure` means a worker thread died (usually memory) and the run completed correctly but slower. Lower `ASTGEN_CONCURRENCY` to flatten the heap, or reduce parallelism and retry. The fallback is safe: writes are idempotent and the inline path produces the same output modulo the union-order caveat.
+
+## Which engine wrote the type maps
+
+Since 2.0.0 the default engine is `parsa` (TypeScript 7's checker), and TypeScript 6 is the fallback. Two machines with the same astgen version can therefore produce different type strings if only one of them has the binary. Do not guess from the output: read the last `{"kind":"types",...}` record of `astgen_manifest.jsonl` in the output directory. Its `engine` field says what ran, `requested` and `requestedBy` say what was asked for and whether the default or an explicit `ASTGEN_TYPES` asked, and `fallback_reason` says why the requested engine did not run. A run with `--no-tsTypes` writes no record. chen's jssrc2cpg reads the same record.
+
+To pin one engine, set `ASTGEN_TYPES=ts6` (or `native`) for the run. To see why `parsa` was not used, check the one-line message on stderr; `ASTGEN_NATIVE_BIN`, next to `astgen.js` and `PATH` are the places astgen looked, in that order, and a value of `ASTGEN_NATIVE_BIN` that is not a file is an error rather than a reason to keep searching.
