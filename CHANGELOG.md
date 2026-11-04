@@ -12,10 +12,10 @@ default and falls back to TypeScript 6 in this process when the binary is missin
 plain `npm install` still works and always produces types. Babel still parses every file, the four
 commands keep their names, and Node stays a requirement.
 
-The npm package does not carry `parsa`, and there are no npm packages for it. It comes with the
-platform packages of `@cdxgen/cdxgen-plugins-bin`, and cdxgen points astgen at it through
-`ASTGEN_NATIVE_BIN`; atom's container images place it next to `astgen.js` or set the same variable.
-The binaries are also attached to each GitHub release (see `docs/PACKAGING.md`). 1.x keeps getting
+The npm package does not carry `parsa`, and there are no npm packages for it. The binaries are
+attached to each GitHub release (see `docs/PACKAGING.md`), and consumers that ship them, such as
+cdxgen with the platform packages of `@cdxgen/cdxgen-plugins-bin` and atom's container images,
+point astgen at the binary through `ASTGEN_NATIVE_BIN` or place it next to `astgen.js`. 1.x keeps getting
 fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x`.
 
 ### Breaking changes
@@ -57,7 +57,8 @@ fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x
   requested (`requested`: `native` or `ts6`) and by whom (`requestedBy`: `default` or `env`), which
   engine ran (`engine`), and the reason of a fallback; a native record also carries the TypeScript
   commit `parsa` was built from, the checker count, the tsconfig it used, the files that hit a
-  budget and why, and the number of types given up.
+  budget and why, and the number of types given up. A file astgen could not parse at all gets a
+  `{"kind":"file_error"}` record with the file and the reason.
 - `parsa` binaries for Linux, macOS and Windows on x64 and arm64, attached to each GitHub release with
   a `.sha256` file, build provenance and a post-build CycloneDX SBOM, and published to `ghcr.io/appthreat/parsa` (see
   `docs/PACKAGING.md`). The npm package does not include them.
@@ -84,3 +85,10 @@ should expect:
   longer treats `baseUrl` as a module root. `paths` aliases still resolve.
 - Each file has a work, time and memory budget. A file that exceeds one has no entries after the
   point where it stopped, and is listed in `astgen_manifest.jsonl`.
+- A file the TypeScript 7 parser cannot parse cleanly (Flow annotations, `do` expressions,
+  `export v from "m"`) gets no entries, and is listed in `astgen_manifest.jsonl` with the reason
+  `syntax-not-parsed`: the checker would type a recovered tree whose positions need not match
+  Babel's nodes. TypeScript 6 typed such files from its own recovered tree.
+- Fewer nodes typed in JavaScript that builds classes from constructor functions assigned to an
+  untyped global (`THREE.OrbitControls = function () { this.target = ...; }`): TypeScript 7 does not
+  infer the `this` members there, so those members and the calls through them have no entries.
