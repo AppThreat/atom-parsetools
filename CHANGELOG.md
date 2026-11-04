@@ -6,11 +6,11 @@ the GitHub releases page.
 
 ## 2.0.0 (unreleased)
 
-The first release of the native rewrite: `parsa` ("parse for atom"), one Go binary that is to
-replace `astgen`, `phpastgen`, `rbastgen` and `scalasem` with a subcommand per language. In this
-release it writes JavaScript and TypeScript type maps with TypeScript 7's checker (typescript-go),
-and astgen uses it when asked to. Babel still parses every file, and without `ASTGEN_TYPES=native`
-astgen behaves as in 1.10.6 apart from the breaking changes below.
+The first release with native type maps: `parsa` ("parse for atom"), a Go binary that writes
+JavaScript and TypeScript type maps with TypeScript 7's checker (typescript-go), which astgen uses
+when asked to. Babel still parses every file, the four commands keep their names, and without
+`ASTGEN_TYPES=native` astgen behaves as in 1.10.6 apart from the breaking changes below. 1.x keeps
+getting fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x`.
 
 ### Breaking changes
 
@@ -30,8 +30,8 @@ astgen behaves as in 1.10.6 apart from the breaking changes below.
 - `parsa js --types-only -i SRC -o OUT` writes a `.typemap` and a `.typespans` for every file astgen
   would type. It runs every file through TypeScript 7's checker in one process, with one checker per
   CPU (at most 8), and its output does not depend on the checker count. It reads the same `ASTGEN_*`
-  variables as astgen for discovery. `parsa js` without `--types-only` (the AST) is not available
-  yet and exits with an error.
+  variables as astgen for discovery. `parsa js` without `--types-only` exits with an error: astgen
+  writes the AST.
 - `ASTGEN_TYPES=native` makes astgen write type maps with `parsa` instead of TypeScript 6, and fall
   back to TypeScript 6 with one warning when the binary is missing, fails, times out or its output
   cannot be moved into place. `ASTGEN_NATIVE_BIN` names the binary (otherwise astgen looks next to
@@ -68,24 +68,10 @@ Consumers that read `.typemap` files written with `ASTGEN_TYPES=native` should e
 - Each file has a work, time and memory budget. A file that exceeds one has no entries after the
   point where it stopped, and is listed in `astgen_manifest.jsonl`.
 
-## Planned breaking changes
+## Planned changes
 
-As the rest of the rewrite lands in later 2.x releases, the Node commands are replaced by `parsa`
-subcommands, with no wrappers under the old names:
-
-| today | after the rewrite |
-|---|---|
-| `astgen` | `parsa js` |
-| `phpastgen` | `parsa php` |
-| `rbastgen` | `parsa rb` |
-| `scalasem` | `parsa scala` |
-
-`parsa` will need no Node runtime. The Ruby and PHP parsers do not change: `parsa rb` runs
-`ruby_ast_gen` in Ruby 3.4 or 4.0 and `parsa php` runs nikic/php-parser in PHP 8, as rbastgen and
-phpastgen do today, so Ruby and PHP projects still need those runtimes, and the gem bundle and the
-nikic tree that the npm package keeps in `plugins/` move inside the `parsa` binary. `parsa scala`
-still runs its TASTy helper on the JVM. `parsa` ships as a binary on GitHub releases and through
-`@cdxgen/cdxgen-plugins-bin` for Linux glibc and musl (x64, arm64), macOS (arm64, x64) and Windows
-(x64, arm64), and not as npm packages.
-Each release that removes or changes a command lists the replacement and every changed flag,
-environment variable and output difference here.
+A later 2.x release makes native type maps astgen's default, with TypeScript 6 kept as the fallback
+when `parsa` is missing or fails and `ASTGEN_TYPES=ts6` to choose it, and changes `ASTGEN_VERSION`
+so that caches keyed on it are rebuilt. The `astgen`, `phpastgen`, `rbastgen` and `scalasem` commands
+stay, Babel and `hermes-parser` keep writing the AST, and Node stays a requirement. That release
+lists here how `npm install` brings the `parsa` binary.

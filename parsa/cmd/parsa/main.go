@@ -1,11 +1,11 @@
-// Command parsa ("parse for atom") is the native replacement for atom-parsetools'
-// parsers, with a subcommand per language. It implements one so far:
+// Command parsa ("parse for atom") writes JavaScript and TypeScript type maps for
+// astgen with TypeScript 7's checker:
 //
 //	parsa js --types-only -i SRC -o OUT [--workers N] [--report FILE]
 //
-// which writes OUT/<relative path>.typemap and .typespans for every file astgen
-// would type, using the flags and ASTGEN_* variables astgen reads. parsa js
-// without --types-only (the AST), parsa php, parsa rb and parsa scala come later.
+// writes OUT/<relative path>.typemap and .typespans for every file astgen would
+// type, using the flags and ASTGEN_* variables astgen reads. astgen keeps writing
+// the AST with Babel, so --types-only is required.
 package main
 
 import (
@@ -46,7 +46,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, `usage: parsa <language> [options]
 
 languages:
-  js        JavaScript and TypeScript. Only type maps so far, so --types-only is required:
+  js        JavaScript and TypeScript type maps (astgen writes the AST), so --types-only is required:
                 --types-only    write .typemap and .typespans files, as astgen does with types on
             -i, --src DIR       source directory            [default: .]
             -o, --output DIR    output directory            [default: <src>/ast_out]
@@ -140,7 +140,7 @@ func runJS(in []string) int {
 		return 2
 	}
 	if !a.typesOnly {
-		fmt.Fprintln(os.Stderr, "parsa js writes only type maps so far; pass --types-only (astgen still writes the AST)")
+		fmt.Fprintln(os.Stderr, "parsa js writes only type maps; pass --types-only (astgen writes the AST)")
 		return 2
 	}
 	if a.output == "ast_out" {
