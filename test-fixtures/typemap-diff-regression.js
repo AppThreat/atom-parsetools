@@ -230,14 +230,65 @@ test("difference classes: each classifier fires on its example and not on a plai
     "recursion-elided": ["{ add(s: any): any; }", "{ add(s: any): ...; }"],
     "any-on-one-side": ["Foo<any>", "Bar<string>"],
     "literal-vs-widened": ['"a"', "string"],
-    "promise-wrapping": ["string", "Promise<string>"]
+    "promise-wrapping": ["string", "Promise<string>"],
+    "reexported-entry-point": ['import("playwright-core").Locator', 'import("@playwright/test").Locator'],
+    "dollar-alias": ["zod_1.z.core.$RefinementCtx", "zod_1.RefinementCtx"],
+    "typeof-instantiated": ["typeof BaseTask", "typeof BaseTask<object>"],
+    "generic-instantiated-to-unknown": ["(performer: InstanceType<P>) => void", "(performer: unknown) => void"],
+    "indexed-access-evaluated": ['import("vue-router").RouteMapGeneric[Name]["params"]', "{ [x: string]: string | Array<string>; }"],
+    "return-literal-narrowed": ["() => boolean", "() => true"],
+    "union-of-refinements": ["Array<() => Promise<any>>", "Array<(() => Promise<Array<any>>) | (() => Promise<void> | M)>"],
+    "union-member-instantiated": ["string | number | { a?: string; }", "string | number | { b?: number; }"],
+    "object-member-superset": ["{ isSaving?: boolean; data: string; }", "{ deletedAt?: string; isSaving?: boolean; data: string; }"],
+    "parenthesization": ["Array<() => void>", "Array<(() => void)>"],
+    "array-form": ["Array<() => Promise<any>>", "(() => Promise<any>)[]"],
+    "duplicate-union-member": ["Foo | Foo", "Foo"],
+    "union-narrowed": ["string | number | boolean", "string | number"],
+    "import-wrapped-name": ['import("../lib/cli/cliOptions").OptionsWarning[]', "OptionsWarning[]"],
+    "record-vs-index-signature": ["Record<string, number>", "{ [x: string]: number; }"],
+    "type-parameter-name": ["Promise<T_1>", "Promise<R>"],
+    "this-vs-literal": ["this", "1"],
+    "bare-fallback-answer": ["undefined", "string"],
+    "defaulted-vs-resolved": ["boolean", "Profile"],
+    "js-primitive-mismatch": ["boolean", "string"],
+    "predicate-signature-narrowed": ["(predicate: string | number | { a?: string; }) => boolean", "(predicate: string | { b?: number; }) => boolean"],
+    "expansion-vs-alias": ['{ type: "a"; } | { type: "b"; }', "ai_1.ToolApprovalRequestOutput<{ q: string; }>"],
+    "object-member-differs": ["{ matches: () => boolean; priority: number; }", "{ matches: () => true; priority: number; }"],
+    "typeof-alias-name": ["typeof node_stream_1.promises", "typeof promises_1"],
+    "contextual-answer": ["void", "Comment"],
+    "class-structure-vs-signature": ["(c: any) => L", "{ (c: any): void; prototype: { _state: string; }; }"],
+    "rest-parameter-dropped": ["(e: any, ...args: Array<any>) => number", "(e: any) => number"],
+    "primitive-on-one-side": ["boolean", "{ uniforms: string; }"],
+    "compiled-bundle": ["boolean", "void"],
+    "return-name-differs": ["(o?: O) => vue", "(o?: O) => Plugin"],
+    "alias-prefixed-union": ["A<{ q: string; }> | { t: \"x\"; }", "{ t: \"x\"; }"],
+    "object-sibling-declaration": ["{ a: string; data: number; }", "{ a: string; deletedAt: string; }"],
+    "typeof-name-vs-name": ["typeof global", "Storage"],
+    "enum-keyed-record": ["{ url: { a: string; }; mention: { b: number; }; }", "{ [E.URL]: { a: string; }; [E.MENTION]: { c: boolean; }; }"],
+    "module-vs-alias": ['import("./api.11ty")', "Docs"],
+    "member-chain-neighbor": ["{ a: string; }", "{ b: number; }"],
+    "overload-added": ['{ (a: string): void; (b: number): void; }', '{ (a: string): void; (x: "webgpu"): C; (b: number): void; }']
   };
   for (const k of DIFFERENCE_CLASSIFIERS) {
     if (k.id === "length-limit") continue;
     const [b, c] = cases[k.id];
-    assert.ok(k.test(b, c, ctx), `${k.id} should fire on ${b} / ${c}`);
-    const neutral = { noNodeModules: true, externalNames: new Set(["other"]), nodeText: "x", minified: false };
+    const perCase =
+      k.id === "compiled-bundle"
+        ? { ...ctx, compiled: true }
+        : k.id === "contextual-answer"
+        ? { ...ctx, nodeText: "comment => this.comments" }
+        : k.id === "member-chain-neighbor"
+          ? { ...ctx, nodeText: "config.email.smtp" }
+          : { ...ctx, jsFile: true };
+    assert.ok(k.test(b, c, perCase), `${k.id} should fire on ${b} / ${c}`);
+    const neutral = { noNodeModules: true, externalNames: new Set(["other"]), nodeText: "x", minified: false, jsFile: false };
     assert.ok(!k.test("number", "string", neutral), `${k.id} must not fire on number / string`);
+    if (k.id === "js-primitive-mismatch") {
+      assert.ok(!k.test("boolean", "string", { ...neutral, jsFile: false }), "js-primitive-mismatch needs a JavaScript file");
+    }
+    if (k.id === "defaulted-vs-resolved") {
+      assert.ok(!k.test("Profile", "boolean"), "defaulted-vs-resolved never fires the other way round");
+    }
   }
   const external = DIFFERENCE_CLASSIFIERS.find((k) => k.id === "unresolved-external-type");
   assert.ok(!external.test("A", "B", { ...ctx, noNodeModules: false }), "needs node_modules to be absent");
