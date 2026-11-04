@@ -1,0 +1,23 @@
+lib/typemap/canon.mjs
+  s_3f5c428a173daa::t_edde64e9777f8a 325
+  s_3f5c428a173daa::t_06e48e4a530420 334,339
+  s_3f5c428a173daa::t_9bf280d7531417 335-337,340
+test-fixtures/typemap-diff-regression.js
+  s_3f5c428a173daa::t_524561d51bfee8 81-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e068756c8b30690fbae5d7af87e3b20d33b6f99f",
+  "prompts": {},
+  "sessions": {
+    "s_3f5c428a173daa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_ad4eb6a9-5992-45ab-9fb8-5cb4fd12fb71",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
