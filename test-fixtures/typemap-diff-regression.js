@@ -208,12 +208,12 @@ test("every class the tranche-3 corpus run reviewed is bounded on the allow-list
     "different:array-form", "different:duplicate-union-member", "different:union-narrowed", "different:import-wrapped-name",
     "different:reexported-entry-point", "different:dollar-alias", "different:typeof-instantiated", "different:generic-instantiated-to-unknown",
     "different:indexed-access-evaluated", "different:return-literal-narrowed", "different:union-of-refinements", "different:union-member-instantiated",
-    "different:object-member-superset", "different:contextual-answer", "different:module-vs-alias", "different:member-chain-neighbor",
+    "different:object-member-superset", "different:contextual-answer", "different:module-vs-alias", "different:same-offset-neighbor",
     "different:overload-added", "different:type-parameter-name", "different:record-vs-index-signature", "different:bare-fallback-answer",
     "different:defaulted-vs-resolved", "different:predicate-signature-narrowed", "different:expansion-vs-alias", "different:object-member-differs",
-    "different:typeof-alias-name", "different:this-vs-literal", "different:compiled-bundle", "different:return-name-differs",
-    "different:alias-prefixed-union", "different:object-sibling-declaration", "different:typeof-name-vs-name", "different:enum-keyed-record",
-    "different:primitive-on-one-side", "different:class-structure-vs-signature", "different:rest-parameter-dropped", "different:spelling-combination"
+    "different:typeof-alias-name", "different:this-vs-literal", "different:type-parameter-instantiated",
+    "different:alias-prefixed-union", "different:return-value-name", "different:typeof-name-vs-name", "different:enum-keyed-record",
+    "different:generic-argument-differs", "different:class-structure-vs-signature", "different:rest-parameter-dropped", "different:function-typeof-vs-signature"
   ];
   const missing = reviewed.filter((id) => !listed.has(id));
   assert.deepEqual(missing, [], "a class that fired on the corpus without its bound would fail the corpus run the moment it fires again");
@@ -272,7 +272,7 @@ test("difference classes: each classifier fires on its example and not on a plai
     "indexed-access-evaluated": ['import("vue-router").RouteMapGeneric[Name]["params"]', "{ [x: string]: string | Array<string>; }"],
     "return-literal-narrowed": ["() => boolean", "() => true"],
     "union-of-refinements": ["Array<() => Promise<any>>", "Array<(() => Promise<Array<any>>) | (() => Promise<void> | M)>"],
-    "union-member-instantiated": ["string | number | { a?: string; }", "string | number | { b?: number; }"],
+    "union-member-instantiated": ["string | number | { a?: string; }", "{ a?: string; b?: number; } | string | number"],
     "object-member-superset": ["{ isSaving?: boolean; data: string; }", "{ deletedAt?: string; isSaving?: boolean; data: string; }"],
     "parenthesization": ["Array<() => void>", "Array<(() => void)>"],
     "array-form": ["Array<() => Promise<any>>", "(() => Promise<any>)[]"],
@@ -284,7 +284,6 @@ test("difference classes: each classifier fires on its example and not on a plai
     "this-vs-literal": ["this", "1"],
     "bare-fallback-answer": ["undefined", "string"],
     "defaulted-vs-resolved": ["boolean", "Profile"],
-    "js-primitive-mismatch": ["boolean", "string"],
     "predicate-signature-narrowed": ["(predicate: string | number | { a?: string; }) => boolean", "(predicate: string | { b?: number; }) => boolean"],
     "expansion-vs-alias": ['{ type: "a"; } | { type: "b"; }', "ai_1.ToolApprovalRequestOutput<{ q: string; }>"],
     "object-member-differs": ["{ matches: () => boolean; priority: number; }", "{ matches: () => true; priority: number; }"],
@@ -292,38 +291,49 @@ test("difference classes: each classifier fires on its example and not on a plai
     "contextual-answer": ["void", "Comment"],
     "class-structure-vs-signature": ["(c: any) => L", "{ (c: any): void; prototype: { _state: string; }; }"],
     "rest-parameter-dropped": ["(e: any, ...args: Array<any>) => number", "(e: any) => number"],
-    "primitive-on-one-side": ["boolean", "{ uniforms: string; }"],
-    "compiled-bundle": ["boolean", "void"],
-    "return-name-differs": ["(o?: O) => vue", "(o?: O) => Plugin"],
     "alias-prefixed-union": ["A<{ q: string; }> | { t: \"x\"; }", "{ t: \"x\"; }"],
-    "object-sibling-declaration": ["{ a: string; data: number; }", "{ a: string; deletedAt: string; }"],
     "typeof-name-vs-name": ["typeof global", "Storage"],
     "enum-keyed-record": ["{ url: { a: string; }; mention: { b: number; }; }", "{ [E.URL]: { a: string; }; [E.MENTION]: { c: boolean; }; }"],
     "module-vs-alias": ['import("./api.11ty")', "Docs"],
-    "member-chain-neighbor": ["{ a: string; }", "{ b: number; }"],
-    "overload-added": ['{ (a: string): void; (b: number): void; }', '{ (a: string): void; (x: "webgpu"): C; (b: number): void; }']
+    "overload-added": ['{ (a: string): void; (b: number): void; }', '{ (a: string): void; (x: "webgpu"): C; (b: number): void; }'],
+    "same-offset-neighbor": ["boolean", "Profile"],
+    "type-parameter-instantiated": ["FormGroup<TControl>", "FormGroup<AuthForm>"],
+    "evaluated-to-object": ["(params?: P) => Promise<M>", "object"],
+    "return-value-name": ["(o?: O) => vue", "(o?: O) => Plugin"],
+    "generic-argument-differs": ["AsyncIterable<Part<{ a: any; b: string; }>>", "AsyncIterable<Part<{ a: Tool<string>; b: string; }>>"],
+    "function-typeof-vs-signature": ["typeof swapBuffers", "() => void"]
   };
+  // classes that only ever name the candidate as the more precise side
+  const oneWay = new Set([
+    "bare-fallback-answer", "defaulted-vs-resolved", "object-member-superset", "type-parameter-instantiated",
+    "evaluated-to-object", "return-value-name", "function-typeof-vs-signature", "this-vs-literal"
+  ]);
   for (const k of DIFFERENCE_CLASSIFIERS) {
     if (k.id === "length-limit") continue;
     const [b, c] = cases[k.id];
     const perCase =
-      k.id === "compiled-bundle"
-        ? { ...ctx, compiled: true }
-        : k.id === "contextual-answer"
+      k.id === "contextual-answer"
         ? { ...ctx, nodeText: "comment => this.comments" }
-        : k.id === "member-chain-neighbor"
-          ? { ...ctx, nodeText: "config.email.smtp" }
-          : { ...ctx, jsFile: true };
+        : k.id === "same-offset-neighbor"
+          ? { ...ctx, neighbors: ["Profile", "string", "boolean"] }
+          : ctx;
     assert.ok(k.test(b, c, perCase), `${k.id} should fire on ${b} / ${c}`);
     const neutral = { noNodeModules: true, externalNames: new Set(["other"]), nodeText: "x", minified: false, jsFile: false };
     assert.ok(!k.test("number", "string", neutral), `${k.id} must not fire on number / string`);
-    if (k.id === "js-primitive-mismatch") {
-      assert.ok(!k.test("boolean", "string", { ...neutral, jsFile: false }), "js-primitive-mismatch needs a JavaScript file");
-    }
-    if (k.id === "defaulted-vs-resolved") {
-      assert.ok(!k.test("Profile", "boolean"), "defaulted-vs-resolved never fires the other way round");
+    if (oneWay.has(k.id)) {
+      assert.ok(!k.test(c, b, perCase), `${k.id} never fires the other way round`);
     }
   }
+  const byId = (id) => DIFFERENCE_CLASSIFIERS.find((k) => k.id === id);
+  assert.ok(!byId("type-parameter-name").test("Promise<User>", "Promise<Order>"), "two type names are not type parameters");
+  assert.ok(!byId("same-offset-neighbor").test("boolean", "Profile", { neighbors: ["Profile"] }), "needs another node at the offset");
+  assert.ok(!byId("same-offset-neighbor").test("boolean", "Profile", { neighbors: ["Profile", "string"] }), "needs the baseline's type on another node");
+  assert.ok(!byId("object-member-differs").test("{ a: boolean; }", "{ a: string; }", {}), "a member difference no class names is not named");
+  assert.ok(
+    byId("object-member-differs").test("{ f: () => void; a?: () => Promise<void>; }", "{ f: () => void; a?: object; }", {}),
+    "the `>` of an arrow closes no bracket, so the members after a function member are split"
+  );
+  assert.ok(!byId("typeof-name-vs-name").test("Foo", "Bar"), "two plain names are not a typeof difference");
   const external = DIFFERENCE_CLASSIFIERS.find((k) => k.id === "unresolved-external-type");
   assert.ok(!external.test("A", "B", { ...ctx, noNodeModules: false }), "needs node_modules to be absent");
   assert.ok(!external.test("A", "B", { ...ctx, nodeText: "other()" }), "needs an imported name to occur");
