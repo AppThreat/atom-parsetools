@@ -1,0 +1,19 @@
+.github/workflows/ci.yml
+  s_3f5c428a173daa::t_1e943e031ec5f2 108,110
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ff3fbe55c52f315488c4c020b0db59e80543a16",
+  "prompts": {},
+  "sessions": {
+    "s_3f5c428a173daa": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_ad4eb6a9-5992-45ab-9fb8-5cb4fd12fb71",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
