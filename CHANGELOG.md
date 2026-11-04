@@ -59,6 +59,12 @@ fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x
   commit `parsa` was built from, the checker count, the tsconfig it used, the files that hit a
   budget and why, and the number of types given up. A file astgen could not parse at all gets a
   `{"kind":"file_error"}` record with the file and the reason.
+- Budgets on the TypeScript 6 type phase: `ASTGEN_TYPE_FILE_TIMEOUT_MS` (default 60,000) for one
+  file's types and `ASTGEN_TYPE_PROGRAM_TIMEOUT_MS` (default 300,000) for building the program. The
+  phase runs in a worker thread that astgen stops past a budget; a file past it keeps its AST and
+  gets no types, and the run carries on. Each case is a `type_budget` record in
+  `astgen_manifest.jsonl`. cdxgen's own `scanOnePathInner` and large bundles that redeclare the same
+  names no longer hold a run for minutes.
 - `parsa` binaries for Linux, macOS and Windows on x64 and arm64, attached to each GitHub release with
   a `.sha256` file, build provenance and a post-build CycloneDX SBOM, and published to `ghcr.io/appthreat/parsa` (see
   `docs/PACKAGING.md`). The npm package does not include them.
