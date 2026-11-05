@@ -290,6 +290,8 @@ const babelSyntaxPlugins = [
   "classPrivateProperties",
   "classPrivateMethods",
   "decorators-legacy",
+  "decoratorAutoAccessors",
+
   "exportDefaultFrom",
   "doExpressions",
   "numericSeparator",
@@ -393,6 +395,7 @@ const babelFlowParserOptions = {
     "optionalChaining",
     "classProperties",
     "decorators-legacy",
+  "decoratorAutoAccessors",
     "exportDefaultFrom",
     "doExpressions",
     "numericSeparator",
@@ -420,6 +423,7 @@ const babelSafeFlowParserOptions = {
     "optionalChaining",
     "classProperties",
     "decorators-legacy",
+  "decoratorAutoAccessors",
     "exportDefaultFrom",
     "doExpressions",
     "numericSeparator",
@@ -3600,7 +3604,15 @@ const runTypeGenWorker = async ({ shard, projectFiles, options, announce }) => {
   }
 };
 
-export { buildVueParseCandidates, vueGeometryPreserved, fileToJsAst, writeAstFile, getCircularReplacer };
+export {
+  buildVueParseCandidates,
+  vueGeometryPreserved,
+  fileToJsAst,
+  writeAstFile,
+  getCircularReplacer,
+  makeBabelOptions,
+  babelParserOptions
+};
 
 // Only run when invoked directly, not when imported by tests (the regression
 // suites import `buildVueParseCandidates` to check candidate geometry). A
