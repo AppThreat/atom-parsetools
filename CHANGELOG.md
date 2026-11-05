@@ -88,6 +88,9 @@ fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x
   slot shorthand (`#name`, `#[expr]`, a bare `v-slot:name`) are masked without changing the
   buffer's length, so the whole-file candidate parses them and positions address the file instead
   of falling back to a candidate that relocated the script (AppThreat/atom#320).
+- Vue attribute names that JSX rejects, such as UnoCSS attributify utilities (`bg-black:90`,
+  `md:90`) and a valueless `@submit.prevent`, are masked the same way, so such templates are no
+  longer dropped.
 
 ### Differences in native type maps
 
