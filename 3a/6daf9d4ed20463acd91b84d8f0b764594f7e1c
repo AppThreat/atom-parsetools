@@ -1,0 +1,23 @@
+astgen.js
+  s_c0804e5357f0c5::t_3ef55f8ac140a6 1163
+  s_c0804e5357f0c5::t_4dbd709be37b0b 1064-1080,1082-1093
+test-fixtures/astgen-vue-positions-regression.js
+  s_c0804e5357f0c5::t_1c04c56a934802 445-447,450-456,459
+  s_c0804e5357f0c5::t_1fa71633804341 198-221
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3a6daf9d4ed20463acd91b84d8f0b764594f7e1c",
+  "prompts": {},
+  "sessions": {
+    "s_c0804e5357f0c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75227701-fd30-4fc7-8eae-71a8df8f3a1c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
