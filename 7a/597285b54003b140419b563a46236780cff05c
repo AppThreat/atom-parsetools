@@ -1,0 +1,27 @@
+lib/largeFileAst.js
+  s_c0804e5357f0c5::t_e09edbaee93689 1-12
+test-fixtures/stream-json-regression.js
+  s_c0804e5357f0c5::t_caa10375fd098e 1-109
+  s_c0804e5357f0c5::t_3e4cf1ecdf9b31 110-116
+lib/streamJson.js
+  s_c0804e5357f0c5::t_9f6854aafde90c 107
+  s_c0804e5357f0c5::t_48d05b67580c5b 1-106,108-149
+astgen.js
+  s_c0804e5357f0c5::t_cf97d9780d8921 14-16,27-28,32,3141-3157,3160-3201,3204-3210,3241-3247,3249-3250,3259-3268,3298-3299,3399
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7a597285b54003b140419b563a46236780cff05c",
+  "prompts": {},
+  "sessions": {
+    "s_c0804e5357f0c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75227701-fd30-4fc7-8eae-71a8df8f3a1c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
