@@ -11,7 +11,9 @@ import { parse as parseHermes } from "hermes-parser";
 // package, which is the same TS 6 engine and therefore keeps AST shapes and
 // type-inference accuracy identical.
 import tsc from "@typescript/typescript6";
-import { tmpdir, cpus, availableParallelism } from "os";
+import { tmpdir, cpus, availableParallelism, totalmem } from "os";
+import { spawnSync } from "child_process";
+import { getHeapStatistics } from "v8";
 import { Worker, isMainThread, parentPort, workerData } from "worker_threads";
 import {
   readFileSync,
@@ -22,10 +24,12 @@ import {
   existsSync,
   mkdtempSync,
   rmSync,
-  realpathSync
+  realpathSync,
+  statSync
 } from "fs";
 import { getAllFiles } from "@appthreat/atom-common";
 import { exitWithSupervisor } from "./supervise.js";
+import { writeJsonStream } from "./lib/streamJson.js";
 import { parseSvelteFile, parseSvelteScriptBuffer } from "./svelteAst.js";
 import { parseAstroFile, parseAstroFrontmatterOnly } from "./astroAst.js";
 import { parseHtmlFile } from "./htmlAst.js";
@@ -3134,10 +3138,76 @@ const createJSAst = async (options) => {
   }
 };
 
+// The heap a file's AST needs, from its length in bytes. Babel's AST of a minified bundle, the
+// densest case, takes about 125 bytes of heap per byte of source and the write's marks about 50
+// more (a 10 MB bundle: 1.3 GB for the AST).
+const AST_HEAP_BYTES_PER_SOURCE_BYTE = 180;
+const MB = 1024 * 1024;
+
+// Whether a file's AST is too large for the heap this process has left: past 60 percent of it,
+// the parse and the write run in a child process with a heap of their own.
+const needsLargeAstHeap = (bytes) => {
+  const { heap_size_limit, used_heap_size } = getHeapStatistics();
+  return bytes * AST_HEAP_BYTES_PER_SOURCE_BYTE > 0.6 * (heap_size_limit - used_heap_size);
+};
+
+// The heap for that child: half again the estimate plus room for the parser, never less than
+// this process has and never more than three quarters of the machine's memory, unless
+// ASTGEN_LARGE_FILE_HEAP_MB names a figure.
+const largeAstHeapMb = (bytes) => {
+  const fromEnv = Number.parseInt(process.env.ASTGEN_LARGE_FILE_HEAP_MB ?? "", 10);
+  if (Number.isFinite(fromEnv) && fromEnv > 0) {
+    return fromEnv;
+  }
+  const wanted = Math.ceil((bytes * AST_HEAP_BYTES_PER_SOURCE_BYTE * 1.5) / MB) + 512;
+  const current = Math.ceil(getHeapStatistics().heap_size_limit / MB);
+  const ceiling = Math.floor((totalmem() * 0.75) / MB);
+  return Math.max(current, Math.min(wanted, ceiling));
+};
+
+// Parse a file and write its AST in a child process with a larger heap. A file whose AST still
+// does not fit ends that child, not astgen, and the caller records it as a file error.
+const writeAstInLargeHeap = (file, bytes, options) => {
+  const heapMb = largeAstHeapMb(bytes);
+  console.error(
+    `astgen: ${file} is ${Math.round(bytes / MB)} MB; parsing it in a process with ${heapMb} MB of heap (ASTGEN_LARGE_FILE_HEAP_MB).`
+  );
+  const child = spawnSync(
+    process.execPath,
+    [
+      `--max-old-space-size=${heapMb}`,
+      join(dirname(fileURLToPath(import.meta.url)), "lib", "largeFileAst.js"),
+      JSON.stringify({ file, type: options.type, src: options.src, output: options.output })
+    ],
+    {
+      encoding: "utf8",
+      env: { ...process.env, ATOM_PARENT_PID: String(process.pid) },
+      stdio: ["ignore", "inherit", "pipe"],
+      maxBuffer: 16 * MB
+    }
+  );
+  if (child.status !== 0) {
+    const stderr = child.stderr || "";
+    if (/heap out of memory/i.test(stderr)) {
+      throw new Error(
+        `the AST did not fit in ${heapMb} MB of heap; set ASTGEN_LARGE_FILE_HEAP_MB to allow more`
+      );
+    }
+    throw new Error(
+      `the large-file process ended with ${child.signal || `status ${child.status}`}: ${stderr.trim().split("\n").slice(-3).join(" ")}`
+    );
+  }
+};
+
 const processFile = (file, options, ts) => {
   try {
-    const ast = fileToJsAst(file, options.type, ts);
-    writeAstFile(file, ast, options);
+    const bytes = statSync(file).size;
+    if (needsLargeAstHeap(bytes)) {
+      writeAstInLargeHeap(file, bytes, options);
+    } else {
+      const ast = fileToJsAst(file, options.type, ts);
+      writeAstFile(file, ast, options);
+    }
 
     const seenTypes = collectSeenTypesForFile(file, ts, options);
     if (seenTypes && seenTypes.size > 0) {
@@ -3168,8 +3238,16 @@ const createVueAst = async (options) => {
 /**
  * Deal with cyclic reference in json
  */
+// An object reached a second time is left out: Babel shares `Position` and `SourceLocation`
+// objects and attached comments between nodes, and a later reference to one is written as
+// nothing. One replacer serves one file. It marks each object it has seen with a symbol of its
+// own instead of keeping a set: a set of every object in a large AST costs about twice the heap
+// (on a 3 MB minified bundle, 4.6 million objects took 290 MB in a WeakSet and 151 MB as marks),
+// and nothing reads the AST after it is written. An object that cannot take a property goes to a
+// small set instead.
 const getCircularReplacer = () => {
-  const seen = new WeakSet();
+  const seenMark = Symbol("astgen-seen");
+  const sealedSeen = new WeakSet();
   return (key, value) => {
     // Babel 8 emits BigIntLiteral/`extra.value` as a native bigint, which
     // JSON.stringify cannot serialize. Emit it as a string, which also matches
@@ -3178,10 +3256,17 @@ const getCircularReplacer = () => {
       return value.toString();
     }
     if (typeof value === "object" && value !== null) {
-      if (seen.has(value)) {
-        return;
+      if (Object.isExtensible(value)) {
+        if (value[seenMark]) {
+          return;
+        }
+        value[seenMark] = true;
+      } else {
+        if (sealedSeen.has(value)) {
+          return;
+        }
+        sealedSeen.add(value);
       }
-      seen.add(value);
     }
     return value;
   };
@@ -3210,10 +3295,8 @@ const writeAstFile = (file, ast, options) => {
     delete ast.sfcCandidate;
   }
   mkdirSync(dirname(outAstFile), { recursive: true });
-  writeFileSync(
-    outAstFile,
-    JSON.stringify(data, getCircularReplacer(), undefined)
-  );
+  // streamed, because the JSON of a large file's AST is longer than V8's largest string
+  writeJsonStream(outAstFile, data, getCircularReplacer());
   console.log("Converted AST for", relativePath, "to", outAstFile);
 };
 
@@ -3313,7 +3396,7 @@ const runTypeGenWorker = async ({ shard, projectFiles, options }) => {
   }
 };
 
-export { buildVueParseCandidates, vueGeometryPreserved };
+export { buildVueParseCandidates, vueGeometryPreserved, fileToJsAst, writeAstFile, getCircularReplacer };
 
 // Only run when invoked directly, not when imported by tests (the regression
 // suites import `buildVueParseCandidates` to check candidate geometry). A
