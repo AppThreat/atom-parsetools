@@ -1,0 +1,37 @@
+lib/largeFileAst.js
+  s_c0804e5357f0c5::t_e09edbaee93689 1-12
+test-fixtures/stream-json-regression.js
+  s_c0804e5357f0c5::t_caa10375fd098e 1-109
+  s_c0804e5357f0c5::t_3e4cf1ecdf9b31 110-116
+lib/streamJson.js
+  s_c0804e5357f0c5::t_9f6854aafde90c 107
+  s_c0804e5357f0c5::t_48d05b67580c5b 1-106,108-149
+CHANGELOG.md
+  s_c0804e5357f0c5::t_c10a5df5513558 87-94
+astgen.js
+  s_c0804e5357f0c5::t_cf97d9780d8921 14-16,27-28,32,3332-3392,3395-3401,3445-3451,3453-3454,3463-3472,3502-3503,3603
+docs/ASTGEN.md
+  s_c0804e5357f0c5::t_5dcdd4477085bd 206-207
+docs/ENV.md
+  s_c0804e5357f0c5::t_7a174ffd13bdc7 14
+package.json
+  s_c0804e5357f0c5::t_8ee032648c2f6e 9
+test-fixtures/astgen-hostile-inputs.js
+  s_c0804e5357f0c5::t_0df13dd2f71122 11,168-208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "02e28e995cc34193dacb0344a41620736739d9bf",
+  "prompts": {},
+  "sessions": {
+    "s_c0804e5357f0c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75227701-fd30-4fc7-8eae-71a8df8f3a1c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
