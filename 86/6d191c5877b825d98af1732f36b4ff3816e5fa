@@ -1,0 +1,23 @@
+package.json
+  s_0b43bb66af7639::t_c1d35afaf8eab0 9
+test-fixtures/astgen-vue-positions-regression.js
+  s_0b43bb66af7639::t_52f4ea5708782d 470-476
+  s_0b43bb66af7639::t_e570576ec43721 1-469
+  s_0b43bb66af7639::t_df56134b47efda 477-515
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "866d191c5877b825d98af1732f36b4ff3816e5fa",
+  "prompts": {},
+  "sessions": {
+    "s_0b43bb66af7639": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_0377af67-5fb7-44f8-86d2-0275af1eab69",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
