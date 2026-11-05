@@ -265,6 +265,37 @@ cases.push({
   shift: "div>".length,
   bindingText: "panel"
 });
+// Attribute names JSX rejects outside the slot forms: UnoCSS attributify
+// utilities (nuxt-movies) and a valueless event modifier.
+cases.push({
+  name: "attr-attributify.vue",
+  content: sfc(
+    `  <div v-if="src" fixed bg-black:90 md:90 w-1/2 flex>\n    <p text-true-gray:90 :title="pTitle">x</p>\n  </div>\n`
+  ),
+  candidate: ["full", "directive-full"],
+  needle: ':title="pTitle"',
+  shift: ':title="'.length,
+  bindingText: "pTitle"
+});
+cases.push({
+  name: "attr-valueless-modifier.vue",
+  content: sfc(`  <form @submit.prevent :title="formTitle">\n  </form>\n`),
+  candidate: ["full", "directive-full"],
+  needle: ':title="formTitle"',
+  shift: ':title="'.length,
+  bindingText: "formTitle"
+});
+// The self-closing `/` is not part of the last attribute's name.
+cases.push({
+  name: "attr-twin-selfclosing.vue",
+  content: sfc(`  <div>\n    <MyIcon :name="iconName" spin/>\n  </div>\n`),
+  candidate: ["full", "directive-full"],
+  needle: ':name="iconName"',
+  shift: ':name="'.length,
+  bindingText: "iconName",
+  keepElement: "MyIcon"
+});
+
 // Item B good twins: a `#` in an attribute value or an interpolation is not a
 // slot and must survive byte for byte.
 cases.push({

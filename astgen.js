@@ -939,15 +939,26 @@ const vueGeometryPreserved = (original, candidate) => {
 
 const isVueTagWhitespace = (c) => c === " " || c === "\t" || c === "\n" || c === "\r" || c === "\f";
 
-// Mask, inside one tag's attribute list, the slot forms that are not valid JSX
-// attribute names: `#name` with or without a value, `#[expr]`, and a bare
-// `v-slot:name`. `#`, `[` and `]` become spaces and `:` (and `.`) a dash, the
-// same one-for-one swap `vuePropRegex` applies to `#name=`. A `#` in a quoted
-// attribute value (`href="#top"`) is a value and is left alone: the walk below
-// skips quoted values. `v-slot` values are not expressions
-// (`VUE_NON_EXPRESSION_DIRECTIVES`), and a `v-slot:name` that carries a value
-// already parses as a JSX namespaced name, so neither is rewritten.
-const maskVueSlotAttributes = (out, code, from, to) => {
+// A JSX attribute name: an identifier that may contain `-`, optionally
+// namespaced once with `:`.
+const JSX_ATTRIBUTE_NAME_REGEX = /^[A-Za-z_$][\w$-]*(?::[A-Za-z_$][\w$-]*)?$/;
+
+// Mask, inside one tag's attribute list, the attribute names that are not
+// valid JSX attribute names, one character for one:
+// - the slot shorthand, `#name` with or without a value and `#[expr]`, and a
+//   bare `v-slot:name`: `#`, `[` and `]` become spaces and `:` (and `.`) a
+//   dash, the same swap `vuePropRegex` applies to `#name=`. `v-slot` values
+//   are not expressions (`VUE_NON_EXPRESSION_DIRECTIVES`), and a
+//   `v-slot:name` that carries a value already parses as a JSX namespaced
+//   name, so neither is rewritten.
+// - any other name JSX rejects, such as the UnoCSS and Windi attributify
+//   names `bg-black:90`, `md:90` or `w-1/2`, and a valueless `@submit.prevent`:
+//   leading characters that cannot start a name become spaces and every other
+//   character outside `[\w$-]` a dash (`bg-black-90`). A name JSX already
+//   accepts is left as it is, so a file that parsed before keeps its json.
+// A `#` in a quoted attribute value (`href="#top"`) is a value and is left
+// alone: the walk below skips quoted values.
+const maskVueAttributeNames = (out, code, from, to) => {
   let index = from;
   while (index < to) {
     const c = code[index];
@@ -989,6 +1000,16 @@ const maskVueSlotAttributes = (out, code, from, to) => {
     } else if (!hasValue && (name === "v-slot" || name.startsWith("v-slot:"))) {
       for (let k = index; k < nameEnd; k++) {
         if (code[k] === ":") {
+          out[k] = "-";
+        }
+      }
+    } else if (name && !JSX_ATTRIBUTE_NAME_REGEX.test(name)) {
+      let k = index;
+      for (; k < nameEnd && !/[A-Za-z_$]/.test(code[k]); k++) {
+        out[k] = " ";
+      }
+      for (; k < nameEnd; k++) {
+        if (!/[\w$-]/.test(code[k])) {
           out[k] = "-";
         }
       }
@@ -1036,12 +1057,12 @@ const maskVueSlotAttributes = (out, code, from, to) => {
 };
 
 // Close, without changing the buffer's length, every HTML void element left
-// unclosed in the template, and mask the slot shorthand inside tag attribute
-// lists. Both rewrites swap characters one for one, so every offset, line and
-// column of the buffer still addresses the original file: that geometry is
-// what makes Babel's `loc` the file's positions. A `<` that does not reach
-// its `>` before the next `<` is text (an interpolation such as `{{ a < b }}`),
-// not a tag, and is left alone.
+// unclosed in the template, and mask the attribute names JSX rejects (the
+// slot shorthand among them). Both rewrites swap characters one for one, so
+// every offset, line and column of the buffer still addresses the original
+// file: that geometry is what makes Babel's `loc` the file's positions. A `<`
+// that does not reach its `>` before the next `<` is text (an interpolation
+// such as `{{ a < b }}`), not a tag, and is left alone.
 //
 // A small scanner instead of a `[^>]*` regex, because a `>` inside a quoted
 // attribute value (`:disabled="a > b"`) does not end the tag. Script blocks
@@ -1151,7 +1172,16 @@ const maskVueTemplateTags = (code, skipRanges) => {
       i++;
       continue;
     }
-    maskVueSlotAttributes(out, code, nameEnd, tagEnd);
+    // the attribute list ends before a self-closing `/`, which is not part
+    // of the last attribute's name
+    let attributesEnd = tagEnd;
+    while (attributesEnd > nameEnd && isVueTagWhitespace(code[attributesEnd - 1])) {
+      attributesEnd--;
+    }
+    if (code[attributesEnd - 1] === "/") {
+      attributesEnd--;
+    }
+    maskVueAttributeNames(out, code, nameEnd, attributesEnd);
     if (HTML_VOID_ELEMENTS.has(name)) {
       // already self-closed (`<input/>`, `<input / >`)? The first non-space
       // character before `>` decides.
