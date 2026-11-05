@@ -1,0 +1,21 @@
+test-fixtures/astgen-vue-positions-regression.js
+  s_c0804e5357f0c5::t_4181b3233bd0f8 268-298
+astgen.js
+  s_c0804e5357f0c5::t_213e8f6c1a89d3 953-972,1017-1026,1071-1076,1186-1195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f57bc09580c3f7ca7870ecf3220c8c7617835bde",
+  "prompts": {},
+  "sessions": {
+    "s_c0804e5357f0c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75227701-fd30-4fc7-8eae-71a8df8f3a1c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
