@@ -3055,9 +3055,15 @@ const runSupervisedTypeWorker = async (files, projectFiles, options, index = 0) 
         clearInterval(timer);
         resolvePromise(value);
       };
+      // A budget stop settles only once the worker has exited. A worker still building its
+      // checker keeps allocating, and a worker without resource limits of its own that runs
+      // out of memory aborts the whole process, so the inline pass must not start beside it.
+      let stopping;
       const stop = (value) => {
-        settle(value);
-        worker?.terminate().catch(() => {});
+        if (settled || stopping) return;
+        stopping = value;
+        clearInterval(timer);
+        worker.terminate().catch(() => {}).finally(() => settle(value));
       };
       try {
         worker = new Worker(workerEntry, {
@@ -3077,10 +3083,11 @@ const runSupervisedTypeWorker = async (files, projectFiles, options, index = 0) 
         }
       });
       worker.on("error", (err) => {
+        if (stopping) return;
         console.error("astgen type worker failed:", err?.message || err);
         settle({ status: "failed" });
       });
-      worker.on("exit", (code) => settle({ status: code === 0 ? "done" : "failed" }));
+      worker.on("exit", (code) => settle(stopping ?? { status: code === 0 ? "done" : "failed" }));
       timer = setInterval(() => {
         const now = Date.now();
         if (current === undefined && now - phaseStart > TYPE_PROGRAM_BUDGET_MS) {
