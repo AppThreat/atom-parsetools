@@ -29,6 +29,19 @@ The `ast` value is the standard Babel AST shape (`type`, `start`, `end`, `loc`, 
 
 For `.svelte` files the output stays within this shape: the template is expressed with stock Babel JSX nodes and synthesized nodes carry two additive keys - `svelteKind` (the Svelte construct a node was built from, e.g. `EachBlock`) and, where applicable, `svelteName` (the tag or snippet name). Consumers that do not know these keys ignore them; they exist so tooling can tell a mapped `{#each}` from a literal `.map()` call. Whole-file Svelte parse failures surface as `{ "svelteParse": true, "message": ... }` entries in `errors`.
 
+For `.vue` files the record carries one more top-level key, `sfcCandidate`, naming the parse candidate that produced the AST:
+
+```json
+{
+  "fullName": "/abs/path/project/src/Login.vue",
+  "relativeName": "src/Login.vue",
+  "sfcCandidate": "directive-full",
+  "ast": { "...": "the Babel AST" }
+}
+```
+
+Every candidate is the file masked to a same-length buffer, so every offset, line and column in the AST addresses the original file. The candidates, tried in order, are `directive-full` (directive values such as `v-html="x"` converted to expression containers), `full` (the whole file masked), `script-in-place` (the file with the template block's content masked to spaces, used when the template cannot be parsed; the template contributes nothing) and `template-only` (the file with the script blocks masked away; the script contributes nothing). A consumer that needs every script statement reads `sfcCandidate` and skips `template-only`; the positions need no adjustment for any candidate.
+
 With type generation on (the default), each file also gets `<relative-path>.typemap`, a flat JSON object mapping node start offsets to the checker's type string:
 
 ```json
