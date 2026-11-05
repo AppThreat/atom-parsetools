@@ -84,6 +84,14 @@ fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x
 
 ### Fixed
 
+- An AST's JSON is written in chunks instead of as one string, with the same bytes. A 10 MB minified
+  bundle's AST (about 700 MB of JSON, longer than V8's largest string) was recorded as a failed
+  file; it is now written. A file whose AST does not fit in the heap astgen has left is parsed in a
+  child process with a larger heap (`ASTGEN_LARGE_FILE_HEAP_MB`), where it used to end astgen with
+  an out-of-memory abort on smaller heaps. The replacer that leaves out objects reached twice now
+  marks them instead of keeping a set, which halves its memory on large files.
+- When the TypeScript 6 program budget stops the type worker, astgen waits for the worker to exit
+  before it writes the ASTs, so the two no longer hold memory at the same time.
 - Every HTML void element left unclosed in a Vue template (`<input type="text">`, `<hr>`) and the
   slot shorthand (`#name`, `#[expr]`, a bare `v-slot:name`) are masked without changing the
   buffer's length, so the whole-file candidate parses them and positions address the file instead
