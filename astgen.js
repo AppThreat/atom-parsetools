@@ -1061,17 +1061,36 @@ const maskVueTemplateTags = (code, skipRanges) => {
     return index;
   };
 
-  // Closing tags of a void element name, so `<input></input>` is left alone.
-  const voidClosers = new Map(
-    [...HTML_VOID_ELEMENTS].map((name) => [name, []])
-  );
-  const closeRegex = /<\/([a-z][\w-]*)/g;
-  let closeMatch;
-  while ((closeMatch = closeRegex.exec(code)) !== null) {
-    if (voidClosers.has(closeMatch[1]) && skipAhead(closeMatch.index) === closeMatch.index) {
-      voidClosers.get(closeMatch[1]).push(closeMatch.index);
+  // Opening and closing tags of each void element name, outside script
+  // blocks, so `<input></input>` is left alone. A closer belongs to the
+  // nearest opener before it: in `<input> ... <input></input>` only the
+  // second tag is explicitly closed.
+  const voidTagPositions = (regex) => {
+    const positions = new Map();
+    let match;
+    while ((match = regex.exec(code)) !== null) {
+      if (
+        HTML_VOID_ELEMENTS.has(match[1]) &&
+        skipAhead(match.index) === match.index
+      ) {
+        if (!positions.has(match[1])) {
+          positions.set(match[1], []);
+        }
+        positions.get(match[1]).push(match.index);
+      }
     }
-  }
+    return positions;
+  };
+  const voidOpeners = voidTagPositions(/<([a-z][\w-]*)(?=[\s/>])/g);
+  const voidClosers = voidTagPositions(/<\/([a-z][\w-]*)/g);
+  const hasExplicitCloser = (name, at) => {
+    const closer = (voidClosers.get(name) || []).find((p) => p > at);
+    if (closer === undefined) {
+      return false;
+    }
+    const nextOpener = (voidOpeners.get(name) || []).find((p) => p > at);
+    return nextOpener === undefined || closer < nextOpener;
+  };
 
   let i = 0;
   while (i < code.length) {
@@ -1141,10 +1160,7 @@ const maskVueTemplateTags = (code, skipRanges) => {
         k--;
       }
       const selfClosed = code[k] === "/";
-      const hasCloser = (voidClosers.get(name) || []).some(
-        (position) => position > i
-      );
-      if (!selfClosed && !hasCloser) {
+      if (!selfClosed && !hasExplicitCloser(name, i)) {
         if (k !== tagEnd - 1) {
           // whitespace before `>` becomes the `/` of a self-closing tag, the
           // one closing form where the element and every attribute keep
