@@ -21,7 +21,8 @@ import {
   constants,
   existsSync,
   mkdtempSync,
-  rmSync
+  rmSync,
+  realpathSync
 } from "fs";
 import { getAllFiles } from "@appthreat/atom-common";
 import { exitWithSupervisor } from "./supervise.js";
@@ -1282,20 +1283,59 @@ const cleanVueCodeForParsing = (code, { includeScripts = true } = {}) => {
   });
 };
 
-const extractVueScriptContent = (code) => {
-  const scriptChunks = [];
-  let scriptMatch;
-  vueScriptBlockRegex.lastIndex = 0;
-  while ((scriptMatch = vueScriptBlockRegex.exec(code)) !== null) {
-    const fullMatch = scriptMatch[0] || "";
-    const content = fullMatch
-      .replace(/^<script\b[^>]*>/i, "")
-      .replace(/<\/script>$/i, "");
-    if (content.trim().length > 0) {
-      scriptChunks.push(content);
+// The root template block: from after the first `<template ...>` opening tag
+// outside any script block to the last `</template>` outside any script block.
+// A `<template>` or `</template>` inside a script string is script content.
+const vueRootTemplateRegion = (code) => {
+  const scriptRanges = vueScriptRanges(code);
+  const inScript = (index) =>
+    scriptRanges.some(([start, end]) => index >= start && index < end);
+  const openRegex = /<template\b[^>]*>/gi;
+  let open = null;
+  let match;
+  while ((match = openRegex.exec(code)) !== null) {
+    if (!inScript(match.index)) {
+      open = match;
+      break;
     }
   }
-  return scriptChunks.join("\n");
+  if (!open) {
+    return null;
+  }
+  const contentStart = open.index + open[0].length;
+  let contentEnd = -1;
+  const lowerCased = code.toLowerCase();
+  let from = contentStart;
+  let close;
+  while ((close = lowerCased.indexOf("</template>", from)) !== -1) {
+    if (!inScript(close)) {
+      contentEnd = close;
+    }
+    from = close + 1;
+  }
+  if (contentEnd < contentStart) {
+    return null;
+  }
+  return [contentStart, contentEnd];
+};
+
+// `script-in-place`: the `full` candidate with the root template block's
+// content masked to spaces (newlines kept), so a component whose template
+// still cannot be parsed keeps its script, at the right lines. It replaces the
+// removed `combined` and `script-only` candidates, which put the script first
+// and made every position wrong for the file.
+const buildVueScriptInPlaceCandidate = (code, fullCandidate) => {
+  const region = vueRootTemplateRegion(code);
+  if (!region) {
+    return null;
+  }
+  const out = fullCandidate.split("");
+  for (let index = region[0]; index < region[1]; index++) {
+    if (out[index] !== "\n" && out[index] !== "\r") {
+      out[index] = " ";
+    }
+  }
+  return out.join("");
 };
 
 const buildVueParseCandidates = (code) => {
@@ -1303,12 +1343,8 @@ const buildVueParseCandidates = (code) => {
   const templateOnlyCandidate = cleanVueCodeForParsing(code, {
     includeScripts: false
   });
-  const scriptOnlyCandidate = extractVueScriptContent(code);
-  const combinedCandidate = scriptOnlyCandidate
-    ? `${scriptOnlyCandidate}\n${templateOnlyCandidate}`
-    : templateOnlyCandidate;
 
-  // Directive-expression candidates first: same masking, but `v-html="x"`
+  // Directive-expression candidate first: same masking, but `v-html="x"`
   // style values are expression containers, so template expressions keep
   // their references. The plain candidates below remain as fallbacks for the
   // (checked-per-attribute, but defensive) case of a converted file not
@@ -1322,25 +1358,25 @@ const buildVueParseCandidates = (code) => {
     const directiveFull = cleanVueCodeForParsing(directiveCode, {
       includeScripts: true
     });
-    const directiveTemplateOnly = cleanVueCodeForParsing(directiveCode, {
-      includeScripts: false
-    });
-    return [
-      { name: "directive-full", code: directiveFull },
-      { name: "directive-template-only", code: directiveTemplateOnly }
-    ];
+    return [{ name: "directive-full", code: directiveFull }];
   })();
+
+  const scriptInPlaceCandidate = buildVueScriptInPlaceCandidate(
+    code,
+    fullCandidate
+  );
 
   const candidates = [
     ...directiveCandidates,
     { name: "full", code: fullCandidate },
-    { name: "combined", code: combinedCandidate },
-    { name: "template-only", code: templateOnlyCandidate },
-    { name: "script-only", code: scriptOnlyCandidate }
+    ...(scriptInPlaceCandidate
+      ? [{ name: "script-in-place", code: scriptInPlaceCandidate }]
+      : []),
+    { name: "template-only", code: templateOnlyCandidate }
   ];
 
   const seenCandidateCode = new Set();
-  return candidates.filter((candidate) => {
+  const kept = candidates.filter((candidate) => {
     if (!candidate.code || !candidate.code.trim()) {
       return false;
     }
@@ -1350,6 +1386,16 @@ const buildVueParseCandidates = (code) => {
     seenCandidateCode.add(candidate.code);
     return true;
   });
+  // no candidate may move the script or lose a line: that is the defect this
+  // list exists to avoid, so it fails loudly here rather than silently
+  for (const candidate of kept) {
+    if (!vueGeometryPreserved(code, candidate.code)) {
+      throw new Error(
+        `Vue candidate "${candidate.name}" does not preserve the file's geometry`
+      );
+    }
+  }
+  return kept;
 };
 
 const parseVueAstWithFallback = (file, code) => {
@@ -1357,7 +1403,12 @@ const parseVueAstWithFallback = (file, code) => {
   let lastError;
   for (const candidate of candidates) {
     try {
-      return codeToJsAst(file, candidate.code, "ts");
+      const ast = codeToJsAst(file, candidate.code, "ts");
+      // say in the json which candidate produced this AST: every candidate
+      // keeps the file's geometry, but a consumer may still want to know the
+      // template was masked (`script-in-place`) or dropped (`template-only`)
+      ast.sfcCandidate = candidate.name;
+      return ast;
     } catch (err) {
       lastError = err;
     }
@@ -3299,6 +3350,12 @@ const writeAstFile = (file, ast, options) => {
     data.source = ast.loweredSource;
     delete ast.loweredSource;
   }
+  // a Vue single-file component: which parse candidate produced this AST
+  // (see docs/OUTPUT_FORMATS.md for the candidate order)
+  if (ast?.sfcCandidate !== undefined) {
+    data.sfcCandidate = ast.sfcCandidate;
+    delete ast.sfcCandidate;
+  }
   mkdirSync(dirname(outAstFile), { recursive: true });
   writeFileSync(
     outAstFile,
@@ -3403,7 +3460,28 @@ const runTypeGenWorker = async ({ shard, projectFiles, options, announce }) => {
   }
 };
 
-if (isMainThread) {
+export { buildVueParseCandidates, vueGeometryPreserved };
+
+// Only run when invoked directly, not when imported by tests (the regression
+// suites import `buildVueParseCandidates` to check candidate geometry). A
+// plain path comparison breaks under a global symlink install, so both sides
+// are resolved first, the same guard phpastgen uses. The type-generation
+// worker re-imports this file with the parent's argv, so the thread check
+// stays in front.
+const isAstgenMainModule = () => {
+  if (!process.argv[1]) {
+    return false;
+  }
+  try {
+    const invoked = realpathSync(process.argv[1]);
+    const self = realpathSync(fileURLToPath(import.meta.url));
+    return invoked === self;
+  } catch {
+    return false;
+  }
+};
+
+if (isMainThread && isAstgenMainModule()) {
   exitWithSupervisor();
   main(process.argv);
 } else if (workerData?.kind === "astgen-typegen") {
