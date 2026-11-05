@@ -1,0 +1,35 @@
+test-fixtures/astgen-ts6-budget-regression.js
+  s_c4b0b47db2bc80::t_46d9d0821b5622 1-110
+astgen.js
+  s_c4b0b47db2bc80::t_834c32e5e577f2 28-29,283-284,388,416,1646,2990,2997-3003,3008-3130,3190-3192,3237-3242,3497,3500,3508-3516
+package.json
+  s_c4b0b47db2bc80::t_3c14cb1f64898a 9
+test-fixtures/astgen-autoaccessor-regression.js
+  s_c4b0b47db2bc80::t_1e6acbf61b30bc 1-170
+test-fixtures/projects/auto-accessors/accessor-decorated.js
+  s_c4b0b47db2bc80::t_813bb14c5bd44a 1-22
+test-fixtures/projects/auto-accessors/accessor-decorated.ts
+  s_c4b0b47db2bc80::t_d698b601cbb1a3 1-13
+test-fixtures/projects/auto-accessors/legacy-decorators.js
+  s_c4b0b47db2bc80::t_a66d3edab9c97b 1-25
+test-fixtures/projects/auto-accessors/legacy-decorators.ts
+  s_c4b0b47db2bc80::t_9e38169297adc1 1-22
+test-fixtures/projects/auto-accessors/package.json
+  s_c4b0b47db2bc80::t_b048b1c5bef9f1 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8bb7d51c626ae42ffdac6ba53d6568d1df38c18d",
+  "prompts": {},
+  "sessions": {
+    "s_c4b0b47db2bc80": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_b18a03ea-27c6-410e-9850-2e20127a6d41",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
