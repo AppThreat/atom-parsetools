@@ -1,0 +1,21 @@
+docs/OUTPUT_FORMATS.md
+  s_0b43bb66af7639::t_9f09b22d6858e9 32-44
+CHANGELOG.md
+  s_0b43bb66af7639::t_3fde8ecd3b7d65 78-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d414067aee2199a1ec6d0eb88f2e2c0cd9ef3f4c",
+  "prompts": {},
+  "sessions": {
+    "s_0b43bb66af7639": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_0377af67-5fb7-44f8-86d2-0275af1eab69",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
