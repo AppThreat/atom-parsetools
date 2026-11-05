@@ -760,6 +760,27 @@ const vuePropRegex = /\s([.:@#])([\w.:-]*?=)/gi;
 const vueDirectiveModifierRegex = /(\sv-[\w-]+)((?::[\w-]+)?(?:[.:][\w-]+)+)(=)/gi;
 const vueOpenImgTag = /(<img)((?!>)[\s\S]+?)( [^/]>)/gi;
 const vueScriptTagRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+// The HTML void elements. Writing one without the closing slash (`<input
+// type="text">`) is legal HTML but not legal JSX, so the whole-file candidate
+// rejects such a template and the parse used to fall back to candidates that
+// relocate the script. Only lowercase names count: `<Input>` is a component
+// and may have children.
+const HTML_VOID_ELEMENTS = new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr"
+]);
 
 const VUE_COMPILER_MACRO_SHIMS = `
 declare function defineProps<T = any>(): T;
@@ -898,6 +919,266 @@ const vueScriptRanges = (code) => {
   return ranges;
 };
 
+// Geometry is the invariant that makes Babel's `loc` the file's positions: a
+// candidate buffer must have the same length as the file and every `\n` and
+// `\r` at the same index (a Windows checkout has `\r\n`). Exported for the
+// regression tests, which assert it for every candidate of every fixture.
+const vueGeometryPreserved = (original, candidate) => {
+  if (original.length !== candidate.length) {
+    return false;
+  }
+  const isLineBreak = (c) => c === "\n" || c === "\r";
+  for (let index = 0; index < original.length; index++) {
+    const originalChar = original[index];
+    const candidateChar = candidate[index];
+    if (isLineBreak(originalChar) !== isLineBreak(candidateChar)) {
+      return false;
+    }
+    if (isLineBreak(originalChar) && originalChar !== candidateChar) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const isVueTagWhitespace = (c) => c === " " || c === "\t" || c === "\n" || c === "\r" || c === "\f";
+
+// Mask, inside one tag's attribute list, the slot forms that are not valid JSX
+// attribute names: `#name` with or without a value, `#[expr]`, and a bare
+// `v-slot:name`. `#`, `[` and `]` become spaces and `:` (and `.`) a dash, the
+// same one-for-one swap `vuePropRegex` applies to `#name=`. A `#` in a quoted
+// attribute value (`href="#top"`) is a value and is left alone: the walk below
+// skips quoted values. `v-slot` values are not expressions
+// (`VUE_NON_EXPRESSION_DIRECTIVES`), and a `v-slot:name` that carries a value
+// already parses as a JSX namespaced name, so neither is rewritten.
+const maskVueSlotAttributes = (out, code, from, to) => {
+  let index = from;
+  while (index < to) {
+    const c = code[index];
+    if (c === '"' || c === "'") {
+      const close = code.indexOf(c, index + 1);
+      index = close === -1 ? to : close + 1;
+      continue;
+    }
+    if (isVueTagWhitespace(c)) {
+      index++;
+      continue;
+    }
+    // an attribute name token
+    let nameEnd = index;
+    while (
+      nameEnd < to &&
+      !isVueTagWhitespace(code[nameEnd]) &&
+      code[nameEnd] !== "=" &&
+      code[nameEnd] !== '"' &&
+      code[nameEnd] !== "'"
+    ) {
+      nameEnd++;
+    }
+    const name = code.slice(index, nameEnd);
+    // the value, if the name is followed by `=`
+    let valueProbe = nameEnd;
+    while (valueProbe < to && isVueTagWhitespace(code[valueProbe])) {
+      valueProbe++;
+    }
+    const hasValue = code[valueProbe] === "=";
+    if (name.startsWith("#")) {
+      for (let k = index; k < nameEnd; k++) {
+        if (code[k] === "#" || code[k] === "[" || code[k] === "]") {
+          out[k] = " ";
+        } else if (code[k] === ":" || code[k] === ".") {
+          out[k] = "-";
+        }
+      }
+    } else if (!hasValue && (name === "v-slot" || name.startsWith("v-slot:"))) {
+      for (let k = index; k < nameEnd; k++) {
+        if (code[k] === ":") {
+          out[k] = "-";
+        }
+      }
+    }
+    if (hasValue) {
+      let valueStart = valueProbe + 1;
+      while (valueStart < to && isVueTagWhitespace(code[valueStart])) {
+        valueStart++;
+      }
+      if (code[valueStart] === '"' || code[valueStart] === "'") {
+        const close = code.indexOf(code[valueStart], valueStart + 1);
+        index = close === -1 ? to : close + 1;
+      } else if (code[valueStart] === "{") {
+        // an expression container value: skip to its matching `}` so its
+        // text is never mistaken for attribute names
+        let depth = 0;
+        index = valueStart;
+        while (index < to) {
+          if (code[index] === "{") {
+            depth++;
+          } else if (code[index] === "}") {
+            depth--;
+            if (depth === 0) {
+              index++;
+              break;
+            }
+          }
+          index++;
+        }
+      } else {
+        index = valueStart;
+        while (
+          index < to &&
+          !isVueTagWhitespace(code[index]) &&
+          code[index] !== '"' &&
+          code[index] !== "'"
+        ) {
+          index++;
+        }
+      }
+    } else {
+      index = nameEnd;
+    }
+  }
+};
+
+// Close, without changing the buffer's length, every HTML void element left
+// unclosed in the template, and mask the slot shorthand inside tag attribute
+// lists. Both rewrites swap characters one for one, so every offset, line and
+// column of the buffer still addresses the original file: that geometry is
+// what makes Babel's `loc` the file's positions. A `<` that does not reach
+// its `>` before the next `<` is text (an interpolation such as `{{ a < b }}`),
+// not a tag, and is left alone.
+//
+// A small scanner instead of a `[^>]*` regex, because a `>` inside a quoted
+// attribute value (`:disabled="a > b"`) does not end the tag. Script blocks
+// are skipped through their ranges so the script bytes stay untouched; style
+// blocks and comments are already masked to spaces by the time this runs. An
+// unclosed void element is closed in place when a trailing whitespace can
+// become the `/`; without one, its delimiters and name are masked and the
+// attribute text stays as JSX text (see the branch below for why).
+const maskVueTemplateTags = (code, skipRanges) => {
+  const out = code.split("");
+  const skipAhead = (index) => {
+    for (const [start, end] of skipRanges) {
+      if (index >= start && index < end) {
+        return end;
+      }
+    }
+    return index;
+  };
+
+  // Closing tags of a void element name, so `<input></input>` is left alone.
+  const voidClosers = new Map(
+    [...HTML_VOID_ELEMENTS].map((name) => [name, []])
+  );
+  const closeRegex = /<\/([a-z][\w-]*)/g;
+  let closeMatch;
+  while ((closeMatch = closeRegex.exec(code)) !== null) {
+    if (voidClosers.has(closeMatch[1]) && skipAhead(closeMatch.index) === closeMatch.index) {
+      voidClosers.get(closeMatch[1]).push(closeMatch.index);
+    }
+  }
+
+  let i = 0;
+  while (i < code.length) {
+    const skippedTo = skipAhead(i);
+    if (skippedTo !== i) {
+      i = skippedTo;
+      continue;
+    }
+    if (code[i] !== "<") {
+      i++;
+      continue;
+    }
+    const next = code[i + 1];
+    if (next === "!" || next === "/") {
+      // a comment (masked when reached here) or a closing tag: its attribute
+      // list is never rewritten, so jump past it
+      const close = code.indexOf(">", i + 1);
+      i = close === -1 ? code.length : close + 1;
+      continue;
+    }
+    let nameEnd = i + 1;
+    while (nameEnd < code.length && /[\w-]/.test(code[nameEnd])) {
+      nameEnd++;
+    }
+    if (nameEnd === i + 1) {
+      // `< ` or `<3`: text, not a tag
+      i++;
+      continue;
+    }
+    const name = code.slice(i + 1, nameEnd);
+    // the tag's `>`, honoring quoted attribute values and the `{...}`
+    // expression containers a directive value was converted into (both can
+    // hold a `>` or a `<`); a nested `<` at depth zero before the `>` means
+    // this `<` was text
+    let tagEnd = -1;
+    let quote = null;
+    let braces = 0;
+    for (let j = nameEnd; j < code.length; j++) {
+      const c = code[j];
+      if (quote !== null) {
+        if (c === quote) {
+          quote = null;
+        }
+      } else if (c === '"' || c === "'") {
+        quote = c;
+      } else if (c === "{") {
+        braces++;
+      } else if (c === "}" && braces > 0) {
+        braces--;
+      } else if (c === ">" && braces === 0) {
+        tagEnd = j;
+        break;
+      } else if (c === "<" && braces === 0) {
+        break;
+      }
+    }
+    if (tagEnd === -1) {
+      i++;
+      continue;
+    }
+    maskVueSlotAttributes(out, code, nameEnd, tagEnd);
+    if (HTML_VOID_ELEMENTS.has(name)) {
+      // already self-closed (`<input/>`, `<input / >`)? The first non-space
+      // character before `>` decides.
+      let k = tagEnd - 1;
+      while (k > nameEnd && isVueTagWhitespace(code[k])) {
+        k--;
+      }
+      const selfClosed = code[k] === "/";
+      const hasCloser = (voidClosers.get(name) || []).some(
+        (position) => position > i
+      );
+      if (!selfClosed && !hasCloser) {
+        if (k !== tagEnd - 1) {
+          // whitespace before `>` becomes the `/` of a self-closing tag, the
+          // one closing form where the element and every attribute keep
+          // their exact offsets (`<input type="text" >` -> `<input
+          // type="text"/>`), the same move `vueOpenImgTag` makes for `<img>`
+          out[tagEnd - 1] = "/";
+        } else {
+          // no whitespace to spend. Deleting the tag name's last letter to
+          // make room for the `/` shifts every attribute of the tag one
+          // column left, which the geometry invariant forbids (verified: a
+          // binding at offset 41 lands at 40). Instead the tag's delimiters
+          // and name are masked to spaces and the attribute text stays as
+          // JSX text, so the expression containers a directive value was
+          // converted into (`:disabled={isDisabled}`) survive as real
+          // expressions at their exact offsets. The element itself leaves
+          // the graph, the same trade `<br>` makes today.
+          for (let m = i; m < nameEnd; m++) {
+            if (!isVueTagWhitespace(out[m])) {
+              out[m] = " ";
+            }
+          }
+          out[tagEnd] = " ";
+        }
+      }
+    }
+    i = tagEnd + 1;
+  }
+  return out.join("");
+};
+
 const vueDirectiveValueToExpression = (code) => {
   const templateOpen = code.match(VUE_TEMPLATE_OPEN_REGEX);
   if (!templateOpen) {
@@ -956,6 +1237,9 @@ const vueDirectiveValueToExpression = (code) => {
 };
 
 const cleanVueCodeForParsing = (code, { includeScripts = true } = {}) => {
+  // script ranges of the file as it is now: every rewrite below (and the tag
+  // pass after them) is length-preserving, so these offsets stay valid
+  const scriptRanges = vueScriptRanges(code);
   let cleanedCode = code
     .replace(vueCommentRegex, (match) => maskNonNewlineChars(match))
     .replace(vueStyleBlockRegex, (match) => maskNonNewlineChars(match));
@@ -971,27 +1255,31 @@ const cleanVueCodeForParsing = (code, { includeScripts = true } = {}) => {
     );
   }
 
-  return cleanedCode
-    .replace(vueBrTagRegex, (match) => {
-      const masked = maskNonNewlineChars(match);
-      return masked.length > 0 ? `${masked.slice(1)};` : masked;
-    })
-    .replace(vueBindRegex, (match, grA, grB, grC) => {
-      return maskNonNewlineChars(grA) + grB + maskNonNewlineChars(grC);
-    })
-    .replace(vuePropRegex, (match, grA, grB) => {
-      return " " + grA.replace(/[.:@#]/g, " ") + grB.replace(/[.:]/g, "-");
-    })
-    .replace(vueDirectiveModifierRegex, (match, grA, grB, grC) => {
-      const argument = grB.startsWith(":") ? grB.slice(0, 1) : "";
-      return grA + argument + grB.slice(argument.length).replace(/[.:]/g, "-") + grC;
-    })
-    .replace(vueOpenImgTag, (match, grA, grB, grC) => {
-      return grA + grB + grC.replace(" >", "/>");
-    })
-    .replace(vueTemplateRegex, (match, grA, grB, grC) => {
-      return grA + grB.replaceAll("{{", "{ ").replaceAll("}}", " }") + grC;
-    });
+  const tagMasked = maskVueTemplateTags(
+    cleanedCode
+      .replace(vueBrTagRegex, (match) => {
+        const masked = maskNonNewlineChars(match);
+        return masked.length > 0 ? `${masked.slice(1)};` : masked;
+      })
+      .replace(vueBindRegex, (match, grA, grB, grC) => {
+        return maskNonNewlineChars(grA) + grB + maskNonNewlineChars(grC);
+      })
+      .replace(vuePropRegex, (match, grA, grB) => {
+        return " " + grA.replace(/[.:@#]/g, " ") + grB.replace(/[.:]/g, "-");
+      })
+      .replace(vueDirectiveModifierRegex, (match, grA, grB, grC) => {
+        const argument = grB.startsWith(":") ? grB.slice(0, 1) : "";
+        return grA + argument + grB.slice(argument.length).replace(/[.:]/g, "-") + grC;
+      })
+      .replace(vueOpenImgTag, (match, grA, grB, grC) => {
+        return grA + grB + grC.replace(" >", "/>");
+      }),
+    scriptRanges
+  );
+
+  return tagMasked.replace(vueTemplateRegex, (match, grA, grB, grC) => {
+    return grA + grB.replaceAll("{{", "{ ").replaceAll("}}", " }") + grC;
+  });
 };
 
 const extractVueScriptContent = (code) => {
