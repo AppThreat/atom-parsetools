@@ -1,0 +1,20 @@
+astgen.js
+  s_0b43bb66af7639::t_e3aa8374a2e350 1163-1164
+  s_0b43bb66af7639::t_c02676bd79ed13 762-768
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "32ae09d93f74c9b07e6a2ba477f8e31bb99b8fb7",
+  "prompts": {},
+  "sessions": {
+    "s_0b43bb66af7639": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_0377af67-5fb7-44f8-86d2-0275af1eab69",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
