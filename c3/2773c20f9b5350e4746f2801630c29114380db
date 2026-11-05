@@ -1,0 +1,23 @@
+astgen.js
+  s_0b43bb66af7639::t_fef793f51a81e1 3161,3266-3287
+  s_0b43bb66af7639::t_f4d3bd76aeea5a 24-25
+  s_0b43bb66af7639::t_24a6323b7c7341 3156-3160
+  s_0b43bb66af7639::t_5c7f858c1d7d0d 1395-1400
+  s_0b43bb66af7639::t_f2e3cccbca4979 1275-1301,1303,1305-1327,1336,1350,1353-1357,1361-1364,1368,1378-1387
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c32773c20f9b5350e4746f2801630c29114380db",
+  "prompts": {},
+  "sessions": {
+    "s_0b43bb66af7639": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_0377af67-5fb7-44f8-86d2-0275af1eab69",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
