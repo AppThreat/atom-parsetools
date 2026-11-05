@@ -195,6 +195,30 @@ cases.push({
   shift: ':disabled="'.length,
   bindingText: "isDisabled"
 });
+// Whitespace before `>` becomes the `/`, so the element itself stays in the
+// AST at its offset.
+cases.push({
+  name: "void-spaced-close.vue",
+  content: sfc(`  <form>\n    <input :disabled="isDisabled" type="text" >\n  </form>\n`),
+  candidate: ["full", "directive-full"],
+  needle: ':disabled="isDisabled"',
+  shift: ':disabled="'.length,
+  bindingText: "isDisabled",
+  keepElement: "input"
+});
+// A closing tag closes only the nearest void tag before it: the first
+// `<input>` here is unclosed and must still be closed, or the whole-file
+// candidates fail and the template is lost.
+cases.push({
+  name: "void-closer-belongs-to-later-tag.vue",
+  content: sfc(
+    `  <form>\n    <input :disabled="isDisabled" type="text">\n    <input type="a"></input>\n  </form>\n`
+  ),
+  candidate: ["full", "directive-full"],
+  needle: ':disabled="isDisabled"',
+  shift: ':disabled="'.length,
+  bindingText: "isDisabled"
+});
 
 // Item B: the slot shorthand and a bare v-slot, in the shapes vue3-realworld
 // uses inside a <Suspense>.
@@ -418,25 +442,21 @@ function evaluateCase(testCase) {
 // of void elements (unclosed, self-closed, explicitly closed), slot
 // shorthands, quoted `>` values, `#` in values and interpolations.
 function evaluateGeneratedGeometry() {
-  const voidTags = fc.constantFrom(
+  // every void element in every spelling, as plain strings (the arbitrary
+  // library's `.map` does not flatten an arbitrary returned from it)
+  const voidElements = [
     "area", "base", "br", "col", "embed", "hr", "img",
     "input", "link", "meta", "param", "source", "track", "wbr"
-  );
+  ].flatMap((tag) => [
+    `<${tag} :disabled="a > b">`,
+    `<${tag} :disabled="a > b" >`,
+    `<${tag} :disabled="a > b"/>`,
+    `<${tag} :disabled="a > b" />`,
+    `<${tag} :disabled="a > b"></${tag}>`
+  ]);
   const elementArb = fc.letrec((tie) => ({
     node: fc.oneof(
-      voidTags.map((tag) => {
-        const style = fc.constantFrom("open", "selfclosed", "spaced", "closed");
-        // the tag spelling is drawn independently of the tag
-        return style.map((form) =>
-          form === "open"
-            ? `<${tag} :disabled="a > b">`
-            : form === "selfclosed"
-              ? `<${tag} :disabled="a > b"/>`
-              : form === "spaced"
-                ? `<${tag} :disabled="a > b" />`
-                : `<${tag} :disabled="a > b"></${tag}>`
-        );
-      }),
+      fc.constantFrom(...voidElements),
       fc.constantFrom(
         "<div #one>{{ a < b }}</div>",
         '<List><template #item="{ row }"><span>{{ row.k }}</span></template></List>',
