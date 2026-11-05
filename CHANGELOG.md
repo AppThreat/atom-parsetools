@@ -75,6 +75,19 @@ fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x
 
 - `plugins/log4j2.xml`. Nothing in atom-parsetools read it; atom configures logging with its own
   `log4j2.xml`.
+- The `combined` and `script-only` Vue parse candidates, and `directive-template-only`. Their
+  buffers moved the script to the top, so every line and column in the json was wrong for the file,
+  and nothing in the output said so. A component whose template still cannot be parsed now falls
+  back to `script-in-place` (the whole file with the template block's content masked to spaces),
+  which keeps the script at its lines. `.vue` json files carry a top-level `sfcCandidate` naming
+  the candidate that parsed; see `docs/OUTPUT_FORMATS.md`.
+
+### Fixed
+
+- Every HTML void element left unclosed in a Vue template (`<input type="text">`, `<hr>`) and the
+  slot shorthand (`#name`, `#[expr]`, a bare `v-slot:name`) are masked without changing the
+  buffer's length, so the whole-file candidate parses them and positions address the file instead
+  of falling back to a candidate that relocated the script (AppThreat/atom#320).
 
 ### Differences in native type maps
 
