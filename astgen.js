@@ -759,7 +759,13 @@ const vuePropRegex = /\s([.:@#])([\w.:-]*?=)/gi;
 // A directive with an argument and modifiers: `v-on:click.stop=`, `v-model.trim=`. JSX allows one
 // `:` in a name (`v-on:click`), never a `.`.
 const vueDirectiveModifierRegex = /(\sv-[\w-]+)((?::[\w-]+)?(?:[.:][\w-]+)+)(=)/gi;
-const vueOpenImgTag = /(<img)((?!>)[\s\S]+?)( [^/]>)/gi;
+// `vueOpenImgTag` closed `<img ... >` by replacing the space before `>` with
+// `/`. Its `[\s\S]+?` could run away across lines: anchored at an `<img>` whose
+// own `>` has no preceding space, it matched up to a later tag's ` >` and
+// self-closed THAT tag (vue3-realworld's ArticleDetailMeta.vue), leaving a
+// stray closing tag that only Babel's error recovery could glue together. The
+// tag scanner below closes the same intended shape (`trailing whitespace
+// becomes /`) for every void element, within the one tag it is looking at.
 const vueScriptTagRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
 // The HTML void elements. Writing one without the closing slash (`<input
 // type="text">`) is legal HTML but not legal JSX, so the whole-file candidate
@@ -1154,7 +1160,8 @@ const maskVueTemplateTags = (code, skipRanges) => {
           // whitespace before `>` becomes the `/` of a self-closing tag, the
           // one closing form where the element and every attribute keep
           // their exact offsets (`<input type="text" >` -> `<input
-          // type="text"/>`), the same move `vueOpenImgTag` makes for `<img>`
+          // type="text"/>`), the move the removed `vueOpenImgTag` regex made
+          // for `<img>`
           out[tagEnd - 1] = "/";
         } else {
           // no whitespace to spend. Deleting the tag name's last letter to
@@ -1271,9 +1278,6 @@ const cleanVueCodeForParsing = (code, { includeScripts = true } = {}) => {
       .replace(vueDirectiveModifierRegex, (match, grA, grB, grC) => {
         const argument = grB.startsWith(":") ? grB.slice(0, 1) : "";
         return grA + argument + grB.slice(argument.length).replace(/[.:]/g, "-") + grC;
-      })
-      .replace(vueOpenImgTag, (match, grA, grB, grC) => {
-        return grA + grB + grC.replace(" >", "/>");
       }),
     scriptRanges
   );
