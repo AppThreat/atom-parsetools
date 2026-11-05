@@ -8,7 +8,7 @@
 // array) run with --all, which CI's native job runs after building the binary.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -165,8 +165,47 @@ if (runAll) {
     }
     writeFileSync(join(dir, "bundle.js"), parts.join(""));
     // TypeScript 6 takes minutes to set up its checker for this many redeclared names; the program
-    // budget ends that, and the run keeps its ASTs without types
-  }, { timeoutMs: 110000, env: { ASTGEN_TYPE_PROGRAM_TIMEOUT_MS: "20000" }, ts6Budget: "program-wall-time", fileError: true, stderrTest: (s) => assert.ok(!crashPattern.test(s), s.slice(0, 800)) });
+    // budget ends that, and the run keeps its ASTs without types. The AST needs about 1.3 GB of
+    // heap and its JSON is about 700 MB, longer than V8's largest string: astgen gets a 1.5 GB
+    // heap here on every runner, so the file always goes to a process with a larger heap, and the
+    // JSON is written in chunks. The native case types the file for up to 60 s after building its
+    // program, hence the longer limit.
+  }, {
+    timeoutMs: 300000,
+    env: { ASTGEN_TYPE_PROGRAM_TIMEOUT_MS: "20000", NODE_OPTIONS: "--max-old-space-size=1536" },
+    ts6Budget: "program-wall-time",
+    fileError: false,
+    stderrTest: (s) => {
+      assert.ok(!crashPattern.test(s), s.slice(0, 800));
+      assert.match(s, /parsing it in a process with \d+ MB of heap/);
+    },
+    outTest: (out) => {
+      const json = join(out, "bundle.js.json");
+      assert.ok(existsSync(json), "the bundle's AST is written");
+      assert.ok(statSync(json).size > 500 * 1024 * 1024, `the AST json is ${statSync(json).size} bytes`);
+      const fd = openSync(json, "r");
+      const head = Buffer.alloc(16);
+      readSync(fd, head, 0, 16, 0);
+      closeSync(fd);
+      assert.equal(head.toString("utf8", 0, 12), '{"fullName":');
+    }
+  });
+
+  hostileCase("a file whose AST does not fit the heap it is given", (dir) => {
+    const chunk = "var a1=1,a2=2,a3=3;function f1(){return a1+a2+a3;}f1();";
+    writeFileSync(join(dir, "bundle.js"), chunk.repeat(Math.ceil((3 * 1024 * 1024) / chunk.length)));
+    // astgen itself has 512 MB and the large-file process 256 MB, too little for a 3 MB bundle's
+    // AST: that process runs out of memory, astgen records the file and carries on
+  }, {
+    timeoutMs: 180000,
+    env: {
+      ASTGEN_TYPE_PROGRAM_TIMEOUT_MS: "5000",
+      NODE_OPTIONS: "--max-old-space-size=512",
+      ASTGEN_LARGE_FILE_HEAP_MB: "256"
+    },
+    fileError: true,
+    stderrTest: (s) => assert.match(s, /did not fit in 256 MB of heap/)
+  });
 
   hostileCase("a 100,000-element array literal", (dir) => {
     const elements = [];
