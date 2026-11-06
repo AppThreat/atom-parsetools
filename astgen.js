@@ -1829,6 +1829,16 @@ const DEFAULT_TSC_OPTIONS = {
   lib: ["lib.es2022.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"]
 };
 
+// The options every program gets whatever its configuration says: astgen
+// types JavaScript as well as TypeScript and never emits.
+const FORCED_TSC_OPTIONS = {
+  allowJs: true,
+  checkJs: true,
+  noEmit: true,
+  skipLibCheck: true,
+  resolveJsonModule: true
+};
+
 const readJsonFileIfExists = (file) => {
   try {
     if (!file || !existsSync(file)) {
@@ -1922,7 +1932,16 @@ const normalizeImportedTypeSpecifier = (specifier, currentFileName) => {
     }
   }
 
-  if (normalizedCurrentFileName && normalizedSpecifier.startsWith("/")) {
+  // A specifier that runs through node_modules names a file of a package.
+  // TypeScript prints one when a `paths` alias covers the directory that holds
+  // node_modules (`"@app/*": ["./*"]` prints `@app/node_modules/pkg/index`), so
+  // the package path after the last node_modules is the specifier.
+  const packageAt = normalizedSpecifier.lastIndexOf("/node_modules/");
+  if (packageAt !== -1) {
+    normalizedSpecifier = normalizedSpecifier.slice(
+      packageAt + "/node_modules/".length
+    );
+  } else if (normalizedCurrentFileName && normalizedSpecifier.startsWith("/")) {
     const relativeSpecifier = relative(
       dirname(normalizedCurrentFileName),
       normalizedSpecifier
@@ -2000,15 +2019,17 @@ const createTscProgramConfig = (srcFiles, src) => {
   const shouldRespectExplicitModuleSettings =
     hasExplicitTsCompilerOption(configFile.config, "module") ||
     hasExplicitTsCompilerOption(configFile.config, "moduleResolution");
-  const configParseDefaults = shouldRespectExplicitModuleSettings
-    ? DEFAULT_TSC_OPTIONS
-    : detectedDefaultOptions;
-
+  // The parser treats `existingOptions` as command-line flags, which win over
+  // the configuration and everything its `extends` chain brings in. Only the
+  // options forced below go there (`allowJs` also decides whether `include`
+  // lists JavaScript files); astgen's defaults go underneath the parsed
+  // options in the merge, so a project's own `lib`, `target` and
+  // `moduleResolution` are the ones its program uses.
   const parsedConfig = tsc.parseJsonConfigFileContent(
     configFile.config,
     tsc.sys,
     dirname(configPath),
-    configParseDefaults,
+    FORCED_TSC_OPTIONS,
     configPath
   );
   // A tsconfig without `include` lists every file under its directory, so a
@@ -2027,11 +2048,7 @@ const createTscProgramConfig = (srcFiles, src) => {
         ...DEFAULT_TSC_OPTIONS,
         ...(shouldRespectExplicitModuleSettings ? {} : detectedDefaultOptions),
         ...parsedConfig.options,
-        allowJs: true,
-        checkJs: true,
-        noEmit: true,
-        skipLibCheck: true,
-        resolveJsonModule: true
+        ...FORCED_TSC_OPTIONS
       },
       src
     )
