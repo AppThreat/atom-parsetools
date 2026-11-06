@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ui/*": ["./ui/*"]
+    }
+  },
+  "include": ["**/*.ts"]
+}
