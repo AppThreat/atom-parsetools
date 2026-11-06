@@ -52,8 +52,10 @@ import { lowerEmberFile } from "./emberAst.js";
 // packages again when the project does not set `types`. 4.5.2: a project
 // whose types recursed through conditional types (Prisma 4's client) ran
 // astgen out of memory, leaving no ASTs at all; the empty parse must not be
-// reused.
-const ASTGEN_VERSION = "4.5.2";
+// reused. 4.5.3: a project's own compiler options win over astgen's
+// defaults, and a nested project with its own tsconfig.json is typed by a
+// program of its own, so type maps change for most TypeScript projects.
+const ASTGEN_VERSION = "4.5.3";
 
 const HELP_TEXT = `Options:
   -i, --src      Source directory                                 [default: "."]
@@ -1829,6 +1831,16 @@ const DEFAULT_TSC_OPTIONS = {
   lib: ["lib.es2022.d.ts", "lib.dom.d.ts", "lib.dom.iterable.d.ts"]
 };
 
+// The options every program gets whatever its configuration says: astgen
+// types JavaScript as well as TypeScript and never emits.
+const FORCED_TSC_OPTIONS = {
+  allowJs: true,
+  checkJs: true,
+  noEmit: true,
+  skipLibCheck: true,
+  resolveJsonModule: true
+};
+
 const readJsonFileIfExists = (file) => {
   try {
     if (!file || !existsSync(file)) {
@@ -1922,7 +1934,16 @@ const normalizeImportedTypeSpecifier = (specifier, currentFileName) => {
     }
   }
 
-  if (normalizedCurrentFileName && normalizedSpecifier.startsWith("/")) {
+  // A specifier that runs through node_modules names a file of a package.
+  // TypeScript prints one when a `paths` alias covers the directory that holds
+  // node_modules (`"@app/*": ["./*"]` prints `@app/node_modules/pkg/index`), so
+  // the package path after the last node_modules is the specifier.
+  const packageAt = normalizedSpecifier.lastIndexOf("/node_modules/");
+  if (packageAt !== -1) {
+    normalizedSpecifier = normalizedSpecifier.slice(
+      packageAt + "/node_modules/".length
+    );
+  } else if (normalizedCurrentFileName && normalizedSpecifier.startsWith("/")) {
     const relativeSpecifier = relative(
       dirname(normalizedCurrentFileName),
       normalizedSpecifier
@@ -1979,9 +2000,16 @@ const withAutomaticTypes = (options, src) => {
     : options;
 };
 
-const createTscProgramConfig = (srcFiles, src) => {
+/**
+ * The program configuration for `srcFiles` under `src`. `program` describes the
+ * program when the run has nested projects (see findTypeProjects): its
+ * `configPath` replaces the search from `src`, which cannot find a referenced
+ * tsconfig.app.json, and a file its configuration lists that belongs to
+ * another project of the run is left to that project's program.
+ */
+const createTscProgramConfig = (srcFiles, src, program = {}) => {
   const detectedDefaultOptions = detectDefaultTscOptions(srcFiles, src);
-  const configPath = findTsConfig(src);
+  const configPath = program.configPath ?? findTsConfig(src);
   if (!configPath) {
     return {
       rootNames: srcFiles,
@@ -2000,15 +2028,17 @@ const createTscProgramConfig = (srcFiles, src) => {
   const shouldRespectExplicitModuleSettings =
     hasExplicitTsCompilerOption(configFile.config, "module") ||
     hasExplicitTsCompilerOption(configFile.config, "moduleResolution");
-  const configParseDefaults = shouldRespectExplicitModuleSettings
-    ? DEFAULT_TSC_OPTIONS
-    : detectedDefaultOptions;
-
+  // The parser treats `existingOptions` as command-line flags, which win over
+  // the configuration and everything its `extends` chain brings in. Only the
+  // options forced below go there (`allowJs` also decides whether `include`
+  // lists JavaScript files); astgen's defaults go underneath the parsed
+  // options in the merge, so a project's own `lib`, `target` and
+  // `moduleResolution` are the ones its program uses.
   const parsedConfig = tsc.parseJsonConfigFileContent(
     configFile.config,
     tsc.sys,
     dirname(configPath),
-    configParseDefaults,
+    FORCED_TSC_OPTIONS,
     configPath
   );
   // A tsconfig without `include` lists every file under its directory, so a
@@ -2017,7 +2047,8 @@ const createTscProgramConfig = (srcFiles, src) => {
   const srcRoot = resolve(src);
   const configFileNames = parsedConfig.fileNames.filter(
     (file) =>
-      !isUnderRoot(file, srcRoot) || !isLeftOutByDiscovery(file, srcRoot)
+      (!isUnderRoot(file, srcRoot) || !isLeftOutByDiscovery(file, srcRoot)) &&
+      !isOtherProjectsFile(file, program)
   );
   const rootNames = [...new Set([...srcFiles, ...configFileNames])].sort();
   return {
@@ -2027,11 +2058,7 @@ const createTscProgramConfig = (srcFiles, src) => {
         ...DEFAULT_TSC_OPTIONS,
         ...(shouldRespectExplicitModuleSettings ? {} : detectedDefaultOptions),
         ...parsedConfig.options,
-        allowJs: true,
-        checkJs: true,
-        noEmit: true,
-        skipLibCheck: true,
-        resolveJsonModule: true
+        ...FORCED_TSC_OPTIONS
       },
       src
     )
@@ -2146,9 +2173,9 @@ const instrumentTypeChecker = (typeChecker) => {
   return timing;
 };
 
-function createTsc(srcFiles, src) {
+function createTsc(srcFiles, src, typeProject) {
   try {
-    const tscConfig = createTscProgramConfig(srcFiles, src);
+    const tscConfig = createTscProgramConfig(srcFiles, src, typeProject);
     const program = tsc.createProgram(tscConfig.rootNames, tscConfig.options);
     const typeChecker = program.getTypeChecker();
     const seenTypes = new Map();
@@ -2965,6 +2992,188 @@ const expandSrcFilesWithRootNames = (srcFiles, rootNames, src) => {
   return [...srcFileByResolvedPath.values()].sort();
 };
 
+const readTypeConfig = (configPath) => {
+  const { config, error } = tsc.readConfigFile(configPath, tsc.sys.readFile);
+  return error ? undefined : (config ?? {});
+};
+
+// A solution-style configuration lists no files of its own and only
+// references other configurations, as Angular and Vite generate one; its
+// compiler options are not the ones its directory's files are built with.
+const isSolutionStyleConfig = (config) =>
+  Array.isArray(config.files) &&
+  config.files.length === 0 &&
+  config.include === undefined &&
+  (config.references?.length ?? 0) > 0;
+
+// When several configurations share a directory, the first in this order types
+// it: one that lists files before a solution-style one, then tsconfig.json and
+// jsconfig.json (the names findTsConfig looks for), then the alphabetically
+// first name.
+const typeConfigRank = ({ path, config }) => {
+  const name = basename(path).toLowerCase();
+  const canonical =
+    name === "tsconfig.json" ? 0 : name === "jsconfig.json" ? 1 : 2;
+  return `${isSolutionStyleConfig(config) ? 1 : 0}${canonical}\u0000${name}`;
+};
+
+const byRank = (a, b) => {
+  const ra = typeConfigRank(a);
+  const rb = typeConfigRank(b);
+  return ra < rb ? -1 : ra > rb ? 1 : 0;
+};
+
+/**
+ * The TypeScript projects of a run, for typing each file with the
+ * configuration that owns it. A directory below the source root is a nested
+ * project when it holds a tsconfig.json or jsconfig.json and some project file
+ * of the run lies under it, so the directories discovery leaves out never hold
+ * one. Without node_modules of its own a nested project is still one (a
+ * workspace package): TypeScript resolves packages by walking up from the
+ * importing file, whatever the program. `references` are followed the way
+ * `tsc -b` follows them, so a configuration a solution-style one names
+ * (Angular's src/tsconfig.app.json) is found, and `extends` chains are left to
+ * the configuration parser. Returns the configuration the root program reads,
+ * which differs from findTsConfig's only when that one is solution-style and
+ * references a configuration beside it, and the nested projects sorted by
+ * directory.
+ */
+const findTypeProjects = (projectFiles, src) => {
+  const srcRoot = resolve(src);
+  const rootConfig = findTsConfig(srcRoot);
+  const rootConfigDir = rootConfig ? dirname(resolve(rootConfig)) : srcRoot;
+  const configsByDir = new Map();
+  const visited = new Set();
+  const consider = (configPath) => {
+    const path = resolve(configPath);
+    if (visited.has(path) || !existsSync(path)) {
+      return;
+    }
+    visited.add(path);
+    const config = readTypeConfig(path);
+    if (!config) {
+      return;
+    }
+    const dir = dirname(path);
+    if (dir === rootConfigDir || isUnderRoot(dir, srcRoot)) {
+      configsByDir.set(dir, [...(configsByDir.get(dir) ?? []), { path, config }]);
+    }
+    for (const ref of Array.isArray(config.references) ? config.references : []) {
+      if (typeof ref?.path === "string" && ref.path.trim() !== "") {
+        // a reference names a configuration file, or a directory whose
+        // tsconfig.json it means
+        consider(tsc.resolveProjectReferencePath({ path: resolve(dir, ref.path) }));
+      }
+    }
+  };
+  if (rootConfig) {
+    consider(rootConfig);
+  }
+  const fileDirs = new Set();
+  for (const file of projectFiles) {
+    let dir = dirname(resolve(file));
+    while (isUnderRoot(dir, srcRoot) && !fileDirs.has(dir)) {
+      fileDirs.add(dir);
+      dir = dirname(dir);
+    }
+  }
+  for (const dir of [...fileDirs].sort()) {
+    consider(join(dir, "tsconfig.json"));
+    consider(join(dir, "jsconfig.json"));
+  }
+  const chosen = (dir) => [...configsByDir.get(dir)].sort(byRank)[0].path;
+  const rootChosen = configsByDir.has(rootConfigDir)
+    ? chosen(rootConfigDir)
+    : undefined;
+  const projects = [...configsByDir.keys()]
+    .filter((dir) => dir !== rootConfigDir && fileDirs.has(dir))
+    .sort()
+    .map((dir) => ({
+      dir,
+      configPath: chosen(dir),
+      label: relative(srcRoot, dir).split(/[\\/]/).join("/")
+    }));
+  return {
+    rootConfigPath:
+      rootChosen && rootChosen !== resolve(rootConfig) ? rootChosen : undefined,
+    projects
+  };
+};
+
+// The directory of the deepest nested project that holds `file`, given the
+// project directories deepest first, or undefined when the root program types
+// it.
+const typeProjectDirOf = (file, projectDirs) =>
+  projectDirs.find((dir) => isUnderRoot(file, dir));
+
+// Whether `file`, which a program's configuration lists, belongs to another
+// project of the run and so is left to that project's program.
+const isOtherProjectsFile = (file, program) =>
+  Boolean(program.projectDirs) &&
+  isUnderRoot(file, program.runRoot) &&
+  typeProjectDirOf(file, program.projectDirs) !== program.dir;
+
+/**
+ * Split the run's files among the programs that type them: a file belongs to
+ * the deepest nested project whose directory holds it, else to the root
+ * program, and each group keeps discovery's order. Without nested projects
+ * there is one group, typed exactly as before. With them, each group carries
+ * the `program` its workers build: the directory its options are read from,
+ * the configuration, a label for its budget records ("." for the root), and
+ * the project directories that decide which listed files are another
+ * program's. Separate programs also keep one project's module lookups from
+ * deciding another's: TypeScript caches them per program.
+ */
+const partitionTypeGroups = (srcFiles, projectFiles, typeProjects, src) => {
+  const { rootConfigPath, projects } = typeProjects;
+  if (projects.length === 0) {
+    const program = rootConfigPath ? { configPath: rootConfigPath } : undefined;
+    return [{ files: srcFiles, projectFiles, program }];
+  }
+  const runRoot = resolve(src);
+  const projectDirs = projects
+    .map((project) => project.dir)
+    .sort((a, b) => b.length - a.length || (a < b ? -1 : 1));
+  const groups = new Map([
+    [
+      undefined,
+      {
+        files: [],
+        projectFiles: [],
+        program: {
+          src,
+          configPath: rootConfigPath,
+          label: ".",
+          runRoot,
+          projectDirs,
+          dir: undefined
+        }
+      }
+    ]
+  ]);
+  for (const project of projects) {
+    groups.set(project.dir, {
+      files: [],
+      projectFiles: [],
+      program: {
+        src: project.dir,
+        configPath: project.configPath,
+        label: project.label,
+        runRoot,
+        projectDirs,
+        dir: project.dir
+      }
+    });
+  }
+  for (const file of srcFiles) {
+    groups.get(typeProjectDirOf(file, projectDirs)).files.push(file);
+  }
+  for (const file of projectFiles) {
+    groups.get(typeProjectDirOf(file, projectDirs)).projectFiles.push(file);
+  }
+  return [...groups.values()].filter((group) => group.files.length > 0);
+};
+
 const runGc = () => {
   if (typeof globalThis.gc === "function") {
     try {
@@ -3034,13 +3243,15 @@ const writeManifestRecord = (output, record) => {
  * it (its fresh program can order a few union members differently, as sharding does). When the
  * program is not built within its budget, the files get their ASTs without types. Resolves to true
  * when every file was handled, false when a worker failed for another reason, so the caller can
- * fall back as before.
+ * fall back as before. `program`, when the run has nested projects, names the project whose
+ * program the worker builds, and its budget records carry that project's label.
  */
-const runSupervisedTypeWorker = async (files, projectFiles, options, index = 0) => {
+const runSupervisedTypeWorker = async (files, projectFiles, options, index = 0, program) => {
   const workerEntry = fileURLToPath(import.meta.url);
+  const project = program?.label ? { project: program.label } : {};
   const record = (fields) => {
     try {
-      writeManifestRecord(options.output, { kind: "type_budget", engine: "ts6", ...fields });
+      writeManifestRecord(options.output, { kind: "type_budget", engine: "ts6", ...project, ...fields });
     } catch (err) {
       console.error("astgen: cannot write the manifest:", err?.message);
     }
@@ -3072,7 +3283,7 @@ const runSupervisedTypeWorker = async (files, projectFiles, options, index = 0) 
       };
       try {
         worker = new Worker(workerEntry, {
-          workerData: { kind: "astgen-typegen", shard: remaining, projectFiles, options, index, announce: true }
+          workerData: { kind: "astgen-typegen", shard: remaining, projectFiles, options, index, announce: true, program }
         });
       } catch (err) {
         console.error("Unable to start astgen type worker:", err?.message);
@@ -3109,8 +3320,9 @@ const runSupervisedTypeWorker = async (files, projectFiles, options, index = 0) 
       return false;
     }
     if (outcome.status === "program-timeout") {
+      const of = program?.label ? ` of ${program.label}` : "";
       console.error(
-        `astgen: the TypeScript 6 program was not built within ${TYPE_PROGRAM_BUDGET_MS} ms (ASTGEN_TYPE_PROGRAM_TIMEOUT_MS); writing ASTs without types.`
+        `astgen: the TypeScript 6 program${of} was not built within ${TYPE_PROGRAM_BUDGET_MS} ms (ASTGEN_TYPE_PROGRAM_TIMEOUT_MS); writing ASTs without types.`
       );
       record({ reason: "program-wall-time", limit_ms: TYPE_PROGRAM_BUDGET_MS, files: remaining.length });
       // types stay on for the run's records (file_error); only the type collection is skipped
@@ -3181,13 +3393,16 @@ const runTypeGenerationInWorkers = (
   srcFiles,
   projectFiles,
   options,
-  workerCount
+  workerCount,
+  program
 ) => {
   const shards = Array.from({ length: workerCount }, () => []);
   srcFiles.forEach((file, index) => shards[index % workerCount].push(file));
   return Promise.all(
     shards.map((shard, index) =>
-      shard.length === 0 ? Promise.resolve(true) : runSupervisedTypeWorker(shard, projectFiles, options, index)
+      shard.length === 0
+        ? Promise.resolve(true)
+        : runSupervisedTypeWorker(shard, projectFiles, options, index, program)
     )
   ).then((results) => results.every(Boolean));
 };
@@ -3208,39 +3423,54 @@ const createJSAst = async (options) => {
     const projectFiles = !shouldIncludeNodeModulesBundles
       ? srcFiles.filter((file) => !file.includes("node_modules"))
       : srcFiles;
+    const typeProjects = findTypeProjects(projectFiles, options.src);
     // Compute the program root names from the parsed tsconfig without building
     // a program on the main thread, then expand the output file set to match.
-    const tscConfig = createTscProgramConfig(projectFiles, options.src);
+    const tscConfig = createTscProgramConfig(projectFiles, options.src, {
+      configPath: typeProjects.rootConfigPath
+    });
     srcFiles = expandSrcFilesWithRootNames(
       srcFiles,
       tscConfig?.rootNames,
       options.src
     );
 
-    const workerCount = resolveTypeWorkerCount(srcFiles.length);
-    if (workerCount > 1) {
-      const ranInParallel = await runTypeGenerationInWorkers(
-        srcFiles,
-        projectFiles,
-        options,
-        workerCount
-      );
-      if (ranInParallel) {
-        return;
+    // A nested project with its own configuration (juice-shop's frontend/) is typed by a program
+    // of its own. The groups run one after another, so no more programs are alive at once than
+    // with one group.
+    const groups = partitionTypeGroups(
+      srcFiles,
+      projectFiles,
+      typeProjects,
+      options.src
+    );
+    for (const { files, projectFiles: groupProjectFiles, program } of groups) {
+      const workerCount = resolveTypeWorkerCount(files.length);
+      if (workerCount > 1) {
+        const ranInParallel = await runTypeGenerationInWorkers(
+          files,
+          groupProjectFiles,
+          options,
+          workerCount,
+          program
+        );
+        if (ranInParallel) {
+          continue;
+        }
+        console.error(
+          "Falling back to single-threaded type generation after worker failure."
+        );
       }
-      console.error(
-        "Falling back to single-threaded type generation after worker failure."
-      );
-    }
 
-    // one worker over every file, in order, builds the same program the inline path would, so the
-    // output is the same; the worker is there so that the budgets can stop it
-    if (await runSupervisedTypeWorker(srcFiles, projectFiles, options)) {
-      return;
+      // one worker over every file, in order, builds the same program the inline path would, so
+      // the output is the same; the worker is there so that the budgets can stop it
+      if (await runSupervisedTypeWorker(files, groupProjectFiles, options, 0, program)) {
+        continue;
+      }
+      console.error("Falling back to inline type generation, without its budgets, after a worker failure.");
+      const ts = createTsc(groupProjectFiles, program?.src ?? options.src, program);
+      await processFilesInline(files, options, ts);
     }
-    console.error("Falling back to inline type generation, without its budgets, after a worker failure.");
-    const ts = createTsc(projectFiles, options.src);
-    await processFilesInline(srcFiles, options, ts);
   } catch (err) {
     console.error(err);
   }
@@ -3491,11 +3721,12 @@ async function main(argvs) {
  * Type-generation worker entry point. Runs in a worker thread spawned by
  * runTypeGenerationInWorkers: builds its own TypeScript program over the full
  * project file set and processes only its assigned shard, so cross-file type
- * resolution is identical to the single-threaded path.
+ * resolution is identical to the single-threaded path. `program`, when set,
+ * names the project the program is built for (see partitionTypeGroups).
  */
-const runTypeGenWorker = async ({ shard, projectFiles, options, announce }) => {
+const runTypeGenWorker = async ({ shard, projectFiles, options, announce, program }) => {
   try {
-    const ts = createTsc(projectFiles, options.src);
+    const ts = createTsc(projectFiles, program?.src ?? options.src, program);
     await processFilesInline(shard, options, ts, announce ? (file) => parentPort?.postMessage({ file }) : undefined);
     parentPort?.postMessage({ done: true });
   } catch (err) {
