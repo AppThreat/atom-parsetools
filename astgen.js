@@ -25,7 +25,8 @@ import {
   mkdtempSync,
   rmSync,
   realpathSync,
-  statSync
+  statSync,
+  appendFileSync
 } from "fs";
 import { getAllFiles } from "@appthreat/atom-common";
 import { exitWithSupervisor } from "./supervise.js";
@@ -279,6 +280,7 @@ const babelSyntaxPlugins = [
   "classPrivateProperties",
   "classPrivateMethods",
   "decorators-legacy",
+  "decoratorAutoAccessors",
   "exportDefaultFrom",
   "doExpressions",
   "numericSeparator",
@@ -382,6 +384,7 @@ const babelFlowParserOptions = {
     "optionalChaining",
     "classProperties",
     "decorators-legacy",
+    "decoratorAutoAccessors",
     "exportDefaultFrom",
     "doExpressions",
     "numericSeparator",
@@ -409,6 +412,7 @@ const babelSafeFlowParserOptions = {
     "optionalChaining",
     "classProperties",
     "decorators-legacy",
+    "decoratorAutoAccessors",
     "exportDefaultFrom",
     "doExpressions",
     "numericSeparator",
@@ -1638,7 +1642,7 @@ const toVueAst = (file, tsInstance) => {
 };
 
 const collectSeenTypesForFile = (file, ts, options) => {
-  if (!options?.tsTypes) {
+  if (!options?.tsTypes || options.typesGivenUp) {
     return undefined;
   }
 
@@ -2982,16 +2986,145 @@ const runGc = () => {
  * thread, in memory-bounded chunks. `ts` is the shared TypeScript program
  * instance (or undefined when type generation is disabled).
  */
-const processFilesInline = async (srcFiles, options, ts) => {
+const processFilesInline = async (srcFiles, options, ts, onFile) => {
   const CONCURRENCY_LIMIT = Math.max(
     1,
     Number.parseInt(process.env.ASTGEN_CONCURRENCY || "10", 10) || 10
   );
   for (let i = 0; i < srcFiles.length; i += CONCURRENCY_LIMIT) {
     const chunk = srcFiles.slice(i, i + CONCURRENCY_LIMIT);
-    await Promise.all(chunk.map((file) => processFile(file, options, ts)));
+    // processFile is synchronous, so each file is announced right before it is processed
+    await Promise.all(
+      chunk.map((file) => {
+        onFile?.(file);
+        return processFile(file, options, ts);
+      })
+    );
     runGc();
   }
+};
+
+// Budgets of the TypeScript 6 type phase. The checker asks its cancellation token only while it
+// writes a type and around declarations, not in the flow analysis that grows exponentially on an
+// untyped array reassigned in many `if` blocks (cdxgen's scanOnePathInner: 20 blocks take 12 s, 25
+// would take minutes), and building the checker grows faster than quadratically on a bundle that
+// redeclares the same names (2 s at 1 MB, 11 s at 2 MB, minutes at 10 MB). Neither can be cancelled
+// from inside, so the phase runs in a worker thread that this thread stops when a file, or the
+// program before the first file, runs past its budget.
+const positiveMsFromEnv = (name, fallback) => {
+  const v = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isFinite(v) && v > 0 ? v : fallback;
+};
+const TYPE_FILE_BUDGET_MS = positiveMsFromEnv("ASTGEN_TYPE_FILE_TIMEOUT_MS", 60000);
+const TYPE_PROGRAM_BUDGET_MS = positiveMsFromEnv("ASTGEN_TYPE_PROGRAM_TIMEOUT_MS", 300000);
+const TYPE_BUDGET_POLL_MS = 100;
+
+// The manifest astgen appends budget records to. The name ends in .jsonl because every *.json
+// under the astgen output is read as an AST (the same name atom-parsetools main uses).
+const MANIFEST_FILENAME = "astgen_manifest.jsonl";
+const writeManifestRecord = (output, record) => {
+  mkdirSync(output, { recursive: true });
+  appendFileSync(join(output, MANIFEST_FILENAME), `${JSON.stringify(record)}\n`);
+};
+
+/**
+ * Run `files` through the TypeScript 6 type phase in one worker thread, under the budgets above.
+ * When a file runs past its budget the worker is stopped, the file keeps the AST it already wrote
+ * and gets no types, a manifest record names it, and a new worker carries on with the files after
+ * it (its fresh program can order a few union members differently, as sharding does). When the
+ * program is not built within its budget, the files get their ASTs without types. Resolves to true
+ * when every file was handled, false when a worker failed for another reason, so the caller can
+ * fall back as before.
+ */
+const runSupervisedTypeWorker = async (files, projectFiles, options, index = 0) => {
+  const workerEntry = fileURLToPath(import.meta.url);
+  const record = (fields) => {
+    try {
+      writeManifestRecord(options.output, { kind: "type_budget", engine: "ts6", ...fields });
+    } catch (err) {
+      console.error("astgen: cannot write the manifest:", err?.message);
+    }
+  };
+  let remaining = files;
+  while (remaining.length > 0) {
+    const outcome = await new Promise((resolvePromise) => {
+      let settled = false;
+      let current;
+      let currentStart = 0;
+      let phaseStart = Date.now();
+      let worker;
+      let timer;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        clearInterval(timer);
+        resolvePromise(value);
+      };
+      // A budget stop settles only once the worker has exited. A worker still building its
+      // checker keeps allocating, and a worker without resource limits of its own that runs
+      // out of memory aborts the whole process, so the inline pass must not start beside it.
+      let stopping;
+      const stop = (value) => {
+        if (settled || stopping) return;
+        stopping = value;
+        clearInterval(timer);
+        worker.terminate().catch(() => {}).finally(() => settle(value));
+      };
+      try {
+        worker = new Worker(workerEntry, {
+          workerData: { kind: "astgen-typegen", shard: remaining, projectFiles, options, index, announce: true }
+        });
+      } catch (err) {
+        console.error("Unable to start astgen type worker:", err?.message);
+        settle({ status: "failed" });
+        return;
+      }
+      worker.on("message", (msg) => {
+        if (msg?.file) {
+          current = msg.file;
+          currentStart = Date.now();
+        } else if (msg?.done) {
+          settle({ status: "done" });
+        }
+      });
+      worker.on("error", (err) => {
+        if (stopping) return;
+        console.error("astgen type worker failed:", err?.message || err);
+        settle({ status: "failed" });
+      });
+      worker.on("exit", (code) => settle(stopping ?? { status: code === 0 ? "done" : "failed" }));
+      timer = setInterval(() => {
+        const now = Date.now();
+        if (current === undefined && now - phaseStart > TYPE_PROGRAM_BUDGET_MS) {
+          stop({ status: "program-timeout", ms: now - phaseStart });
+        } else if (current !== undefined && now - currentStart > TYPE_FILE_BUDGET_MS) {
+          stop({ status: "file-timeout", file: current, ms: now - currentStart });
+        }
+      }, TYPE_BUDGET_POLL_MS);
+    });
+    if (outcome.status === "done") {
+      return true;
+    }
+    if (outcome.status === "failed") {
+      return false;
+    }
+    if (outcome.status === "program-timeout") {
+      console.error(
+        `astgen: the TypeScript 6 program was not built within ${TYPE_PROGRAM_BUDGET_MS} ms (ASTGEN_TYPE_PROGRAM_TIMEOUT_MS); writing ASTs without types.`
+      );
+      record({ reason: "program-wall-time", limit_ms: TYPE_PROGRAM_BUDGET_MS, files: remaining.length });
+      // types stay on for the run's records (file_error); only the type collection is skipped
+      await processFilesInline(remaining, { ...options, typesGivenUp: true }, undefined);
+      return true;
+    }
+    // file-timeout: the file's AST is written before its types are collected
+    console.error(
+      `astgen: typing ${outcome.file} took longer than ${TYPE_FILE_BUDGET_MS} ms (ASTGEN_TYPE_FILE_TIMEOUT_MS); it has no types.`
+    );
+    record({ reason: "file-wall-time", file: outcome.file, limit_ms: TYPE_FILE_BUDGET_MS });
+    remaining = remaining.slice(remaining.indexOf(outcome.file) + 1);
+  }
+  return true;
 };
 
 /**
@@ -3052,41 +3185,10 @@ const runTypeGenerationInWorkers = (
 ) => {
   const shards = Array.from({ length: workerCount }, () => []);
   srcFiles.forEach((file, index) => shards[index % workerCount].push(file));
-  const workerEntry = fileURLToPath(import.meta.url);
   return Promise.all(
-    shards.map((shard, index) => {
-      if (shard.length === 0) {
-        return Promise.resolve(true);
-      }
-      return new Promise((resolvePromise) => {
-        let settled = false;
-        const settle = (value) => {
-          if (!settled) {
-            settled = true;
-            resolvePromise(value);
-          }
-        };
-        try {
-          const worker = new Worker(workerEntry, {
-            workerData: {
-              kind: "astgen-typegen",
-              shard,
-              projectFiles,
-              options,
-              index
-            }
-          });
-          worker.on("error", (err) => {
-            console.error("astgen type worker failed:", err?.message || err);
-            settle(false);
-          });
-          worker.on("exit", (code) => settle(code === 0));
-        } catch (err) {
-          console.error("Unable to start astgen type worker:", err?.message);
-          settle(false);
-        }
-      });
-    })
+    shards.map((shard, index) =>
+      shard.length === 0 ? Promise.resolve(true) : runSupervisedTypeWorker(shard, projectFiles, options, index)
+    )
   ).then((results) => results.every(Boolean));
 };
 
@@ -3131,6 +3233,12 @@ const createJSAst = async (options) => {
       );
     }
 
+    // one worker over every file, in order, builds the same program the inline path would, so the
+    // output is the same; the worker is there so that the budgets can stop it
+    if (await runSupervisedTypeWorker(srcFiles, projectFiles, options)) {
+      return;
+    }
+    console.error("Falling back to inline type generation, without its budgets, after a worker failure.");
     const ts = createTsc(projectFiles, options.src);
     await processFilesInline(srcFiles, options, ts);
   } catch (err) {
@@ -3385,10 +3493,10 @@ async function main(argvs) {
  * project file set and processes only its assigned shard, so cross-file type
  * resolution is identical to the single-threaded path.
  */
-const runTypeGenWorker = async ({ shard, projectFiles, options }) => {
+const runTypeGenWorker = async ({ shard, projectFiles, options, announce }) => {
   try {
     const ts = createTsc(projectFiles, options.src);
-    await processFilesInline(shard, options, ts);
+    await processFilesInline(shard, options, ts, announce ? (file) => parentPort?.postMessage({ file }) : undefined);
     parentPort?.postMessage({ done: true });
   } catch (err) {
     console.error(err);
@@ -3396,7 +3504,15 @@ const runTypeGenWorker = async ({ shard, projectFiles, options }) => {
   }
 };
 
-export { buildVueParseCandidates, vueGeometryPreserved, fileToJsAst, writeAstFile, getCircularReplacer };
+export {
+  buildVueParseCandidates,
+  vueGeometryPreserved,
+  fileToJsAst,
+  writeAstFile,
+  getCircularReplacer,
+  makeBabelOptions,
+  babelParserOptions
+};
 
 // Only run when invoked directly, not when imported by tests (the regression
 // suites import `buildVueParseCandidates` to check candidate geometry). A
