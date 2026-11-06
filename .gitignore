@@ -43,6 +43,11 @@ node_modules/
 !test-fixtures/projects/node-builtins/node_modules/
 # a fixture project's stub package, reachable only through its exports
 !test-fixtures/projects/config-options/node_modules/
+# fixture projects' stub packages, one for the root and one for a nested project
+!test-fixtures/projects/nested-configs/node_modules/
+!test-fixtures/projects/nested-configs/frontend/node_modules/
+!test-fixtures/projects/nested-budgets/node_modules/
+!test-fixtures/projects/nested-budgets/frontend/node_modules/
 jspm_packages/
 
 # Snowpack dependency directory (https://snowpack.dev/)

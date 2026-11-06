@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["vite.config.ts"]
+}
