@@ -1,0 +1,31 @@
+test-fixtures/projects/auto-accessors/package.json
+  s_c4b0b47db2bc80::t_b048b1c5bef9f1 1-6
+package.json
+  s_c4b0b47db2bc80::t_ce546da0ec8e79 9
+test-fixtures/projects/auto-accessors/accessor-decorated.js
+  s_c4b0b47db2bc80::t_813bb14c5bd44a 1-22
+test-fixtures/projects/auto-accessors/legacy-decorators.ts
+  s_c4b0b47db2bc80::t_9e38169297adc1 1-22
+test-fixtures/projects/auto-accessors/accessor-decorated.ts
+  s_c4b0b47db2bc80::t_d698b601cbb1a3 1-13
+test-fixtures/astgen-autoaccessor-regression.js
+  s_c4b0b47db2bc80::t_1e6acbf61b30bc 1-169
+test-fixtures/projects/auto-accessors/legacy-decorators.js
+  s_c4b0b47db2bc80::t_a66d3edab9c97b 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1fe51efda56e4b049ac8313ca59474673afbef19",
+  "prompts": {},
+  "sessions": {
+    "s_c4b0b47db2bc80": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_b18a03ea-27c6-410e-9850-2e20127a6d41",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
