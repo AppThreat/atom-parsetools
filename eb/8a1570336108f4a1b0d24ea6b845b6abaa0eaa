@@ -1,0 +1,22 @@
+test-fixtures/astgen-ts6-budget-regression.js
+  s_c4b0b47db2bc80::t_46d9d0821b5622 1-110
+astgen.js
+  s_c4b0b47db2bc80::t_834c32e5e577f2 28-29,1645,2989,2996-3002,3007-3129,3189-3191,3236-3239,3241,3496
+  s_c4b0b47db2bc80::t_be22935a62eb63 3240
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "eb8a1570336108f4a1b0d24ea6b845b6abaa0eaa",
+  "prompts": {},
+  "sessions": {
+    "s_c4b0b47db2bc80": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_b18a03ea-27c6-410e-9850-2e20127a6d41",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
