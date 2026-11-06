@@ -1,0 +1,97 @@
+.gitignore
+  s_c0804e5357f0c5::t_227c6daa0199b9 46-50
+astgen.js
+  s_c0804e5357f0c5::t_6483b39447d786 55-58,2003-2010,2012,2050-2051,2176,2178,2995-3176,3246-3247,3249,3251,3254,3286,3323,3325,3396-3397,3403-3405,3426,3429-3431,3438-3462,3465-3472,3724-3725,3727,3729
+package.json
+  s_c0804e5357f0c5::t_d1a0f766eb09fe 9
+test-fixtures/astgen-nested-configs-regression.js
+  s_c0804e5357f0c5::t_e7e3c87c3fb46a 1-183
+test-fixtures/projects/nested-budgets/frontend/node_modules/tiny-logger/index.d.ts
+  s_c0804e5357f0c5::t_f596e5115a5756 1-2
+test-fixtures/projects/nested-budgets/frontend/node_modules/tiny-logger/package.json
+  s_c0804e5357f0c5::t_7b1e54eda50f34 1-6
+test-fixtures/projects/nested-budgets/frontend/package.json
+  s_c0804e5357f0c5::t_171fc9336af25d 1-5
+test-fixtures/projects/nested-budgets/frontend/src/heavy.js
+  s_c0804e5357f0c5::t_ca2671a6eed88c 1-45
+test-fixtures/projects/nested-budgets/frontend/src/small.js
+  s_c0804e5357f0c5::t_d1670ea78069e7 1-2
+test-fixtures/projects/nested-budgets/frontend/tsconfig.json
+  s_c0804e5357f0c5::t_6d4f82b8eb5491 1-6
+test-fixtures/projects/nested-budgets/node_modules/tiny-logger/index.d.ts
+  s_c0804e5357f0c5::t_198405ae11a687 1-2
+test-fixtures/projects/nested-budgets/node_modules/tiny-logger/package.json
+  s_c0804e5357f0c5::t_505b96f7b3537e 1-6
+test-fixtures/projects/nested-budgets/package.json
+  s_c0804e5357f0c5::t_653bf233b23ab2 1-5
+test-fixtures/projects/nested-budgets/src/root.js
+  s_c0804e5357f0c5::t_29ea284ab11913 1-2
+test-fixtures/projects/nested-budgets/tsconfig.json
+  s_c0804e5357f0c5::t_a085ae680feaf4 1-6
+test-fixtures/projects/nested-configs/config/settings.ts
+  s_c0804e5357f0c5::t_d19ddd6924d96d 1
+test-fixtures/projects/nested-configs/examples/widget-lab/lab.ts
+  s_c0804e5357f0c5::t_f67b2c43e812b2 1
+test-fixtures/projects/nested-configs/examples/widget-lab/tsconfig.json
+  s_c0804e5357f0c5::t_96ffd272da707a 1-6
+test-fixtures/projects/nested-configs/frontend/node_modules/tiny-logger/index.d.ts
+  s_c0804e5357f0c5::t_234751a2dc7dde 1-2
+test-fixtures/projects/nested-configs/frontend/node_modules/tiny-logger/package.json
+  s_c0804e5357f0c5::t_bcc175b7c1c756 1-16
+test-fixtures/projects/nested-configs/frontend/node_modules/tiny-logger/types/extra.d.ts
+  s_c0804e5357f0c5::t_ad51b84859c7ba 1-2
+test-fixtures/projects/nested-configs/frontend/package.json
+  s_c0804e5357f0c5::t_12c790b05541fc 1-5
+test-fixtures/projects/nested-configs/frontend/src/tsconfig.app.json
+  s_c0804e5357f0c5::t_ac95b525612e60 1-11
+test-fixtures/projects/nested-configs/frontend/src/ui/badge.ts
+  s_c0804e5357f0c5::t_34d85df824a76c 1
+test-fixtures/projects/nested-configs/frontend/src/widget.ts
+  s_c0804e5357f0c5::t_667a068b5fb12a 1-12
+test-fixtures/projects/nested-configs/frontend/tsconfig.base.json
+  s_c0804e5357f0c5::t_753fe889eadc1e 1-5
+test-fixtures/projects/nested-configs/frontend/tsconfig.json
+  s_c0804e5357f0c5::t_8f00589ff17651 1-6
+test-fixtures/projects/nested-configs/node_modules/tiny-logger/index.d.ts
+  s_c0804e5357f0c5::t_c5afffc65716fc 1-2
+test-fixtures/projects/nested-configs/node_modules/tiny-logger/package.json
+  s_c0804e5357f0c5::t_a7492ef97f3b07 1-7
+test-fixtures/projects/nested-configs/package.json
+  s_c0804e5357f0c5::t_46ab3bcd3abf85 1-5
+test-fixtures/projects/nested-configs/packages/shared/flags.ts
+  s_c0804e5357f0c5::t_5db19f44d0f1e9 1-8
+test-fixtures/projects/nested-configs/packages/shared/tsconfig.json
+  s_c0804e5357f0c5::t_e9eb3410b2e261 1-6
+test-fixtures/projects/nested-configs/src/app.js
+  s_c0804e5357f0c5::t_bf518918af6c07 1-5
+test-fixtures/projects/nested-configs/tsconfig.json
+  s_c0804e5357f0c5::t_efeaf933da9600 1-11
+test-fixtures/projects/solution-root/lib/value.ts
+  s_c0804e5357f0c5::t_a59c2422e2e602 1
+test-fixtures/projects/solution-root/package.json
+  s_c0804e5357f0c5::t_36fe85279b3cbc 1-5
+test-fixtures/projects/solution-root/src/main.ts
+  s_c0804e5357f0c5::t_4e8467c1111abf 1-3
+test-fixtures/projects/solution-root/tsconfig.app.json
+  s_c0804e5357f0c5::t_4967d55deca6c3 1-9
+test-fixtures/projects/solution-root/tsconfig.json
+  s_c0804e5357f0c5::t_d2a1704e3fa5b4 1-4
+test-fixtures/projects/solution-root/tsconfig.node.json
+  s_c0804e5357f0c5::t_45c833a1a9cd8c 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f45e44a9e8436f33449eecff2d153521a09291c9",
+  "prompts": {},
+  "sessions": {
+    "s_c0804e5357f0c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75227701-fd30-4fc7-8eae-71a8df8f3a1c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
