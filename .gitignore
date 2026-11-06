@@ -41,6 +41,8 @@ build/Release
 node_modules/
 # a fixture project's stand-in for @types/node
 !test-fixtures/projects/node-builtins/node_modules/
+# a fixture project's stub package, reachable only through its exports
+!test-fixtures/projects/config-options/node_modules/
 jspm_packages/
 
 # Snowpack dependency directory (https://snowpack.dev/)

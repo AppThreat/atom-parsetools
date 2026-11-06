@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": [
+      "es2017"
+    ],
+    "paths": {
+      "@app/*": [
+        "./*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*.ts"
+  ]
+}
