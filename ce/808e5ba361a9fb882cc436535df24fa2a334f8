@@ -1,0 +1,44 @@
+test-fixtures/projects/config-options/node_modules/tiny-config/index.d.ts
+  s_c0804e5357f0c5::t_a8ba26e66a7545 1
+astgen.js
+  s_c0804e5357f0c5::t_6ab4bfe95d0e39 2024-2025
+  s_c0804e5357f0c5::t_94469df97e08a0 1935-1944
+  s_c0804e5357f0c5::t_ccc16d50ba7845 2026-2027,2032
+  s_c0804e5357f0c5::t_a068ca0702d7de 2022-2023
+  s_c0804e5357f0c5::t_f21eff6b3fc512 1832-1841
+  s_c0804e5357f0c5::t_455eef53e75824 2051
+test-fixtures/projects/config-options/tsconfig.json
+  s_c0804e5357f0c5::t_18a60d77b679ef 1-17
+test-fixtures/projects/config-options/src/settings.ts
+  s_c0804e5357f0c5::t_356872b5532ee4 1-6
+test-fixtures/projects/config-options/node_modules/tiny-config/package.json
+  s_c0804e5357f0c5::t_2a4717fedde055 1-10
+test-fixtures/projects/config-options/package.json
+  s_c0804e5357f0c5::t_a9ecd9705172b5 1-5
+.gitignore
+  s_c0804e5357f0c5::t_0d121cea7c8b4e 44-45
+test-fixtures/projects/config-options/node_modules/tiny-config/types/inner.d.ts
+  s_c0804e5357f0c5::t_b104dd2f1a77cc 1-3
+test-fixtures/astgen-config-options-regression.js
+  s_c0804e5357f0c5::t_a793e666185b20 1-62
+test-fixtures/projects/config-options/node_modules/tiny-config/types/extra.d.ts
+  s_c0804e5357f0c5::t_95014c1525a786 1
+package.json
+  s_c0804e5357f0c5::t_5966d934badb80 9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ce808e5ba361a9fb882cc436535df24fa2a334f8",
+  "prompts": {},
+  "sessions": {
+    "s_c0804e5357f0c5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75227701-fd30-4fc7-8eae-71a8df8f3a1c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
