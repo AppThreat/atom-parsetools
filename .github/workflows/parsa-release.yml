@@ -1,7 +1,7 @@
 name: parsa binaries
 # Builds parsa for every target on one Linux machine (parsa has no cgo yet, so it cross-compiles and
 # the Linux binaries are static, for glibc and musl alike), then runs the binaries it can on their own
-# platforms, and writes a post-build SBOM of what the binaries link. A push to main publishes the binaries to ghcr.io/appthreat/parsa with oras, tagged
+# platforms, and writes a post-build SBOM of what the binaries link. A push to main, or a manual run on main, publishes the binaries to ghcr.io/appthreat/parsa with oras, tagged
 # <os>-<arch>-<commit> and <os>-<arch>-main, each with its .sha256 file and the SBOM. A published
 # release also gets them as assets, with a .sha256 file each, the SBOM and build provenance, and as <os>-<arch>-<version> on ghcr.io; cdxgen-plugins-bin
 # bakes those assets into its platform packages.
@@ -121,7 +121,7 @@ jobs:
 
   ghcr:
     needs: [build, run]
-    if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'release' || (github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch'))
     runs-on: ubuntu-latest
     permissions:
       contents: read
