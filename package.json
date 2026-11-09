@@ -34,7 +34,8 @@
     "test:supervise": "node test-fixtures/supervise-regression.js",
     "test:scala": "node test-fixtures/scalasem-engine.js && node test-fixtures/scalasem-derive.js && node test-fixtures/scalasem-semanticdb.js && node test-fixtures/scalasem-report-schema.js && node test-fixtures/scalasem-toolchain.js && node test-fixtures/scalasem-jvm.js && node test-fixtures/scalasem-cli.js && node test-fixtures/scalasem-hygiene.js && node test-fixtures/scalasem-timeout.js && node test-fixtures/scalasem-accuracy-units.js",
     "test:scala:record": "node test-fixtures/record-scalasem-inspector.js",
-    "test:hostile": "node test-fixtures/astgen-hostile-inputs.js --all"
+    "test:hostile": "node test-fixtures/astgen-hostile-inputs.js --all",
+    "eval:typemaps": "sh parsa/scripts/eval-typemaps.sh"
   },
   "dependencies": {
     "@appthreat/atom-common": "^1.1.0",
