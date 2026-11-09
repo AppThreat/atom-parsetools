@@ -51,25 +51,36 @@ type FileWork struct {
 
 // Report is the run manifest written with --report.
 type Report struct {
-	Tool          string       `json:"tool"`
-	TypeScript    string       `json:"typescript"`
-	Workers       int          `json:"workers"`
-	Checkers      int          `json:"checkers"`
-	Files         int          `json:"files"`
-	Typed         int          `json:"typed"`
-	Keys          int          `json:"keys"`
-	GaveUp        int          `json:"gaveUpTypes"`
-	RetriedByName int          `json:"typesRetriedByName"`
-	Recovered     int          `json:"recoveredPanics"`
-	ConfigPath    string       `json:"config,omitempty"`
-	Warnings      []string     `json:"warnings,omitempty"`
-	Diagnostics   []FileReport `json:"diagnostics,omitempty"`
-	Rebuilds      int          `json:"programRebuilds,omitempty"`
-	HeapMB        uint64       `json:"heapMBAfter"`
-	PeakHeapMB    uint64       `json:"peakHeapMB"`
-	MaxWork       int64        `json:"maxFileWork"`
-	HeaviestFiles []FileWork   `json:"heaviestFiles,omitempty"`
-	Millis        int64        `json:"ms"`
+	Tool          string `json:"tool"`
+	TypeScript    string `json:"typescript"`
+	Workers       int    `json:"workers"`
+	Checkers      int    `json:"checkers"`
+	Files         int    `json:"files"`
+	Typed         int    `json:"typed"`
+	Keys          int    `json:"keys"`
+	GaveUp        int    `json:"gaveUpTypes"`
+	RetriedByName int    `json:"typesRetriedByName"`
+	Recovered     int    `json:"recoveredPanics"`
+	ConfigPath    string `json:"config,omitempty"`
+	// Projects lists the programs of a run with nested projects, the root (".") first; a run with
+	// one program leaves it out.
+	Projects      []ProjectReport `json:"projects,omitempty"`
+	Warnings      []string        `json:"warnings,omitempty"`
+	Diagnostics   []FileReport    `json:"diagnostics,omitempty"`
+	Rebuilds      int             `json:"programRebuilds,omitempty"`
+	HeapMB        uint64          `json:"heapMBAfter"`
+	PeakHeapMB    uint64          `json:"peakHeapMB"`
+	MaxWork       int64           `json:"maxFileWork"`
+	HeaviestFiles []FileWork      `json:"heaviestFiles,omitempty"`
+	Millis        int64           `json:"ms"`
+}
+
+// ProjectReport is one program of a run with nested projects.
+type ProjectReport struct {
+	Label      string `json:"label"`
+	ConfigPath string `json:"config,omitempty"`
+	Typed      int    `json:"typed"`
+	Checkers   int    `json:"checkers"`
 }
 
 // FixedCheckers is the number of checkers every program is built with, whatever the number of workers.
@@ -157,39 +168,12 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 		workers = ResolveWorkers(os.Getenv("ASTGEN_TYPE_WORKERS"), len(discovered))
 	}
 	rep.Workers = workers
-	setup, err := safeBuildSetup(src, projectFiles, disc, min(FixedCheckers, max(1, len(projectFiles))))
-	if err != nil {
-		return rep, err
-	}
-	rep.ConfigPath = setup.ConfigPath
-	rep.Checkers = setup.CheckerCount() // what the program was built with, not what was asked for
-	rep.Warnings = append(rep.Warnings, setup.Warnings...)
-
-	// expandSrcFilesWithRootNames: the typed set also holds tsconfig files under the source root.
-	have := map[string]bool{}
-	for _, f := range discovered {
-		have[filepath.ToSlash(f)] = true
-	}
-	files := append([]string(nil), discovered...)
-	for _, r := range setup.RootNames {
-		rf := filepath.FromSlash(r)
-		if IsUnderRoot(rf, src) && typedExtRe.MatchString(rf) && !disc.IsExcludedTestFile(rf) &&
-			!disc.IsExcludedMinifiedFile(rf) && !have[r] {
-			have[r] = true
-			files = append(files, filepath.Join(src, mustRel(src, rf)))
-		}
-	}
-	sort.Strings(files)
-
-	var targets []*ast.SourceFile
-	var rels []string
-	for _, f := range files {
-		if sf := setup.Program.GetSourceFile(rootedFile(filepath.ToSlash(f))); sf != nil {
-			targets = append(targets, sf)
-			rels = append(rels, mustRel(src, f))
-		}
-	}
-	logf("program ready: %d root files, %d to type, %d checkers, %d at a time, %d ms", len(setup.RootNames), len(targets), FixedCheckers, workers, time.Since(t0).Milliseconds())
+	// A nested project with its own configuration (juice-shop's frontend/) is typed by a program of
+	// its own, as astgen's TypeScript 6 path types it. The groups run one after another, so no more
+	// programs are alive at once than with one group, and a run without nested projects builds the
+	// one program it always built.
+	typeProjects := FindTypeProjects(projectFiles, src)
+	nested := len(typeProjects.Projects) > 0
 
 	type result struct {
 		keys, gaveUp, recovered int
@@ -197,70 +181,158 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 		work, ms                int64
 		diag                    *FileReport
 	}
-	results := make([]result, len(targets))
+	var results []result
+	var rels []string
+	var files []string
+	var rebuilds atomic.Int64
+	var last *Setup
 	watch := NewWatch(o.Budget)
 	defer watch.Close()
 
-	// Deterministic schedule. The pool ties every file to one checker, so the files are grouped by
-	// that checker first (taking and releasing the checker at once), and each checker then types
-	// its files one after the other in sorted order. A checker's answers can depend on what it
-	// resolved before (a circular reference is cut at a different place), so the order of the files
-	// on a checker must not depend on timing. Handing files to whichever goroutine is free, as a
-	// work queue does, changes that order from run to run.
-	groups := map[*checker.Checker][]int{}
-	var order []*checker.Checker
-	for i, sf := range targets {
-		c, done := setup.Program.GetTypeCheckerForFileExclusive(ctx, sf)
-		done()
-		if _, ok := groups[c]; !ok {
-			order = append(order, c)
+	// expandSrcFilesWithRootNames: the typed set also holds the files the root configuration lists
+	// under the source root.
+	expand := func(rootNames []string) {
+		have := map[string]bool{}
+		for _, f := range discovered {
+			have[filepath.ToSlash(f)] = true
 		}
-		groups[c] = append(groups[c], i)
+		files = append([]string(nil), discovered...)
+		for _, r := range rootNames {
+			rf := filepath.FromSlash(r)
+			if IsUnderRoot(rf, src) && typedExtRe.MatchString(rf) && !disc.IsExcludedTestFile(rf) &&
+				!disc.IsExcludedMinifiedFile(rf) && !have[r] {
+				have[r] = true
+				files = append(files, filepath.Join(src, mustRel(src, rf)))
+			}
+		}
+		sort.Strings(files)
 	}
-	var wg sync.WaitGroup
-	var rebuilds atomic.Int64
-	slots := make(chan struct{}, workers) // at most `workers` checkers type files at the same time
-	for _, c := range order {
-		list := groups[c]
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			slots <- struct{}{}
-			defer func() { <-slots }()
-			cur := setup
-			for n, i := range list {
-				if watch.Capped() {
-					results[i] = result{diag: &FileReport{File: rels[i], Reason: ReasonCap, Detail: "not typed: the run went over its memory cap"}}
+	if nested {
+		// astgen expands from the root configuration alone, before the files are split among the
+		// programs
+		expand(configRootNames(src, projectFiles, disc, typeProjects.RootConfigPath))
+	}
+
+	var groups []TypeGroup
+	if nested {
+		groups = PartitionTypeGroups(files, projectFiles, typeProjects, src)
+	} else {
+		var spec *ProgramSpec
+		if typeProjects.RootConfigPath != "" {
+			spec = &ProgramSpec{ConfigPath: typeProjects.RootConfigPath}
+		}
+		groups = []TypeGroup{{ProjectFiles: projectFiles, Program: spec}}
+	}
+	for gi, g := range groups {
+		gsrc := src
+		if g.Program != nil && g.Program.Src != "" {
+			gsrc = g.Program.Src
+		}
+		setup, err := safeBuildSetup(gsrc, g.ProjectFiles, disc, min(FixedCheckers, max(1, len(g.ProjectFiles))), g.Program)
+		if err != nil {
+			if gi == 0 {
+				return rep, err
+			}
+			// a nested project whose program cannot be built leaves its files untyped, with a reason
+			for _, f := range g.Files {
+				if strings.HasSuffix(f, ".vue") || strings.HasSuffix(f, ".svelte") {
 					continue
 				}
-				sf := targets[i]
-				if cur != setup {
-					sf = cur.Program.GetSourceFile(rootedFile(filepath.ToSlash(string(targets[i].FileName()))))
-					if sf == nil {
-						results[i] = result{diag: &FileReport{File: rels[i], Reason: "missing", Detail: "the file is not in the rebuilt program"}}
+				results = append(results, result{diag: &FileReport{File: filepath.ToSlash(mustRel(src, f)), Reason: "program-failed", Detail: err.Error()}})
+				rels = append(rels, filepath.ToSlash(mustRel(src, f)))
+			}
+			rep.Warnings = append(rep.Warnings, "project "+g.Program.Label+": "+err.Error())
+			continue
+		}
+		if gi == 0 {
+			rep.ConfigPath = setup.ConfigPath
+		}
+		if c := setup.CheckerCount(); c > rep.Checkers {
+			rep.Checkers = c // what the programs were built with, not what was asked for
+		}
+		rep.Warnings = append(rep.Warnings, setup.Warnings...)
+		if !nested {
+			expand(setup.RootNames)
+			g.Files = files
+		}
+
+		var targets []*ast.SourceFile
+		var grels []string
+		for _, f := range g.Files {
+			if sf := setup.Program.GetSourceFile(rootedFile(filepath.ToSlash(f))); sf != nil {
+				targets = append(targets, sf)
+				grels = append(grels, mustRel(src, f))
+			}
+		}
+		if nested {
+			rep.Projects = append(rep.Projects, ProjectReport{Label: g.Program.Label, ConfigPath: setup.ConfigPath, Typed: len(targets), Checkers: setup.CheckerCount()})
+		}
+		logf("program ready: %d root files, %d to type, %d checkers, %d at a time, %d ms", len(setup.RootNames), len(targets), FixedCheckers, workers, time.Since(t0).Milliseconds())
+
+		gresults := make([]result, len(targets))
+		// Deterministic schedule. The pool ties every file to one checker, so the files are grouped by
+		// that checker first (taking and releasing the checker at once), and each checker then types
+		// its files one after the other in sorted order. A checker's answers can depend on what it
+		// resolved before (a circular reference is cut at a different place), so the order of the files
+		// on a checker must not depend on timing. Handing files to whichever goroutine is free, as a
+		// work queue does, changes that order from run to run.
+		byChecker := map[*checker.Checker][]int{}
+		var order []*checker.Checker
+		for i, sf := range targets {
+			c, done := setup.Program.GetTypeCheckerForFileExclusive(ctx, sf)
+			done()
+			if _, ok := byChecker[c]; !ok {
+				order = append(order, c)
+			}
+			byChecker[c] = append(byChecker[c], i)
+		}
+		var wg sync.WaitGroup
+		slots := make(chan struct{}, workers) // at most `workers` checkers type files at the same time
+		for _, c := range order {
+			list := byChecker[c]
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				slots <- struct{}{}
+				defer func() { <-slots }()
+				cur := setup
+				for n, i := range list {
+					if watch.Capped() {
+						gresults[i] = result{diag: &FileReport{File: grels[i], Reason: ReasonCap, Detail: "not typed: the run went over its memory cap"}}
 						continue
 					}
-				}
-				k, st, d, tainted := typeFile(ctx, cur, watch, o.Budget, probeOnce(o.HeapProbe, &probeMu), sf, filepath.FromSlash(rels[i]), outDir, rels[i])
-				results[i] = result{keys: k, gaveUp: st.gaveUp, recovered: st.recovered, retriedByName: st.retriedByName, work: st.work, ms: st.ms, diag: d}
-				if tainted && n+1 < len(list) && !watch.Capped() {
-					// The checker was stopped inside a query and may hold half built state. The rest of its
-					// files go to a fresh single checker program.
-					next, err := safeBuildSetup(src, projectFiles, disc, 1)
-					if err != nil {
-						for _, j := range list[n+1:] {
-							results[j] = result{diag: &FileReport{File: rels[j], Reason: "rebuild-failed", Detail: err.Error()}}
+					sf := targets[i]
+					if cur != setup {
+						sf = cur.Program.GetSourceFile(rootedFile(filepath.ToSlash(string(targets[i].FileName()))))
+						if sf == nil {
+							gresults[i] = result{diag: &FileReport{File: grels[i], Reason: "missing", Detail: "the file is not in the rebuilt program"}}
+							continue
 						}
-						return
 					}
-					rebuilds.Add(1)
-					cur = next
+					k, st, d, tainted := typeFile(ctx, cur, watch, o.Budget, probeOnce(o.HeapProbe, &probeMu), sf, filepath.FromSlash(grels[i]), outDir, grels[i])
+					gresults[i] = result{keys: k, gaveUp: st.gaveUp, recovered: st.recovered, retriedByName: st.retriedByName, work: st.work, ms: st.ms, diag: d}
+					if tainted && n+1 < len(list) && !watch.Capped() {
+						// The checker was stopped inside a query and may hold half built state. The rest of its
+						// files go to a fresh single checker program.
+						next, err := safeBuildSetup(gsrc, g.ProjectFiles, disc, 1, g.Program)
+						if err != nil {
+							for _, j := range list[n+1:] {
+								gresults[j] = result{diag: &FileReport{File: grels[j], Reason: "rebuild-failed", Detail: err.Error()}}
+							}
+							return
+						}
+						rebuilds.Add(1)
+						cur = next
+					}
 				}
-			}
-		}()
+			}()
+		}
+		wg.Wait()
+		results = append(results, gresults...)
+		rels = append(rels, grels...)
+		rep.Typed += len(targets)
+		last = setup
 	}
-	wg.Wait()
-	rep.Rebuilds = int(rebuilds.Load())
 
 	// .vue and .svelte files are not part of the program (no source file has their extension): their
 	// script blocks are typed from a virtual source in a throwaway program, as astgen does.
@@ -314,14 +386,15 @@ func Run(ctx context.Context, o Options) (*Report, error) {
 		rels = append(rels, filepath.ToSlash(mustRel(src, sfcFiles[i])))
 	}
 
-	rep.Typed = len(targets) + len(sfcFiles)
+	rep.Rebuilds = int(rebuilds.Load())
+	rep.Typed += len(sfcFiles)
 	if path := os.Getenv("TYPEMAP_HEAP_PROFILE"); path != "" { // diagnostic: heap profile while the program is still alive
 		runtime.GC()
 		if f, e := os.Create(path); e == nil {
 			_ = pprof.Lookup("heap").WriteTo(f, 0)
 			f.Close()
 		}
-		runtime.KeepAlive(setup)
+		runtime.KeepAlive(last)
 	}
 	var heavy []FileWork
 	for i, r := range results {
@@ -391,13 +464,13 @@ func safeTypeSFC(ctx context.Context, file string, b Budget, w *Watch) (seen map
 }
 
 // safeBuildSetup is BuildSetup with a panic in the checker's program code turned into an error.
-func safeBuildSetup(src string, projectFiles []string, disc *Discovery, checkers int) (s *Setup, err error) {
+func safeBuildSetup(src string, projectFiles []string, disc *Discovery, checkers int, spec *ProgramSpec) (s *Setup, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			s, err = nil, fmt.Errorf("building the program panicked: %v", r)
 		}
 	}()
-	return BuildSetup(src, projectFiles, disc, checkers)
+	return BuildSetup(src, projectFiles, disc, checkers, spec)
 }
 
 // typeFile types one file with its own exclusive checker and writes its map. An interrupt (a time

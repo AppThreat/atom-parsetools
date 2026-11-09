@@ -72,23 +72,55 @@ func overlayNodeNext(o *core.CompilerOptions) {
 	o.VerbatimModuleSyntax = core.TSTrue
 }
 
-// overlayDefaults copies every option astgen's defaults set onto o. In
-// TypeScript 6 these are `existingOptions` to parseJsonConfigFileContent, which
-// win over the tsconfig for the keys they set (checked against TypeScript 6.0:
-// a tsconfig with target es5 and jsx react still gave ES2022 and preserve).
-func overlayDefaults(o *core.CompilerOptions, d *core.CompilerOptions, nodeNext bool) {
-	o.Target, o.Module, o.ModuleResolution = d.Target, d.Module, d.ModuleResolution
-	o.AllowImportingTsExtensions, o.AllowArbitraryExtensions = d.AllowImportingTsExtensions, d.AllowArbitraryExtensions
-	o.AllowSyntheticDefaultImports, o.AllowUmdGlobalAccess = d.AllowSyntheticDefaultImports, d.AllowUmdGlobalAccess
-	o.AllowJs, o.CheckJs = d.AllowJs, d.CheckJs
-	o.AllowUnreachableCode, o.AllowUnusedLabels, o.AlwaysStrict = d.AllowUnreachableCode, d.AllowUnusedLabels, d.AlwaysStrict
-	o.EmitDecoratorMetadata, o.ExactOptionalPropertyTypes, o.ExperimentalDecorators = d.EmitDecoratorMetadata, d.ExactOptionalPropertyTypes, d.ExperimentalDecorators
-	o.NoUncheckedIndexedAccess, o.NoPropertyAccessFromIndexSignature = d.NoUncheckedIndexedAccess, d.NoPropertyAccessFromIndexSignature
-	o.NoEmit, o.SkipLibCheck, o.ResolveJsonModule = d.NoEmit, d.SkipLibCheck, d.ResolveJsonModule
-	o.Jsx, o.Lib = d.Jsx, d.Lib
-	if nodeNext {
-		overlayNodeNext(o)
+// underlayDefaults gives o astgen's default for every option the configuration, with its extends
+// chain, left unset: astgen merges `{...DEFAULT_TSC_OPTIONS, ...detected, ...parsed options,
+// ...FORCED_TSC_OPTIONS}`, so a project's own target, module, moduleResolution, lib, jsx and
+// exactOptionalPropertyTypes are the ones its program uses. d carries the detected NodeNext
+// settings when the configuration sets neither module nor moduleResolution itself. A target or
+// module resolution TypeScript 7 removed (ES5, classic) counts as unset.
+func underlayDefaults(o *core.CompilerOptions, d *core.CompilerOptions) {
+	tri := func(v *core.Tristate, def core.Tristate) {
+		if *v == core.TSUnknown {
+			*v = def
+		}
 	}
+	if o.Target == core.ScriptTargetNone || o.Target < core.ScriptTargetES2015 {
+		o.Target = d.Target
+	}
+	if o.Module == core.ModuleKindNone {
+		o.Module = d.Module
+	}
+	if o.ModuleResolution == core.ModuleResolutionKindUnknown || o.ModuleResolution == core.ModuleResolutionKindClassic {
+		o.ModuleResolution = d.ModuleResolution
+	}
+	tri(&o.AllowImportingTsExtensions, d.AllowImportingTsExtensions)
+	tri(&o.AllowArbitraryExtensions, d.AllowArbitraryExtensions)
+	tri(&o.AllowSyntheticDefaultImports, d.AllowSyntheticDefaultImports)
+	tri(&o.AllowUmdGlobalAccess, d.AllowUmdGlobalAccess)
+	tri(&o.AllowUnreachableCode, d.AllowUnreachableCode)
+	tri(&o.AllowUnusedLabels, d.AllowUnusedLabels)
+	tri(&o.AlwaysStrict, d.AlwaysStrict)
+	tri(&o.EmitDecoratorMetadata, d.EmitDecoratorMetadata)
+	tri(&o.ExactOptionalPropertyTypes, d.ExactOptionalPropertyTypes)
+	tri(&o.ExperimentalDecorators, d.ExperimentalDecorators)
+	tri(&o.NoUncheckedIndexedAccess, d.NoUncheckedIndexedAccess)
+	tri(&o.NoPropertyAccessFromIndexSignature, d.NoPropertyAccessFromIndexSignature)
+	tri(&o.ResolvePackageJsonExports, d.ResolvePackageJsonExports)
+	tri(&o.ResolvePackageJsonImports, d.ResolvePackageJsonImports)
+	tri(&o.VerbatimModuleSyntax, d.VerbatimModuleSyntax)
+	if o.Jsx == core.JsxEmitNone {
+		o.Jsx = d.Jsx
+	}
+	if o.Lib == nil {
+		o.Lib = d.Lib
+	}
+}
+
+// forcedOptions are astgen's FORCED_TSC_OPTIONS: every program types JavaScript too and never
+// emits. They go to the configuration parser as existing options (allowJs also decides whether
+// `include` lists JavaScript files) and win over the configuration.
+func forcedOptions() *core.CompilerOptions {
+	return &core.CompilerOptions{AllowJs: core.TSTrue, CheckJs: core.TSTrue, NoEmit: core.TSTrue, SkipLibCheck: core.TSTrue, ResolveJsonModule: core.TSTrue}
 }
 
 // emulateBaseURL keeps TypeScript 6's meaning of `baseUrl` for `paths`: their entries are relative to
@@ -356,7 +388,10 @@ func (s *Setup) Options() *core.CompilerOptions { return s.Program.Options() }
 // BuildSetup is createTscProgramConfig followed by createProgram. projectFiles
 // are the discovered files (without node_modules); checkers is the number of
 // type checkers the program may use.
-func BuildSetup(src string, projectFiles []string, disc *Discovery, checkers int) (*Setup, error) {
+// BuildSetup builds the program for projectFiles under src. spec, when the run has nested projects
+// or a solution-style root, names the configuration to read instead of searching from src, and a
+// file that configuration lists but another project of the run owns is left to that project.
+func BuildSetup(src string, projectFiles []string, disc *Discovery, checkers int, spec *ProgramSpec) (*Setup, error) {
 	s := &Setup{}
 	fs := bundled.WrapFS(cachedvfs.From(osvfs.FS()))
 	s.FS = fs
@@ -373,9 +408,13 @@ func BuildSetup(src string, projectFiles []string, disc *Discovery, checkers int
 	}
 	var parsed *tsoptions.ParsedCommandLine
 
-	if cfgPath := findConfigFile(src); cfgPath != "" {
+	cfgPath := findConfigFile(src)
+	if spec != nil && spec.ConfigPath != "" {
+		cfgPath = spec.ConfigPath
+	}
+	if cfgPath != "" {
 		respect := hasExplicitCompilerOption(cfgPath, "module", "moduleResolution")
-		p, diags := tsoptions.GetParsedCommandLineOfConfigFile(rootedFile(cfgPath), &core.CompilerOptions{}, nil, tsoptions.NewDefaultParseConfigHost(fs), nil)
+		p, diags := tsoptions.GetParsedCommandLineOfConfigFile(rootedFile(cfgPath), forcedOptions(), nil, tsoptions.NewDefaultParseConfigHost(fs), nil)
 		if p == nil {
 			for _, d := range diags {
 				s.Warnings = append(s.Warnings, "tsconfig "+cfgPath+" is unreadable, using the defaults: "+diagText(d))
@@ -393,12 +432,19 @@ func BuildSetup(src string, projectFiles []string, disc *Discovery, checkers int
 			if o == nil {
 				o = &core.CompilerOptions{}
 			}
-			overlayDefaults(o, baseOptions(), nodeNext && !respect)
+			defaults := baseOptions()
+			if nodeNext && !respect {
+				overlayNodeNext(defaults)
+			}
+			underlayDefaults(o, defaults)
 			emulateBaseURL(o)
 			opts = o
 			for _, f := range p.FileNames() {
 				ff := string(f)
 				if IsUnderRoot(filepath.FromSlash(ff), src) && disc.IsLeftOutByDiscovery(filepath.FromSlash(ff), src) {
+					continue
+				}
+				if spec.isOtherProjectsFile(filepath.FromSlash(ff)) {
 					continue
 				}
 				rootSet[ff] = true
@@ -447,4 +493,38 @@ func BuildSetup(src string, projectFiles []string, disc *Discovery, checkers int
 	}
 	s.Program.BindSourceFiles()
 	return s, nil
+}
+
+// configRootNames is the file list of the configuration a program for projectFiles under src
+// would read (configPath, or the one found from src), with what discovery leaves out removed, as
+// BuildSetup lists them, plus the project files themselves: astgen's tscConfig.rootNames, computed
+// without building a program.
+func configRootNames(src string, projectFiles []string, disc *Discovery, configPath string) []string {
+	set := map[string]bool{}
+	for _, f := range projectFiles {
+		if isSupportedRoot(f) {
+			set[filepath.ToSlash(f)] = true
+		}
+	}
+	if configPath == "" {
+		configPath = findConfigFile(src)
+	}
+	if configPath != "" {
+		fs := bundled.WrapFS(cachedvfs.From(osvfs.FS()))
+		if p, _ := tsoptions.GetParsedCommandLineOfConfigFile(rootedFile(configPath), forcedOptions(), nil, tsoptions.NewDefaultParseConfigHost(fs), nil); p != nil {
+			for _, f := range p.FileNames() {
+				ff := string(f)
+				if IsUnderRoot(filepath.FromSlash(ff), src) && disc.IsLeftOutByDiscovery(filepath.FromSlash(ff), src) {
+					continue
+				}
+				set[ff] = true
+			}
+		}
+	}
+	out := make([]string, 0, len(set))
+	for f := range set {
+		out = append(out, f)
+	}
+	sort.Strings(out)
+	return out
 }

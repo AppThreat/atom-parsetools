@@ -72,11 +72,14 @@ fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x
   second project in a subdirectory with its own `tsconfig.json` (juice-shop's Angular app in
   `frontend/`) had that project typed with the root's compiler options, and the root's files could
   pick up the nested project's packages through the one shared program. Each project now gets a
-  program of its own. A project's own compiler options also win over astgen's defaults
-  (`moduleResolution`, `module`, `target`, `lib`, `jsx`, `exactOptionalPropertyTypes`), so a package
-  reachable only through `exports` under bundler resolution is typed, and a project whose `lib`
-  leaves out the DOM no longer gets DOM types. `ASTGEN_VERSION` goes to 4.7.1 so caches keyed on it,
-  such as chen's parse cache, are rebuilt.
+  program of its own. Both engines do this: astgen's TypeScript 6 path and `parsa`, which find the
+  projects the same way (following `references` as `tsc -b` does, so Angular's solution-style
+  `frontend/tsconfig.json` hands `frontend/src` to `tsconfig.app.json`) and type them one after
+  another. A `parsa` report for such a run lists each program under `projects`. A project's own
+  compiler options also win over astgen's defaults (`moduleResolution`, `module`, `target`, `lib`,
+  `jsx`, `exactOptionalPropertyTypes`), so a package reachable only through `exports` under bundler
+  resolution is typed, and a project whose `lib` leaves out the DOM no longer gets DOM types.
+  `ASTGEN_VERSION` goes to 4.7.1 so caches keyed on it, such as chen's parse cache, are rebuilt.
 - A class member declared with `accessor` (`accessor x = 1`, decorated or not) parses: the
   `decoratorAutoAccessors` plugin is in the syntax list and in both Flow lists, where the member
   used to fail the whole file's parse.

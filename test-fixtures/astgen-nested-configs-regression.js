@@ -2,7 +2,7 @@
 // subdirectory, with its own tsconfig.json (juice-shop's frontend/), had that project typed by the
 // root program, with the root's compiler options: the nested project's module resolution, `paths`
 // and `strict` were all ignored. Each nested project is now typed by a program built from its own
-// configuration. The fixtures commit their stub packages (.gitignore exceptions let them through,
+// configuration, in both engines: astgen's TypeScript 6 path and parsa. The fixtures commit their stub packages (.gitignore exceptions let them through,
 // as for node-builtins).
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -22,6 +22,15 @@ const here = dirname(fileURLToPath(import.meta.url));
 const astgen = join(dirname(here), "astgen.js");
 // release/1.x has no lib/typemap module to import the name from
 const MANIFEST_FILENAME = "astgen_manifest.jsonl";
+// The native engine runs when the binary the CI native job builds is there; that job sets
+// ASTGEN_NATIVE_REQUIRED, so there a missing binary fails instead of skipping.
+const exe = process.platform === "win32" ? ".exe" : "";
+const builtBinary = join(dirname(here), "parsa", "_deps", "bin", `parsa${exe}`);
+const engines = existsSync(builtBinary) ? ["ts6", "native"] : ["ts6"];
+if (process.env.ASTGEN_NATIVE_REQUIRED && engines.length === 1) {
+  console.error(`not ok - ASTGEN_NATIVE_REQUIRED is set and there is no binary at ${builtBinary}`);
+  process.exit(1);
+}
 const outputRoot = mkdtempSync(join(tmpdir(), "astgen-nested-configs-"));
 let failures = 0;
 
@@ -36,8 +45,8 @@ const test = (name, fn) => {
 };
 
 const runs = new Map();
-const run = (fixtureName, env = {}) => {
-  const key = `${fixtureName} ${JSON.stringify(env)}`;
+const run = (fixtureName, env = {}, engine = "ts6") => {
+  const key = `${fixtureName} ${engine} ${JSON.stringify(env)}`;
   if (runs.has(key)) {
     return runs.get(key);
   }
@@ -49,7 +58,12 @@ const run = (fixtureName, env = {}) => {
     {
       cwd: here,
       // main defaults to the native engine; release/1.x has only TypeScript 6 and ignores this
-      env: { ...process.env, ASTGEN_TYPES: "ts6", ...env },
+      env: {
+        ...process.env,
+        ASTGEN_TYPES: engine,
+        ...(engine === "native" ? { ASTGEN_NATIVE_BIN: builtBinary } : {}),
+        ...env
+      },
       encoding: "utf8",
       timeout: 120000
     }
@@ -57,6 +71,15 @@ const run = (fixtureName, env = {}) => {
   assert.ok(!r.signal, `astgen was stopped by ${r.signal}`);
   assert.equal(r.status, 0, r.stderr?.slice(0, 1500));
   const result = { fixtureRoot, out, stderr: r.stderr ?? "" };
+  if (engine === "native") {
+    // a native run that fell back to TypeScript 6 would pass the type checks without testing parsa
+    const types = readFileSync(join(out, MANIFEST_FILENAME), "utf8")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => JSON.parse(line))
+      .filter((record) => record.kind === "types");
+    assert.equal(types.at(-1)?.engine, "native", `the native run fell back: ${JSON.stringify(types.at(-1))}`);
+  }
   runs.set(key, result);
   return result;
 };
@@ -89,69 +112,71 @@ const budgetRecords = (out) => {
     : [];
 };
 
-test("a nested project is typed with its own configuration", () => {
-  const r = run("nested-configs");
-  // frontend/tsconfig.json is solution-style and references src/tsconfig.app.json, whose base
-  // configuration sets bundler resolution: only that reaches the stub's exports-only subpath
-  const widget = "frontend/src/widget.ts";
-  assert.equal(typeAt(r, widget, "widgetLevel"), "string", "the frontend's own stub package");
-  assert.equal(
-    typeAt(r, widget, "widgetExtraLevel"),
-    "string",
-    "the frontend's bundler resolution, inherited through extends"
-  );
-  assert.equal(typeAt(r, widget, "widgetBadge"), "string", "the frontend's own paths");
-  assert.equal(
-    typeAt(r, widget, "widgetFlag"),
-    "boolean | undefined",
-    "the frontend's strict option"
-  );
-  assert.ok(
-    existsSync(join(r.out, "frontend/src/ui/badge.ts.typemap")),
-    "the target of the frontend's paths is typed too"
-  );
-});
+for (const engine of engines) {
+  test(`${engine}: a nested project is typed with its own configuration`, () => {
+    const r = run("nested-configs", {}, engine);
+    // frontend/tsconfig.json is solution-style and references src/tsconfig.app.json, whose base
+    // configuration sets bundler resolution: only that reaches the stub's exports-only subpath
+    const widget = "frontend/src/widget.ts";
+    assert.equal(typeAt(r, widget, "widgetLevel"), "string", "the frontend's own stub package");
+    assert.equal(
+      typeAt(r, widget, "widgetExtraLevel"),
+      "string",
+      "the frontend's bundler resolution, inherited through extends"
+    );
+    assert.equal(typeAt(r, widget, "widgetBadge"), "string", "the frontend's own paths");
+    assert.equal(
+      typeAt(r, widget, "widgetFlag"),
+      "boolean | undefined",
+      "the frontend's strict option"
+    );
+    assert.ok(
+      existsSync(join(r.out, "frontend/src/ui/badge.ts.typemap")),
+      "the target of the frontend's paths is typed too"
+    );
+  });
 
-test("a workspace package without node_modules gets its options and the root's packages", () => {
-  const r = run("nested-configs");
-  const flags = "packages/shared/flags.ts";
-  assert.equal(
-    typeAt(r, flags, "sharedLevel"),
-    "number",
-    "the package resolves the root's stub by walking up"
-  );
-  assert.equal(
-    typeAt(r, flags, "sharedFlag"),
-    "boolean | undefined",
-    "the package's own strict option"
-  );
-});
+  test(`${engine}: a workspace package without node_modules gets its options and the root's packages`, () => {
+    const r = run("nested-configs", {}, engine);
+    const flags = "packages/shared/flags.ts";
+    assert.equal(
+      typeAt(r, flags, "sharedLevel"),
+      "number",
+      "the package resolves the root's stub by walking up"
+    );
+    assert.equal(
+      typeAt(r, flags, "sharedFlag"),
+      "boolean | undefined",
+      "the package's own strict option"
+    );
+  });
 
-test("a file at the root keeps the root project's types", () => {
-  // the root configuration has no include, so it lists the nested projects' files too; built into
-  // the root program, they decided which tiny-logger the root's own import found
-  const r = run("nested-configs");
-  assert.equal(typeAt(r, "src/app.js", "appLevel"), "number", "the root's stub package");
-  assert.equal(typeAt(r, "src/app.js", "appLabel"), "string", "the root's own paths");
-  assert.ok(existsSync(join(r.out, "config/settings.ts.typemap")));
-});
+  test(`${engine}: a file at the root keeps the root project's types`, () => {
+    // the root configuration has no include, so it lists the nested projects' files too; built into
+    // the root program, they decided which tiny-logger the root's own import found
+    const r = run("nested-configs", {}, engine);
+    assert.equal(typeAt(r, "src/app.js", "appLevel"), "number", "the root's stub package");
+    assert.equal(typeAt(r, "src/app.js", "appLabel"), "string", "the root's own paths");
+    assert.ok(existsSync(join(r.out, "config/settings.ts.typemap")));
+  });
 
-test("a nested tsconfig under an ignored directory changes nothing", () => {
-  const r = run("nested-configs");
-  assert.deepEqual(
-    outputFiles(r.out).filter((file) => file.startsWith("examples")),
-    [],
-    "discovery leaves examples/ out, so its tsconfig types nothing"
-  );
-  assert.deepEqual(budgetRecords(r.out), [], "the run stays inside its budgets");
-});
+  test(`${engine}: a nested tsconfig under an ignored directory changes nothing`, () => {
+    const r = run("nested-configs", {}, engine);
+    assert.deepEqual(
+      outputFiles(r.out).filter((file) => file.startsWith("examples")),
+      [],
+      "discovery leaves examples/ out, so its tsconfig types nothing"
+    );
+    assert.deepEqual(budgetRecords(r.out), [], "the run stays inside its budgets");
+  });
 
-test("a solution-style root configuration hands the root to the configuration beside it", () => {
-  // Vite and Angular generate a root tsconfig.json with no files of its own that references
-  // tsconfig.app.json; its paths are the ones the root's files are built with
-  const r = run("solution-root");
-  assert.equal(typeAt(r, "src/main.ts", "mainAnswer"), "number");
-});
+  test(`${engine}: a solution-style root configuration hands the root to the configuration beside it`, () => {
+    // Vite and Angular generate a root tsconfig.json with no files of its own that references
+    // tsconfig.app.json; its paths are the ones the root's files are built with
+    const r = run("solution-root", {}, engine);
+    assert.equal(typeAt(r, "src/main.ts", "mainAnswer"), "number");
+  });
+}
 
 test("a nested file past its budget keeps its AST and the record names its project", () => {
   const r = run("nested-budgets", { ASTGEN_TYPE_FILE_TIMEOUT_MS: "1500" });

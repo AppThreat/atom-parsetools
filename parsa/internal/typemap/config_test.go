@@ -152,7 +152,7 @@ func setupFor(t *testing.T, name string) *Setup {
 	t.Helper()
 	proj, _ := filepath.Abs(filepath.Join("..", "..", "testdata", "typemap", "config", name))
 	d := NewDiscovery(Env{})
-	s, err := BuildSetup(proj, d.SourceFiles(proj), d, 1)
+	s, err := BuildSetup(proj, d.SourceFiles(proj), d, 1, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,10 +174,10 @@ func TestConfigOptionsPerRule(t *testing.T) {
 			t.Errorf("forced-options: %s must be forced on, got %v", name, v)
 		}
 	}
-	// astgen's defaults win over the tsconfig for the keys they set (TypeScript 6 behaviour, checked)
+	// a target TypeScript 7 removed counts as unset, so astgen's default applies
 	o = setupFor(t, "removed-options").Options()
 	if o.Target != core.ScriptTargetES2022 {
-		t.Errorf("removed-options: the tsconfig asks for es5 and astgen's default target is ES2022, got %v", o.Target)
+		t.Errorf("removed-options: the tsconfig asks for es5, which TypeScript 7 removed, so astgen's default ES2022 applies, got %v", o.Target)
 	}
 	if o.Module != core.ModuleKindCommonJS {
 		t.Errorf("default module must be CommonJS, got %v", o.Module)
@@ -212,5 +212,50 @@ func TestExplicitCompilerOptionReadsLikeTypeScript(t *testing.T) {
 		if !hasExplicitCompilerOption(p, "module") {
 			t.Errorf("%s: module is set explicitly", name)
 		}
+	}
+}
+
+// A project's own options, its extends chain included, win over astgen's defaults, which only fill
+// what the configuration leaves unset (astgen's createTscProgramConfig since it stopped passing them
+// as command-line options). The detected NodeNext settings of a "type": "module" package are defaults
+// too: a configuration that inherits bundler resolution keeps it.
+func TestProjectOptionsWinOverDefaults(t *testing.T) {
+	dir := t.TempDir()
+	write := func(rel, body string) {
+		p := filepath.Join(dir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("package.json", `{ "type": "module" }`)
+	write("base.json", `{ "compilerOptions": { "module": "esnext", "moduleResolution": "bundler", "target": "es2017", "lib": ["es2017"], "jsx": "react-jsx", "exactOptionalPropertyTypes": false } }`)
+	write("tsconfig.json", `{ "extends": "./base.json", "include": ["src"] }`)
+	write("src/a.ts", "export const a = 1\n")
+	d := NewDiscovery(Env{})
+	s, err := BuildSetup(dir, d.SourceFiles(dir), d, 1, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	o := s.Options()
+	if o.ModuleResolution != core.ModuleResolutionKindBundler || o.Module != core.ModuleKindESNext {
+		t.Errorf("the inherited bundler resolution must win over the detected NodeNext, got module %v resolution %v", o.Module, o.ModuleResolution)
+	}
+	if o.Target != core.ScriptTargetES2017 {
+		t.Errorf("the project's target must win, got %v", o.Target)
+	}
+	if len(o.Lib) != 1 || !strings.Contains(o.Lib[0], "es2017") {
+		t.Errorf("the project's lib must win, got %v", o.Lib)
+	}
+	if o.Jsx != core.JsxEmitReactJSX {
+		t.Errorf("the project's jsx must win, got %v", o.Jsx)
+	}
+	if o.ExactOptionalPropertyTypes != core.TSFalse {
+		t.Errorf("the project's exactOptionalPropertyTypes must win, got %v", o.ExactOptionalPropertyTypes)
+	}
+	if !o.ExperimentalDecorators.IsTrue() || !o.AllowJs.IsTrue() {
+		t.Errorf("options the project leaves unset keep astgen's defaults, and forced ones stay on")
 	}
 }
