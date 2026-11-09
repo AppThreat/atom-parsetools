@@ -6,6 +6,10 @@ the GitHub releases page.
 
 ## 2.0.0 (unreleased)
 
+Pre-releases of 2.0.0 (`2.0.0-rc.1` first) are published to npm under the `next` dist-tag
+(`npm install @appthreat/atom-parsetools@next`), with the `parsa` binaries attached to their GitHub
+releases.
+
 The first release with native type maps: `parsa` ("parse for atom"), a Go binary that writes
 JavaScript and TypeScript type maps with TypeScript 7's checker (typescript-go). astgen calls it by
 default and falls back to TypeScript 6 in this process when the binary is missing or fails, so a

@@ -68,9 +68,22 @@ jobs:
         bun test-fixtures/astgen-type-regression.js
         bun test-fixtures/astgen-json-regression.js
         bun test-fixtures/astgen-vue-regression.js
+    # A tag publishes the version package.json names, which must be the tag's. A prerelease
+    # (2.0.0-rc.1) goes to the `next` dist-tag, so `npm install` keeps resolving to the last release.
     - name: publish
+      env:
+        REF_NAME: ${{ github.ref_name }}
       run: |
-        npm publish --provenance --access=public
+        version=$(jq -r .version package.json)
+        if [ "v$version" != "$REF_NAME" ]; then
+          echo "tag $REF_NAME does not match package.json version $version" >&2
+          exit 1
+        fi
+        case "$version" in
+          *-*) dist_tag=next ;;
+          *) dist_tag=latest ;;
+        esac
+        npm publish --provenance --access=public --tag "$dist_tag"
       if: startsWith(github.ref, 'refs/tags/')
 
   # The native type map binary (Go, typescript-go through a pinned shim). Builds it, runs its Go tests
