@@ -77,7 +77,13 @@ func normalizeImportedTypeSpecifier(specifier, currentFile string) string {
 			s = strings.ReplaceAll(p, "\\", "/")
 		}
 	}
-	if cur != "" && (strings.HasPrefix(s, "/") || isDriveAbsolute(s)) {
+	// A specifier that runs through node_modules names a file of a package. TypeScript prints one
+	// when a `paths` alias covers the directory that holds node_modules (`"@app/*": ["./*"]` prints
+	// `@app/node_modules/pkg/index`), so the package path after the last node_modules is the
+	// specifier.
+	if at := strings.LastIndex(s, "/node_modules/"); at != -1 {
+		s = s[at+len("/node_modules/"):]
+	} else if cur != "" && (strings.HasPrefix(s, "/") || isDriveAbsolute(s)) {
 		rel := posixRelative(path.Dir(cur), s)
 		if strings.HasPrefix(rel, ".") {
 			s = rel

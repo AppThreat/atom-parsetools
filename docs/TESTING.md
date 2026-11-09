@@ -21,6 +21,34 @@ The Ruby and PHP suites skip themselves cleanly when the plugin bundle or the la
 
 The single most useful thing to know locally: `ci/verify-packed-tarball.sh` is the release check, and it runs the same way on a laptop as in CI. It packs the tarball, installs it into a scratch project, and parses fixtures with the installed copy.
 
+## The type map evaluation command
+
+`npm run eval:typemaps -- <corpus-id|path> --secs N --mb N` is the one command for the two score
+tables of a JavaScript or TypeScript input (#44). It runs astgen under the watchdog
+(`parsa/scripts/wd.sh`) from the project directory, as chen starts it, once in ts6 and once in native mode, prints the type map agreement table
+between them (`lib/typemap/diff.mjs`), and, when a callsites scorer is given, builds the usages and
+callsites slices with atom in both modes (`--frontend-args astgen-types=ts6|native`) and prints
+both score tables. It refuses to run without caps: `--secs` and `--mb` are required, and every
+astgen and atom run goes through the watchdog with them. Use the corpus caps (600 s, 8,192 MB) for
+a corpus project and the fixture caps (120 s, 2,048 MB) for anything small.
+
+```shell
+cd parsa && ./scripts/wd.sh -t 900 -m 6144 -- go build -trimpath -o _deps/bin/parsa ./cmd/parsa
+npm run eval:typemaps -- /path/to/project --secs 600 --mb 8192 \
+  --scorer ~/work/callsites-eval/harness/score.py \
+  --truth ~/work/callsites-eval/truth \
+  --atom /path/to/atom --corpus-json ~/work/parsetools-eval/corpus.json --out /tmp/eval
+```
+
+The scorer, its truth and the corpus description stay outside this repository (the testing plan keeps
+baselines and probes out): `--scorer` (or `CALLSITES_SCORER`) names the scorer, `--truth` (or
+`CALLSITES_TRUTH`) its truth directory, `--corpus-json` (or `ASTGEN_EVAL_CORPUS_JSON`) the corpus
+description that maps an id to a path, and `--atom` (or `EVAL_ATOM`) an atom build that takes
+`--frontend-args` (the released atom does not yet; build one from atom's main). Without a scorer the
+command says so and still prints the type map table. The native binary is the one the CI parsa job
+builds at `parsa/_deps/bin/parsa`; `ASTGEN_NATIVE_MEMORY_MB` is set to half the memory cap, so the
+binary astgen starts runs with the same Go soft limit the watchdog's cap allows.
+
 ## The local accuracy check
 
 The fixture suites run scalasem over small projects, which no new Scala or sbt release can be trusted against alone. `test-fixtures/scalasem-accuracy.js` is the by-hand check over a large, current Scala code base, for example over a checkout of [chen](https://github.com/AppThreat/chen); run it before a release and after a change to the inventory, the compiler handling or the derivation rules. It is not part of CI and not part of `npm test`.

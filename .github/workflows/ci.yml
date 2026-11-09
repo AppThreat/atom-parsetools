@@ -106,6 +106,8 @@ jobs:
         npm ci
         node test-fixtures/astgen-native-types-regression.js
         node test-fixtures/astgen-native-recovered-syntax.js
+        node test-fixtures/astgen-nested-configs-regression.js
+        node test-fixtures/astgen-config-options-regression.js
         node test-fixtures/typemap-diff-regression.js
         npm run test:hostile
 
