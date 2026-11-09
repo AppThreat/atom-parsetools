@@ -301,7 +301,21 @@ test("difference classes: each classifier fires on its example and not on a plai
     "evaluated-to-object": ["(params?: P) => Promise<M>", "object"],
     "return-value-name": ["(o?: O) => vue", "(o?: O) => Plugin"],
     "generic-argument-differs": ["AsyncIterable<Part<{ a: any; b: string; }>>", "AsyncIterable<Part<{ a: Tool<string>; b: string; }>>"],
-    "function-typeof-vs-signature": ["typeof swapBuffers", "() => void"]
+    "function-typeof-vs-signature": ["typeof swapBuffers", "() => void"],
+    "union-member-swapped": [
+      "Array<typeof AsyncPipe | typeof RouterLink | typeof ReactiveFormsModule>",
+      "Array<typeof AsyncPipe | typeof RouterLink | typeof FormsModule>"
+    ],
+    "declaration-type-parameter-spelling": ["Authenticator<InitializeRet, AuthenticateRet, AuthorizeRet, AuthorizeOptions>", "Authenticator<X, Y, Z, AuthenticateOptions>"],
+    "overload-set-differs": [
+      "{ <T>(v1: Subscribable<T>): Observable<[T]>; <T, T2>(v1: T, v2: T2): Observable<[T, T2]>; }",
+      "{ <T extends AnyCatcher>(arg: T): Observable<unknown>; (sources: readonly []): Observable<never>; }"
+    ],
+    "return-promise-of-imported-name": ["(slug: string) => Promise<Get>", "(slug: string) => Promise<Request>"],
+    "computed-key-assignment": ["boolean", "string"],
+    "record-literal-keys-expanded": ['Record<"app" | "chat", Flag>', "{ app: Flag; chat: Flag; }"],
+    "signature-parts-differ": ["(url: Array<UrlSegment>) => UrlMatchResult", "(url: Array<UrlSegment>) => { consumed: UrlSegment[]; posParams?: { [name: string]: UrlSegment; }; }"],
+    "nested-package-copy": ["ethers.AbstractProvider", "ethers.providers.BaseProvider"]
   };
   // classes that only ever name the candidate as the more precise side
   const oneWay = new Set([
@@ -316,7 +330,15 @@ test("difference classes: each classifier fires on its example and not on a plai
         ? { ...ctx, nodeText: "comment => this.comments" }
         : k.id === "same-offset-neighbor"
           ? { ...ctx, neighbors: ["Profile", "string", "boolean"] }
-          : ctx;
+          : k.id === "declaration-type-parameter-spelling"
+            ? { ...ctx, typeParameters: new Set(["InitializeRet", "AuthenticateRet", "AuthorizeRet", "AuthorizeOptions", "AuthenticateOptions", "X", "Y", "Z"]) }
+            : k.id === "return-promise-of-imported-name"
+              ? { ...ctx, externalNames: new Set(["Get", "Request"]) }
+              : k.id === "computed-key-assignment"
+                ? { ...ctx, nodeText: "['https://www.alchemy.com/'] = alchemyDomainReachable;" }
+                : k.id === "nested-package-copy"
+                  ? { ...ctx, nestedNodeModules: true }
+                  : ctx;
     assert.ok(k.test(b, c, perCase), `${k.id} should fire on ${b} / ${c}`);
     const neutral = { noNodeModules: true, externalNames: new Set(["other"]), nodeText: "x", minified: false, jsFile: false };
     assert.ok(!k.test("number", "string", neutral), `${k.id} must not fire on number / string`);
@@ -326,6 +348,47 @@ test("difference classes: each classifier fires on its example and not on a plai
   }
   const byId = (id) => DIFFERENCE_CLASSIFIERS.find((k) => k.id === id);
   assert.ok(!byId("type-parameter-name").test("Promise<User>", "Promise<Order>"), "two type names are not type parameters");
+  assert.ok(
+    !byId("declaration-type-parameter-spelling").test("Promise<User>", "Promise<Order>", {
+      typeParameters: new Set(["User"])
+    }),
+    "a name the file does not declare as a parameter is not a parameter spelling"
+  );
+  assert.ok(
+    !byId("return-promise-of-imported-name").test("(slug: string) => Promise<Get>", "(slug: string) => Promise<Request>", {
+      externalNames: new Set(["Get"])
+    }),
+    "both names must be ones the file imports"
+  );
+  assert.ok(
+    !byId("overload-set-differs").test("{ <T>(a: T): void; <T>(a: T): void; }", "{ (a: string): Observable<string>; (b: number): Observable<number>; }"),
+    "two signature sets that share no name are not the same function family"
+  );
+  assert.ok(
+    !byId("union-member-swapped").test("typeof A | typeof B | typeof C", "typeof A | typeof B | typeof D | typeof E"),
+    "a union with a member count that differs is not a swap"
+  );
+  assert.ok(
+    !byId("computed-key-assignment").test("boolean", "string", { nodeText: "x === y" }),
+    "the key must sit in a computed member assignment"
+  );
+  assert.ok(!byId("alias-vs-expansion").test("Promise<User>", "Promise<Array<User>>"), "a baseline with type arguments is not a bare alias");
+  assert.ok(
+    !byId("record-literal-keys-expanded").test('Record<"app" | "chat", Flag>', "{ app: Flag; chat: Other; }"),
+    "a member with another value type is not the record's expansion"
+  );
+  assert.ok(
+    !byId("record-literal-keys-expanded").test('Record<string, Flag>', "{ app: Flag; chat: Flag; }"),
+    "a plain string key is the index-signature class, not this one"
+  );
+  assert.ok(
+    !byId("nested-package-copy").test("ethers.AbstractProvider", "ethers.providers.BaseProvider", { nestedNodeModules: false }),
+    "a file whose project has no node_modules of its own is not named by the nested copy class"
+  );
+  assert.ok(
+    !byId("signature-parts-differ").test("(a: string) => void", "(a: number) => void", {}),
+    "a parameter whose types differ in no named way is not a named member difference"
+  );
   assert.ok(!byId("same-offset-neighbor").test("boolean", "Profile", { neighbors: ["Profile"] }), "needs another node at the offset");
   assert.ok(!byId("same-offset-neighbor").test("boolean", "Profile", { neighbors: ["Profile", "string"] }), "needs the baseline's type on another node");
   assert.ok(!byId("object-member-differs").test("{ a: boolean; }", "{ a: string; }", {}), "a member difference no class names is not named");
@@ -361,6 +424,23 @@ test("refinesAny needs every any of one side to be a piece of the other", () => 
   assert.ok(!k("candidate-refines-any").test("(a: any) => Promise<any>", "(a: string) => Set<User>"));
   assert.ok(!k("candidate-refines-any").test("Promise<any>", "Promise<any>"));
   assert.ok(k("candidate-refines-any").test("any", "string"), "a whole any refined to a type counts");
+});
+
+test("refinesAny still decides, without backtracking, types with dozens of any", () => {
+  const k = (id) => DIFFERENCE_CLASSIFIERS.find((x) => x.id === id);
+  // twelve `any` holes: the greedy in-order match must still recognise the refinement
+  const many = (resolved) => `Table<{ ${["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"].map((n) => `${n}: ${resolved ? `{ id: string; }` : "any"}`).join("; ")}; }>`;
+  assert.ok(k("candidate-refines-any").test(many(false), many(true)), "every any refined to an object");
+  // a hole the candidate leaves as `any` matches itself; the refinement is the other holes
+  const partly = many(true).replace("c: { id: string; }", "c: any;");
+  assert.ok(k("candidate-refines-any").test(many(false), partly), "one hole left as any does not spoil the refinement");
+  assert.ok(!k("candidate-refines-any").test(many(false), many(false)), "identical strings never refine");
+  const scrambled = many(true).replace("a: { id: string; }", "a: { completely: different; }").replace("b: { id: string; }", "b: { other: shape; }");
+  assert.ok(k("candidate-refines-any").test(many(false), scrambled), "any hole content that keeps the skeleton is a refinement");
+  const brokenSkeleton = many(true).replace("Table<", "Table2<");
+  assert.ok(!k("candidate-refines-any").test(many(false), brokenSkeleton), "a changed prefix is not a refinement");
+  const missingMember = many(true).replace(/; l: \{ id: string; \}/, "");
+  assert.ok(!k("candidate-refines-any").test(many(false), missingMember), "a part of the skeleton that went missing is not a refinement");
 });
 
 test("difference classes do not name differences that change the type", () => {

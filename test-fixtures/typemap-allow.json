@@ -12,7 +12,7 @@
       "id": "baseline-only:ArrayType",
       "reason": "TypeScript 6 typed an array type node TypeScript 7 left untyped, in juice-shop's compiled output. Largest share seen: 3.37760814679085e-05 on js-juice-shop.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00005
+      "maxShare": 5e-05
     },
     {
       "id": "baseline-only:ArrowFunction",
@@ -78,13 +78,13 @@
       "id": "baseline-only:FalseKeyword",
       "reason": "TypeScript 6 typed a `false` literal TypeScript 7 left untyped. Largest share seen: 4.503477529054467e-05 on js-juice-shop.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00007
+      "maxShare": 7e-05
     },
     {
       "id": "baseline-only:FirstLiteralToken",
       "reason": "TypeScript 6 typed a numeric literal TypeScript 7 left untyped. Largest share seen: 2.8146734556590417e-05 on js-juice-shop.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00004
+      "maxShare": 4e-05
     },
     {
       "id": "baseline-only:FunctionDeclaration",
@@ -186,7 +186,7 @@
       "id": "baseline-only:PostfixUnaryExpression",
       "reason": "TypeScript 6 typed a postfix expression TypeScript 7 left untyped. Largest share seen: 5.629346911318084e-06 on js-juice-shop.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
     },
     {
       "id": "baseline-only:PropertyAccessExpression",
@@ -240,7 +240,7 @@
       "id": "baseline-only:TrueKeyword",
       "reason": "TypeScript 6 typed a `true` literal TypeScript 7 left untyped. Largest share seen: 2.2517387645272335e-05 on js-juice-shop.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00003
+      "maxShare": 3e-05
     },
     {
       "id": "baseline-only:TypeReference",
@@ -294,7 +294,7 @@
       "id": "candidate-only:BigIntLiteral",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00007
+      "maxShare": 7e-05
     },
     {
       "id": "candidate-only:BinaryExpression",
@@ -324,13 +324,13 @@
       "id": "candidate-only:ClassExpression",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
     },
     {
       "id": "candidate-only:ComputedPropertyName",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
     },
     {
       "id": "candidate-only:ConditionalExpression",
@@ -438,7 +438,7 @@
       "id": "candidate-only:LiteralType",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
     },
     {
       "id": "candidate-only:MethodDeclaration",
@@ -450,7 +450,7 @@
       "id": "candidate-only:NamedTupleMember",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
     },
     {
       "id": "candidate-only:NewExpression",
@@ -468,7 +468,7 @@
       "id": "candidate-only:NumberKeyword",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00004
+      "maxShare": 4e-05
     },
     {
       "id": "candidate-only:ObjectLiteralExpression",
@@ -480,7 +480,7 @@
       "id": "candidate-only:OmittedExpression",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00005
+      "maxShare": 5e-05
     },
     {
       "id": "candidate-only:Parameter",
@@ -546,7 +546,7 @@
       "id": "candidate-only:SetAccessor",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00004
+      "maxShare": 4e-05
     },
     {
       "id": "candidate-only:ShorthandPropertyAssignment",
@@ -612,13 +612,13 @@
       "id": "candidate-only:TypeOfExpression",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00002
+      "maxShare": 2e-05
     },
     {
       "id": "candidate-only:TypeParameter",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
     },
     {
       "id": "candidate-only:TypeReference",
@@ -630,13 +630,13 @@
       "id": "candidate-only:UndefinedKeyword",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
     },
     {
       "id": "candidate-only:UnionType",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00002
+      "maxShare": 2e-05
     },
     {
       "id": "candidate-only:VariableDeclaration",
@@ -648,19 +648,19 @@
       "id": "candidate-only:VoidExpression",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
     },
     {
       "id": "candidate-only:VoidKeyword",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
     },
     {
       "id": "candidate-only:YieldExpression",
       "reason": "The astgen 1.10.6 baseline for cdxgen was killed at its 600 s cap after typing 60 of the project's files, so every key of the remaining files is one-sided here; the class is the partial baseline speaking, not a reviewed engine difference. On the 60 files the baseline finished, agreement is 99.49 percent and unclassified is 0.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
     },
     {
       "id": "candidate-only:unknown",
@@ -696,7 +696,7 @@
       "id": "different:bare-fallback-answer",
       "reason": "One side a fallback answer (`undefined`, `any`, `this`, `{}`, `{ exports: any; }`) and the other the resolved annotation or value: the engines' inference differs in kind. Only differences no other class name. Largest share seen: 5.774672287347693e-05 on js-bulletproof-react.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00009
+      "maxShare": 9e-05
     },
     {
       "id": "different:baseline-refines-any",
@@ -726,13 +726,25 @@
       "id": "different:class-structure-vs-signature",
       "reason": "A class value typed by its constructor's signature by TypeScript 6 and by its structure (`{ (c: any): void; prototype: { ... } }`) by TypeScript 7, in a compiled promise polyfill. Largest share seen: 1.4073367278295209e-05 on js-juice-shop.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00002
+      "maxShare": 2e-05
+    },
+    {
+      "id": "different:computed-key-assignment",
+      "reason": "A computed member assignment in compiled CommonJS (juice-shop's `exports.preconditionResults['https://...'] = reachable`) where TypeScript 6 keyed the property's value type at the key literal's offset and TypeScript 7 the literal's own type (boolean against string). Largest share seen: 0.000003 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-5 corpus run, 2026-11-09",
+      "maxShare": 1e-05
     },
     {
       "id": "different:contextual-answer",
       "reason": "At an arrow parameter whose type is inferred, TypeScript 6 answered a bare keyword and TypeScript 7 the contextual type; or at a member call whose receiver shares the call's offset, the receiver's name against the call's return: the engines offered different candidates at one offset and the same tie-break kept a different one. Reviewed on angular-realworld's services. Largest share seen: 0.002017872585759585 on js-angular-realworld.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
       "maxShare": 0.00303
+    },
+    {
+      "id": "different:declaration-type-parameter-spelling",
+      "reason": "A vendored .d.ts spells one generic reference with two sets of its own declared parameter names (outline's outlinewiki__koa-passport.d.ts: `Authenticator<InitializeRet, ...>` and `Authenticator<X, Y, Z, ...>`), and each engine printed the spelling it resolved. Largest share seen: 0.000013 on js-outline.",
+      "reviewer": "AI agent review of the tranche-5 corpus run, 2026-11-09",
+      "maxShare": 2e-05
     },
     {
       "id": "different:declared-vs-instantiated-reference",
@@ -756,13 +768,13 @@
       "id": "different:dollar-alias",
       "reason": "Equal apart from the `$` of a compatibility alias (`zod_1.z.core.$RefinementCtx` against `zod_1.RefinementCtx`) and the namespace path to it. Largest share seen: 1.1258693822636168e-05 on js-juice-shop.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00002
+      "maxShare": 2e-05
     },
     {
       "id": "different:duplicate-union-member",
       "reason": "A union with one member printed twice by TypeScript 6; the printer of 7 collapses the duplicate. Seen on juice-shop's compiled data creator before later classes took its pairs.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00002
+      "maxShare": 2e-05
     },
     {
       "id": "different:enum-keyed-record",
@@ -849,6 +861,12 @@
       "maxShare": 0.00713
     },
     {
+      "id": "different:nested-package-copy",
+      "reason": "Files under juice-shop's `frontend/`, which keeps its own node_modules: the root and nested copies of a package differ in version (ethers v6 against v5, two @angular majors) and each engine resolved another copy, so both answers name resolved types no other class equates. Largest share seen: 0.000551 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-5 corpus run, 2026-11-09",
+      "maxShare": 0.0009
+    },
+    {
       "id": "different:object-member-differs",
       "reason": "Two object types with the same member names where up to three members' types differ; the sample shows the member. Largest share seen: 0.006437768240343348 on ver-js.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
@@ -864,7 +882,13 @@
       "id": "different:overload-added",
       "reason": "One side's call signatures are the other's plus one the other engine's library does not declare (`(contextId: \"webgpu\")`, a DOM library difference at the pinned commits). Largest share seen: 2.2517387645272335e-05 on js-juice-shop.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00003
+      "maxShare": 3e-05
+    },
+    {
+      "id": "different:overload-set-differs",
+      "reason": "An overloaded function's call signatures printed from another declaration of the same function: juice-shop's frontend resolves rxjs through a different copy or module than the root project (the internal `rxjs/internal/AnyCatcher` entry), so the whole signature set differs. Largest share seen: 0.000063 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-5 corpus run, 2026-11-09",
+      "maxShare": 0.0001
     },
     {
       "id": "different:parameter-names",
@@ -903,6 +927,12 @@
       "maxShare": 0.0019
     },
     {
+      "id": "different:record-literal-keys-expanded",
+      "reason": "A mapped record keyed by a union of string literals, kept as `Record<\"a\" | \"b\", V>` by TypeScript 6 and expanded to its member list (with the checker's `... N more ...` elision) by TypeScript 7, in juice-shop's datacreator and datacache. Largest share seen: 0.000069 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-5 corpus run, 2026-11-09",
+      "maxShare": 0.00011
+    },
+    {
       "id": "different:record-vs-index-signature",
       "reason": "A mapped record as `Record<string, T>` on one side and as the index signature `{ [x: string]: T; }` on the other. Largest share seen: 0.00011358795967627432 on js-cdxgen.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
@@ -924,13 +954,19 @@
       "id": "different:rest-parameter-dropped",
       "reason": "Equal apart from a rest parameter one side keeps (`...args: Array<any>`). Largest share seen: 3.096140801224946e-05 on js-juice-shop.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00005
+      "maxShare": 5e-05
     },
     {
       "id": "different:return-literal-narrowed",
       "reason": "A function type whose `boolean` return one engine narrowed to its literal (`() => boolean` against `() => true`). Largest share seen: 6.395088571976722e-06 on js-outline.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00001
+      "maxShare": 1e-05
+    },
+    {
+      "id": "different:return-promise-of-imported-name",
+      "reason": "A call of a method the receiver's class does not declare (nestjs-realworld's `this.articleService.delete(...)`), answered by each engine with a signature built from a name the file imports (`Promise<Get>` against `Promise<Request>`). Largest share seen: 0.000646 on js-nestjs-realworld.",
+      "reviewer": "AI agent review of the tranche-5 corpus run, 2026-11-09",
+      "maxShare": 0.001
     },
     {
       "id": "different:return-value-name",
@@ -949,6 +985,12 @@
       "reason": "TypeScript 6 renames a type parameter that shadows another (T_1); TypeScript 7 writes T. Same type, another name for the parameter.",
       "reviewer": "AI agent review of the corpus run, 2026-11-03",
       "maxShare": 0.0042
+    },
+    {
+      "id": "different:signature-parts-differ",
+      "reason": "Two signatures whose parameter and return types differ each in a way another class names (juice-shop's frontend: an alias the candidate expanded in a return, an Angular output typed by another copy's name). Largest share seen: 0.001072 on js-juice-shop.",
+      "reviewer": "AI agent review of the tranche-5 corpus run, 2026-11-09",
+      "maxShare": 0.0017
     },
     {
       "id": "different:spelling-combination",
@@ -1002,7 +1044,7 @@
       "id": "different:typeof-name-vs-name",
       "reason": "A value's type written `typeof global` by one engine and by the interface name (`Storage`) by the other. Largest share seen: 2.2517387645272335e-05 on js-juice-shop.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
-      "maxShare": 0.00003
+      "maxShare": 3e-05
     },
     {
       "id": "different:typeof-vs-structure",
@@ -1021,6 +1063,12 @@
       "reason": "The same union members apart from object members that are the instantiated attributes of a model, typed from the outer generic by TypeScript 6 and from the concrete model by TypeScript 7 (an observable store's find predicate). Largest share seen: 0.004744333157617291 on js-express-boilerplate.",
       "reviewer": "AI agent review of the tranche-3 corpus run, 2026-11-04",
       "maxShare": 0.00712
+    },
+    {
+      "id": "different:union-member-swapped",
+      "reason": "A union of the element types of a component's `imports` array where the engines kept a different element's typeof (angular-realworld's article component: `typeof ReactiveFormsModule` against `typeof FormsModule`, 11 of 12 members equal). Largest share seen: 0.000577 on js-angular-realworld.",
+      "reviewer": "AI agent review of the tranche-5 corpus run, 2026-11-09",
+      "maxShare": 0.00087
     },
     {
       "id": "different:union-narrowed",
