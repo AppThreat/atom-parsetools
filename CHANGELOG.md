@@ -16,6 +16,16 @@ nikic/php-parser 5.9.0 (which parses PHP 8.6 partial function application) and t
 gem 3.3.13.0. Each `@appthreat/parsa-<os>-<cpu>` package now carries the release's post-build SBOM,
 `sbom-parsa-postbuild.cdx.json`, beside the binary.
 
+The corpus round for 2.0.0 found the new TypeScript commit changes no output: on the 19 JavaScript
+and TypeScript inputs, the native type maps agree with 1.10.6's and with this release's TypeScript 6
+path exactly as rc.1's did (88.7 to 100 percent of the keys per input against TypeScript 6, one key
+in no difference class), and are byte-identical at 1 and 8 checkers. On the nine projects with
+callsites truth, atom finds the same calls with either engine: callsites recall is 0.928 with both,
+precision 0.758 with native type maps against 0.765 with TypeScript 6, and usages recall 0.639
+against 0.637 with precision 0.617 against 0.619. The native engine wrote the type maps of
+cdxgen's own repository in 20.9 s against 88.3 s, juice-shop's in 5.0 s against 21.3 s and
+outline's in 5.5 s against 21.4 s.
+
 The first release with native type maps: `parsa` ("parse for atom"), a Go binary that writes
 JavaScript and TypeScript type maps with TypeScript 7's checker (typescript-go). astgen calls it by
 default and falls back to TypeScript 6 in this process when the binary is missing or fails, so a
