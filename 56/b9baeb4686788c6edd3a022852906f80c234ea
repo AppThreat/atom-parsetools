@@ -1,0 +1,20 @@
+CHANGELOG.md
+  s_8808d9e6ee938f::t_f1fb96abd24019 21
+  s_8808d9e6ee938f::t_c13ae8875eb743 19-20,22-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "56b9baeb4686788c6edd3a022852906f80c234ea",
+  "prompts": {},
+  "sessions": {
+    "s_8808d9e6ee938f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5df8b5bb-b1b1-4554-b720-2a19c73c15c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
