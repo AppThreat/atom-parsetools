@@ -9,7 +9,8 @@
 //   node parsa/scripts/npm-packages.mjs wait <version> [timeout-seconds]
 //
 // `stage` turns the release binaries in <dist-dir> (parsa-<goos>-<goarch>[.exe], as
-// build-release.sh names them) into one publishable directory per package. `optional-deps` writes
+// build-release.sh names them) into one publishable directory per package, each with the release's
+// post-build SBOM (sbom-parsa-postbuild.cdx.json) beside the binary. `optional-deps` writes
 // the exact-version optionalDependencies into the root package.json just before it is published;
 // they are not kept in git, so `npm ci` in this repository never asks the registry for packages of
 // a version that is not published yet. `wait` returns once every package of a version is on the
@@ -42,6 +43,9 @@ export const binaryName = (os) => (os === "win32" ? "parsa.exe" : "parsa");
 
 export const PACKAGE_NAMES = TARGETS.map((t) => packageName(t.os, t.cpu));
 
+/** The post-build SBOM parsa-release.yml writes for the binaries; every package carries it. */
+export const SBOM_NAME = "sbom-parsa-postbuild.cdx.json";
+
 const isPrerelease = (version) => version.includes("-");
 
 function packageJson(target, version) {
@@ -55,7 +59,7 @@ function packageJson(target, version) {
     author: "Team AppThreat <cloud@appthreat.com>",
     os: [target.os],
     cpu: [target.cpu],
-    files: ["bin/"],
+    files: ["bin/", SBOM_NAME],
     // yarn PnP must unpack a package whose binary is executed
     preferUnplugged: true
   };
@@ -68,11 +72,16 @@ The \`parsa\` binary of [@appthreat/atom-parsetools](https://www.npmjs.com/packa
 ${version} for ${target.os}-${target.cpu}. atom-parsetools lists it as an optional dependency, npm installs
 the package that matches the host, and astgen runs \`bin/${binaryName(target.os)}\` to write JavaScript and
 TypeScript type maps with TypeScript 7's checker. There is nothing to install or import directly.
+
+\`${SBOM_NAME}\` is the CycloneDX SBOM of the release's binaries: the Go modules they were built
+from, the pinned TypeScript commit and its patches.
 `;
 }
 
 /** Writes one publishable directory per target under outDir; returns their paths. */
 export function stage(distDir, outDir, version) {
+  const sbom = join(distDir, SBOM_NAME);
+  if (!existsSync(sbom)) throw new Error(`missing release SBOM ${sbom}`);
   const dirs = [];
   for (const t of TARGETS) {
     const asset = `parsa-${t.goos}-${t.goarch}${t.goos === "windows" ? ".exe" : ""}`;
@@ -86,6 +95,7 @@ export function stage(distDir, outDir, version) {
     chmodSync(to, 0o755);
     writeFileSync(join(dir, "package.json"), `${JSON.stringify(packageJson(t, version), null, 2)}\n`);
     writeFileSync(join(dir, "README.md"), readme(t, version));
+    copyFileSync(sbom, join(dir, SBOM_NAME));
     writeFileSync(join(dir, "LICENSE"), readFileSync(new URL("../../LICENSE", import.meta.url)));
     dirs.push(dir);
   }

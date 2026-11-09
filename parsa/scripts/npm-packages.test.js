@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { packagedNativeBinary } from "../../lib/typemap/native.mjs";
-import { PACKAGE_NAMES, TARGETS, published, stage, writeOptionalDeps } from "./npm-packages.mjs";
+import { PACKAGE_NAMES, SBOM_NAME, TARGETS, published, stage, writeOptionalDeps } from "./npm-packages.mjs";
 
 test("one package per release target, named as astgen looks them up", () => {
   assert.deepEqual(PACKAGE_NAMES, [
@@ -19,7 +19,7 @@ test("one package per release target, named as astgen looks them up", () => {
   ]);
 });
 
-test("stage writes a package per target with the binary, executable, under bin/", () => {
+test("stage writes a package per target with the binary, executable, under bin/, and the SBOM", () => {
   const root = mkdtempSync(join(tmpdir(), "parsa-npm-"));
   try {
     const dist = join(root, "dist");
@@ -28,6 +28,8 @@ test("stage writes a package per target with the binary, executable, under bin/"
       const name = `parsa-${t.goos}-${t.goarch}${t.goos === "windows" ? ".exe" : ""}`;
       writeFileSync(join(mkdirp(dist), name), `binary ${name}`);
     }
+    assert.throws(() => stage(dist, out, "2.0.0-rc.1"), /missing release SBOM/);
+    writeFileSync(join(dist, SBOM_NAME), '{"bomFormat":"CycloneDX"}');
     const dirs = stage(dist, out, "2.0.0-rc.1");
     assert.equal(dirs.length, 6);
     const linux = JSON.parse(readFileSync(join(out, "parsa-linux-x64", "package.json"), "utf8"));
@@ -36,7 +38,10 @@ test("stage writes a package per target with the binary, executable, under bin/"
     assert.deepEqual(linux.os, ["linux"]);
     assert.deepEqual(linux.cpu, ["x64"]);
     assert.equal(linux.libc, undefined, "the static linux binary serves glibc and musl");
-    assert.deepEqual(linux.files, ["bin/"]);
+    assert.deepEqual(linux.files, ["bin/", SBOM_NAME]);
+    for (const t of TARGETS) {
+      assert.equal(readFileSync(join(out, `parsa-${t.os}-${t.cpu}`, SBOM_NAME), "utf8"), '{"bomFormat":"CycloneDX"}');
+    }
     assert.equal(readFileSync(join(out, "parsa-linux-x64", "bin", "parsa"), "utf8"), "binary parsa-linux-amd64");
     if (process.platform !== "win32") {
       assert.ok(statSync(join(out, "parsa-linux-x64", "bin", "parsa")).mode & 0o111, "executable");

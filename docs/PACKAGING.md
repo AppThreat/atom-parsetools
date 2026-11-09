@@ -10,7 +10,7 @@ build.sh [--php-only|--ruby-only] [--skip-smoke]
   plugins/
     bin/php-parse              binstub for the vendored parser
     composer.json, composer.lock, installed.php, autoload.php
-    nikic/                     nikic/php-parser 5.8.0 (tests and docs stripped)
+    nikic/                     nikic/php-parser 5.9.0 (tests and docs stripped)
     rubyastgen/
       bundle/ruby/<abi>/       pure-Ruby gems: ruby_ast_gen 2.0.1, parser, ...
       setup.sh
@@ -71,11 +71,11 @@ A published GitHub release gets the binaries, their `.sha256` files and the SBOM
 
 ### The npm platform packages
 
-A release also publishes one npm package per binary: `@appthreat/parsa-linux-x64`, `-linux-arm64`, `-darwin-x64`, `-darwin-arm64`, `-win32-x64` and `-win32-arm64`. Each holds `bin/parsa` (`bin/parsa.exe` on Windows), its README and the license, and declares its `os` and `cpu` so that npm installs only the one for the host. The Linux packages declare no `libc`: the binaries are static and run on musl as well. `parsa/scripts/npm-packages.mjs` builds them from the release binaries, and the `npm-packages` job of `parsa-release.yml` publishes them with provenance through npm trusted publishing, under `next` for a prerelease and `latest` otherwise.
+A release also publishes one npm package per binary: `@appthreat/parsa-linux-x64`, `-linux-arm64`, `-darwin-x64`, `-darwin-arm64`, `-win32-x64` and `-win32-arm64`. Each holds `bin/parsa` (`bin/parsa.exe` on Windows), the release's post-build SBOM `sbom-parsa-postbuild.cdx.json` (as cdxgen-plugins-bin ships one in each plugin), its README and the license, and declares its `os` and `cpu` so that npm installs only the one for the host. The Linux packages declare no `libc`: the binaries are static and run on musl as well. `parsa/scripts/npm-packages.mjs` builds them from the release binaries, and the `npm-packages` job of `parsa-release.yml` publishes them with provenance through npm trusted publishing, under `next` for a prerelease and `latest` otherwise.
 
 `@appthreat/atom-parsetools` lists them as `optionalDependencies` at its own exact version. They are written into `package.json` by the tag publish step of `ci.yml`, after it has waited for all six to reach the registry, and are not kept in git, so `npm ci` in this repository never asks for packages of a version that is not published yet. astgen looks for the binary in the installed package after `ASTGEN_NATIVE_BIN` and `astgen.js`'s own directory (`packagedNativeBinary` in `lib/typemap/native.mjs`). `npm install --omit=optional`, or a host with no package (linux-arm, riscv64, ppc64), keeps astgen on TypeScript 6.
 
-The packages need a trusted publisher on npmjs before the first release that publishes them, and npm accepts one only for a package that already exists. `parsa/scripts/setup-npm-trusted-publishing.sh` does both for a maintainer of the `@appthreat` scope: it publishes a deprecated `0.0.0-placeholder.0` of any package that is missing and sets the trusted publisher (GitHub Actions, `AppThreat/atom-parsetools`, `parsa-release.yml`) with `npm trust`. Without `--apply` it only prints what it would do.
+The packages need a trusted publisher on npmjs before the first release that publishes them, and npm accepts one only for a package that already exists. `parsa/scripts/setup-npm-trusted-publishing.sh` does both for a maintainer of the `@appthreat` scope: it publishes a deprecated `0.0.0-placeholder.<timestamp>` of any package that is missing and sets the trusted publisher (GitHub Actions, `AppThreat/atom-parsetools`, `parsa-release.yml`) with `npm trust`. Without `--apply` it only prints what it would do.
 
 ## Publishing this documentation site
 
