@@ -79,6 +79,13 @@ const run = (fixtureName, env = {}, engine = "ts6") => {
       .map((line) => JSON.parse(line))
       .filter((record) => record.kind === "types");
     assert.equal(types.at(-1)?.engine, "native", `the native run fell back: ${JSON.stringify(types.at(-1))}`);
+    if (fixtureName === "nested-configs") {
+      assert.deepEqual(
+        types.at(-1).projects?.map((p) => p.label),
+        [".", "frontend/src", "packages/shared"],
+        "the manifest lists the programs, the root first"
+      );
+    }
   }
   runs.set(key, result);
   return result;
