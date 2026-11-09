@@ -12,10 +12,11 @@
 # the registry yet gets a placeholder first: version 0.0.0-placeholder.<UTC timestamp>, a README and
 # nothing else, published from your own login and deprecated at once. The version is new on every
 # run because npm never accepts a version twice, not even one that was only staged or unpublished.
-# When npm stages the publish for later approval instead of completing it, the script stops and
-# names the `npm stage` commands to finish it; run the script again afterwards. npm points `latest`
-# at the first version of a package, so `latest` names the placeholder until a final release
-# replaces it; @appthreat/atom-parsetools depends on exact versions and never resolves it.
+# npm takes a few minutes to show a new package, so the script publishes every missing placeholder
+# first, waits up to 15 minutes for all of them, and then deprecates them and sets the publishers.
+# Run it again at any point: what is done already is skipped. npm points `latest` at the first
+# version of a package, so `latest` names the placeholder until a final release replaces it;
+# @appthreat/atom-parsetools depends on exact versions and never resolves it.
 #
 # Then each package gets a trusted publisher with these values, set with `npm trust github`
 # (npm 11.10 and later) or on https://www.npmjs.com/package/<name>/access:
@@ -61,15 +62,21 @@ fi
 work=$(mktemp -d "${TMPDIR:-/tmp}/parsa-npm-setup.XXXXXX")
 trap 'rm -rf "$work"' EXIT
 
-for name in $(node "$here/npm-packages.mjs" names); do
+names=$(node "$here/npm-packages.mjs" names)
+exists() { npm view "$1" name >/dev/null 2>&1; }
+
+# 1. a placeholder for each package that is not on the registry
+pending=""
+for name in $names; do
   echo ""
   echo "== $name"
-  if npm view "$name" name >/dev/null 2>&1; then
+  if exists "$name"; then
     echo "already on the registry"
-  else
-    dir="$work/$(echo "$name" | tr '/@' '__')"
-    mkdir -p "$dir"
-    cat > "$dir/package.json" <<EOF
+    continue
+  fi
+  dir="$work/$(echo "$name" | tr '/@' '__')"
+  mkdir -p "$dir"
+  cat > "$dir/package.json" <<EOF
 {
   "name": "$name",
   "version": "$placeholder",
@@ -79,26 +86,40 @@ for name in $(node "$here/npm-packages.mjs" names); do
   "files": ["README.md"]
 }
 EOF
-    printf '# %s\n\nReserved for the parsa binary of @appthreat/atom-parsetools. Install @appthreat/atom-parsetools instead.\n' "$name" > "$dir/README.md"
-    run sh -c "cd '$dir' && npm publish --access public --tag placeholder"
-    # the registry can take a few seconds to show a new version
-    tries=0
-    while $apply && ! npm view "$name@$placeholder" version >/dev/null 2>&1 && [ "$tries" -lt 5 ]; do
-      tries=$((tries + 1))
-      sleep 3
-    done
-    if $apply && ! npm view "$name@$placeholder" version >/dev/null 2>&1; then
-      echo "$name@$placeholder is not on the registry yet; if npm staged it, finish with:" >&2
-      echo "  npm stage list $name" >&2
-      echo "  npm stage approve <stage-id>" >&2
-      echo "then run this script again" >&2
+  printf '# %s\n\nReserved for the parsa binary of @appthreat/atom-parsetools. Install @appthreat/atom-parsetools instead.\n' "$name" > "$dir/README.md"
+  run sh -c "cd '$dir' && npm publish --access public --tag placeholder"
+  pending="$pending $name"
+done
+
+# 2. npm takes a few minutes to show a new package; wait for all of them (up to 15 minutes)
+if $apply && [ -n "$pending" ]; then
+  echo ""
+  echo "waiting for the registry to show:$pending"
+  waited=0
+  while :; do
+    missing=""
+    for name in $pending; do exists "$name" || missing="$missing $name"; done
+    [ -z "$missing" ] && break
+    if [ "$waited" -ge 900 ]; then
+      echo "still not on the registry after 15 minutes:$missing" >&2
+      echo "if npm staged them, finish with 'npm stage list' and 'npm stage approve <stage-id>'; then run this script again" >&2
       exit 1
     fi
+    sleep 20
+    waited=$((waited + 20))
+  done
+  for name in $pending; do
     run npm deprecate "$name@$placeholder" "placeholder; install @appthreat/atom-parsetools"
-  fi
+  done
+fi
+
+# 3. the trusted publisher of each package
+for name in $names; do
+  echo ""
+  echo "== $name: trusted publisher"
   if npm trust --help >/dev/null 2>&1; then
     if npm trust list "$name" 2>/dev/null | grep -q "$workflow"; then
-      echo "trusted publisher for $workflow already set"
+      echo "already set for $workflow"
     else
       run npm trust github "$name" --file "$workflow" --repo "$repo" --allow-publish --yes
     fi
