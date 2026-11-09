@@ -1,0 +1,20 @@
+parsa/scripts/setup-npm-trusted-publishing.sh
+  s_8808d9e6ee938f::t_ff40c94e0374ee 15-16,65-70,73,75-79,89-105,108-111,113-119,122
+  s_8808d9e6ee938f::t_b9c66e4b1f96ff 17-19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "25a98755c7548e1dcc7eb136511cce46c304fb7a",
+  "prompts": {},
+  "sessions": {
+    "s_8808d9e6ee938f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5df8b5bb-b1b1-4554-b720-2a19c73c15c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
