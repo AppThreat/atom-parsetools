@@ -1,0 +1,22 @@
+CHANGELOG.md
+  s_be48abf732935d::t_c09b85c175daa3 28-29
+  s_be48abf732935d::t_29fb1efb82bcec 68-82
+docs/ASTGEN.md
+  s_be48abf732935d::t_bc6f998c152b73 229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e59216844567bed60a22a75ddd1978096a38748b",
+  "prompts": {},
+  "sessions": {
+    "s_be48abf732935d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "sess_e9a6d2cf-9b65-4fbf-a3f7-18df64182d54",
+        "model": "GLM-5.3"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
