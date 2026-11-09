@@ -7,7 +7,8 @@ import {
   DIFFERENCE_CLASSIFIERS,
   checkAllowList,
   diffTrees,
-  externalImportNames
+  externalImportNames,
+  packageCopiesFor
 } from "../lib/typemap/diff.mjs";
 import { CANONICAL_FORMS, NORMALIZATIONS, canon, equalAfterNormalization } from "../lib/typemap/canon.mjs";
 
@@ -161,6 +162,18 @@ test("identical trees: no differences, all exact", () => {
   assert.deepEqual(checkAllowList(r, { classes: [] }), []);
 });
 
+test("--reference names a difference only when the candidate equals the reference's answer", () => {
+  // the baseline is an older astgen; the reference is the candidate's astgen in ts6 mode
+  const a = tree("ref-a", { "x.ts": { 0: "Foo", 1: "Bar", 2: "Baz" } });
+  const b = tree("ref-b", { "x.ts": { 0: "Qux", 1: '"a" | "b"', 2: "Quux" } });
+  const ref = tree("ref-r", { "x.ts": { 0: "Qux", 1: '"b" | "a"', 2: "Other" } });
+  const r = diffTrees({ baseline: a, candidate: b, reference: ref, samples: 5 });
+  assert.equal(r.classes["different:reference-agrees"]?.count, 2, "equal, and equal after a normalization");
+  assert.equal(r.classes["different:unclassified"]?.count, 1, "a reference that answers otherwise names nothing");
+  const plain = diffTrees({ baseline: a, candidate: b });
+  assert.equal(plain.classes["different:reference-agrees"], undefined, "without --reference the class never fires");
+});
+
 test("counts exact, normalized, different and one-sided keys separately", () => {
   const a = tree("cnt-a", { "x.ts": { 0: "number", 1: '"a" | "b"', 2: "string", 3: "only-a" } });
   const b = tree("cnt-b", { "x.ts": { 0: "number", 1: '"b" | "a"', 2: "number", 4: "only-b" } });
@@ -223,7 +236,9 @@ test("no allow-list entry names a classifier that no longer exists", () => {
   const allow = JSON.parse(readFileSync(join(here, "typemap-allow.json"), "utf8"));
   const ids = new Set(DIFFERENCE_CLASSIFIERS.map((k) => `different:${k.id}`));
   const stale = allow.classes.filter(
-    (e) => e.id.startsWith("different:") && !ids.has(e.id.replace(/\+spelling$/, "")) && e.id !== "different:spelling-combination"
+    (e) => e.id.startsWith("different:") && !ids.has(e.id.replace(/\+spelling$/, "")) &&
+      e.id !== "different:spelling-combination" &&
+      e.id !== "different:reference-agrees"
   );
   assert.deepEqual(stale.map((e) => e.id), [], "entries whose classifier was removed leave differences unclassified with no one to name them");
 });
@@ -307,20 +322,19 @@ test("difference classes: each classifier fires on its example and not on a plai
       "Array<typeof AsyncPipe | typeof RouterLink | typeof FormsModule>"
     ],
     "declaration-type-parameter-spelling": ["Authenticator<InitializeRet, AuthenticateRet, AuthorizeRet, AuthorizeOptions>", "Authenticator<X, Y, Z, AuthenticateOptions>"],
-    "overload-set-differs": [
-      "{ <T>(v1: Subscribable<T>): Observable<[T]>; <T, T2>(v1: T, v2: T2): Observable<[T, T2]>; }",
-      "{ <T extends AnyCatcher>(arg: T): Observable<unknown>; (sources: readonly []): Observable<never>; }"
-    ],
     "return-promise-of-imported-name": ["(slug: string) => Promise<Get>", "(slug: string) => Promise<Request>"],
     "computed-key-assignment": ["boolean", "string"],
     "record-literal-keys-expanded": ['Record<"app" | "chat", Flag>', "{ app: Flag; chat: Flag; }"],
     "signature-parts-differ": ["(url: Array<UrlSegment>) => UrlMatchResult", "(url: Array<UrlSegment>) => { consumed: UrlSegment[]; posParams?: { [name: string]: UrlSegment; }; }"],
-    "nested-package-copy": ["ethers.AbstractProvider", "ethers.providers.BaseProvider"]
+    "nested-package-copy": ["ethers.AbstractProvider", "ethers.providers.BaseProvider"],
+    "mapped-over-any-evaluated": ["QueryConfig<() => any>", "{ [x: string]: any; [x: number]: any; [x: symbol]: any; }"],
+    "default-type-argument-printed": ["MatTableDataSource<ProductTableEntry>", "MatTableDataSource<ProductTableEntry, MatPaginator>"],
+    "nested-only-package": ["(lang: string) => ChangeDetectionStrategy", '(lang: string) => import("@codemirror/state").Extension']
   };
   // classes that only ever name the candidate as the more precise side
   const oneWay = new Set([
     "bare-fallback-answer", "defaulted-vs-resolved", "object-member-superset", "type-parameter-instantiated",
-    "evaluated-to-object", "return-value-name", "function-typeof-vs-signature", "this-vs-literal"
+    "evaluated-to-object", "return-value-name", "function-typeof-vs-signature", "this-vs-literal", "nested-only-package"
   ]);
   for (const k of DIFFERENCE_CLASSIFIERS) {
     if (k.id === "length-limit") continue;
@@ -337,7 +351,9 @@ test("difference classes: each classifier fires on its example and not on a plai
               : k.id === "computed-key-assignment"
                 ? { ...ctx, nodeText: "['https://www.alchemy.com/'] = alchemyDomainReachable;" }
                 : k.id === "nested-package-copy"
-                  ? { ...ctx, nestedNodeModules: true }
+                  ? { ...ctx, nestedPackageCopies: new Map([["ethers", { locals: ["ethers"], nested: "5.8.0", root: "6.17.0" }]]) }
+                  : k.id === "nested-only-package"
+                    ? { ...ctx, nestedPackageCopies: new Map([["@codemirror/state", { locals: ["Extension"], nested: "6.7.6" }]]) }
                   : ctx;
     assert.ok(k.test(b, c, perCase), `${k.id} should fire on ${b} / ${c}`);
     const neutral = { noNodeModules: true, externalNames: new Set(["other"]), nodeText: "x", minified: false, jsFile: false };
@@ -361,10 +377,6 @@ test("difference classes: each classifier fires on its example and not on a plai
     "both names must be ones the file imports"
   );
   assert.ok(
-    !byId("overload-set-differs").test("{ <T>(a: T): void; <T>(a: T): void; }", "{ (a: string): Observable<string>; (b: number): Observable<number>; }"),
-    "two signature sets that share no name are not the same function family"
-  );
-  assert.ok(
     !byId("union-member-swapped").test("typeof A | typeof B | typeof C", "typeof A | typeof B | typeof D | typeof E"),
     "a union with a member count that differs is not a swap"
   );
@@ -373,6 +385,22 @@ test("difference classes: each classifier fires on its example and not on a plai
     "the key must sit in a computed member assignment"
   );
   assert.ok(!byId("alias-vs-expansion").test("Promise<User>", "Promise<Array<User>>"), "a baseline with type arguments is not a bare alias");
+  assert.ok(byId("alias-vs-expansion").test("Extension", "ReadonlyArray<Extension> | { extension: Extension; }"), "a recursive alias expanded to its union");
+  assert.ok(!byId("alias-vs-expansion").test("Extension", "string | number"), "a union that never refers back to the name is not its expansion");
+  assert.ok(!byId("alias-vs-expansion").test("Extension", "Extension | { a: Extension; }"), "a union that keeps the name as a member is not an expansion");
+  assert.ok(!byId("default-type-argument-printed").test("Map<string>", "Map<number, string>"), "the leading arguments must be equal");
+  assert.ok(!byId("mapped-over-any-evaluated").test("QueryConfig<() => User>", "{ [x: string]: any; [x: number]: any; [x: symbol]: any; }"), "an argument that returns a type is not any");
+  assert.ok(!byId("mapped-over-any-evaluated").test("QueryConfig<() => any>", "{ [x: string]: User; }"), "only the all-any mapped object");
+  assert.ok(
+    byId("mapped-over-any-evaluated").test("QueryConfig<() => any>", "{ [x: number]: any; [x: string]: any; [x: symbol]: any; }"),
+    "the canonical form sorts the members"
+  );
+  assert.ok(
+    byId("overload-added").test("(text: string, r?: (k: string) => any) => any", "{ (text: string, r?: (k: string) => any): any; (text: string, r?: (k: string, c: { source?: string; }) => any): any; }"),
+    "a lone arrow signature is a set of one"
+  );
+  assert.ok(!byId("overload-added").test("(text: string) => any", "{ (text: number): any; (x: boolean): any; }"), "the lone signature must be one of the set");
+  assert.ok(!byId("default-type-argument-printed").test("Map<K, V>", "Set<K, V, W>"), "the same generic, not another one");
   assert.ok(
     !byId("record-literal-keys-expanded").test('Record<"app" | "chat", Flag>', "{ app: Flag; chat: Other; }"),
     "a member with another value type is not the record's expansion"
@@ -381,10 +409,53 @@ test("difference classes: each classifier fires on its example and not on a plai
     !byId("record-literal-keys-expanded").test('Record<string, Flag>', "{ app: Flag; chat: Flag; }"),
     "a plain string key is the index-signature class, not this one"
   );
-  assert.ok(
-    !byId("nested-package-copy").test("ethers.AbstractProvider", "ethers.providers.BaseProvider", { nestedNodeModules: false }),
-    "a file whose project has no node_modules of its own is not named by the nested copy class"
-  );
+  {
+    const copy = byId("nested-package-copy");
+    const copies = new Map([
+      ["rxjs", { locals: ["Observable"], nested: "7.8.2", root: "6.6.7" }],
+      ["ethers", { locals: ["ethers"], nested: "5.8.0", root: "6.17.0" }],
+      ["@angular/material/table", { locals: ["MatTableDataSource"], nested: "21.2.0" }]
+    ]);
+    assert.ok(!copy.test("ethers.AbstractProvider", "ethers.providers.BaseProvider", { nestedPackageCopies: new Map() }), "no differing copy, no class");
+    assert.ok(!copy.test("void | this", "10 | false", { nestedPackageCopies: copies }), "answers that name no copied package are not a copy difference");
+    assert.ok(!copy.test("ethers.A", "Wallet", { nestedPackageCopies: copies }), "both answers must name the package");
+    assert.ok(!copy.test("a.Observable", "Observable<T>", { nestedPackageCopies: copies }), "a member that shares the binding's name is not the binding");
+    const only = byId("nested-only-package");
+    assert.ok(only.test("MatTableDataSource", "MatTableDataSource<T, MatPaginator>", { nestedPackageCopies: copies }) === false, "a baseline that names the package too is not unresolved");
+    assert.ok(only.test("Component", "MatTableDataSource<T, MatPaginator>", { nestedPackageCopies: copies }), "the candidate names a package only the nested project installs");
+    assert.ok(!only.test("Component", "ethers.Wallet", { nestedPackageCopies: copies }), "a package the root installs too is the copy class's question");
+    assert.ok(!only.test("Component", "Other", { nestedPackageCopies: copies }), "the candidate must name the nested-only package");
+    assert.ok(!copy.test("myethers.A", "ethers.B", { nestedPackageCopies: copies }), "a longer name ending in the binding is not the binding");
+    assert.ok(!copy.test('import("rxjsx").A', 'import("rxjs").B', { nestedPackageCopies: copies }), "another package whose name starts with the copy's is not the copy");
+    assert.ok(
+      copy.test('{ <T>(v1: import("rxjs").SubscribableOrPromise<T>): Observable<[T]>; }', '{ <T extends import("rxjs/internal/AnyCatcher").AnyCatcher>(arg: T): Observable<unknown>; }', { nestedPackageCopies: copies }),
+      "rxjs 6 against rxjs 7 overloads name the copied package on both sides"
+    );
+    // the evidence comes from the installed versions: a nested project whose copy matches the root has none
+    const dir = mkdtempSync(join(tmpdir(), "pt-copies-"));
+    const pkgAt = (nm, name, version) => {
+      mkdirSync(join(dir, nm, name), { recursive: true });
+      writeFileSync(join(dir, nm, name, "package.json"), JSON.stringify({ name, version }));
+    };
+    pkgAt("node_modules", "rxjs", "6.6.7");
+    pkgAt("frontend/node_modules", "rxjs", "7.8.2");
+    pkgAt("frontend/node_modules", "only-here", "2.0.0");
+    pkgAt("node_modules", "same", "1.0.0");
+    pkgAt("frontend/node_modules", "same", "1.0.0");
+    const text = 'import { Observable as Obs } from "rxjs";\nimport { x } from "same";\nimport { z } from "only-here/sub";\nimport { y } from "./local";\n';
+    const found = packageCopiesFor(dir, "frontend/src/a.ts", text);
+    assert.deepEqual(
+      [...found.entries()],
+      [
+        ["rxjs", { locals: ["Observable", "Obs"], nested: "7.8.2", root: "6.6.7" }],
+        ["only-here", { locals: ["z"], nested: "2.0.0", root: undefined }]
+      ],
+      "the package with differing copies and the nested-only one, with their bindings; not the matching copy or a relative import"
+    );
+    assert.equal(packageCopiesFor(dir, "src/a.ts", text).size, 0, "a root file has no nested copies");
+    assert.equal(packageCopiesFor(undefined, "frontend/src/a.ts", text).size, 0, "no --src, no evidence");
+    rmSync(dir, { recursive: true, force: true });
+  }
   assert.ok(
     !byId("signature-parts-differ").test("(a: string) => void", "(a: number) => void", {}),
     "a parameter whose types differ in no named way is not a named member difference"
