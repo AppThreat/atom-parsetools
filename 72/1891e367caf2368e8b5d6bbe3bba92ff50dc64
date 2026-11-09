@@ -1,0 +1,24 @@
+docs/TESTING.md
+  s_8808d9e6ee938f::t_9390a351f3d98c 28
+parsa/scripts/eval-typemaps.sh
+  s_8808d9e6ee938f::t_682e3e459a6a3b 146-148
+  s_8808d9e6ee938f::t_4424db1b698a4c 126
+  s_8808d9e6ee938f::t_259d3e68470147 22-23,73,121
+  s_8808d9e6ee938f::t_b8a3ed67dfdd35 134-135
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "721891e367caf2368e8b5d6bbe3bba92ff50dc64",
+  "prompts": {},
+  "sessions": {
+    "s_8808d9e6ee938f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5df8b5bb-b1b1-4554-b720-2a19c73c15c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
