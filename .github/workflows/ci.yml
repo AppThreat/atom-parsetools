@@ -57,7 +57,8 @@ jobs:
         astgen --version
         phpastgen --help
         rbastgen --help
-        npm publish --dry-run
+        # a dry run needs a dist-tag for a prerelease version; which one does not matter here
+        npm publish --dry-run --tag ci-dry-run
     - name: packed tarball runs the ruby workflow
       run: bash ci/verify-packed-tarball.sh
     - name: bun compatibility
