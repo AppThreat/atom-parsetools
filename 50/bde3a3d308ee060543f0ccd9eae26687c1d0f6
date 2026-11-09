@@ -1,0 +1,52 @@
+CHANGELOG.md
+  s_8808d9e6ee938f::t_6a5263a47dbd95 75-77
+  s_8808d9e6ee938f::t_b82f24eedf05b9 78-82
+parsa/internal/typemap/projects_test.go
+  s_8808d9e6ee938f::t_8540830c360587 1-32,34-88,90-137
+  s_8808d9e6ee938f::t_4b704a696c1a99 33,89
+  s_8808d9e6ee938f::t_6482f037feba59 138-154
+parsa/internal/typemap/run.go
+  s_8808d9e6ee938f::t_d3d93970828c47 54-64,67-75
+  s_8808d9e6ee938f::t_e314d14b636afc 65-66,76-83
+  s_8808d9e6ee938f::t_3c57068a86bb7a 467,473
+  s_8808d9e6ee938f::t_7efc138678d69c 171-176,184-188,192-206,208,210-238,241-301,304-322,324-325,328-334,389-390,397
+parsa/internal/typemap/sfc.go
+  s_8808d9e6ee938f::t_3c57068a86bb7a 117
+parsa/internal/typemap/program.go
+  s_8808d9e6ee938f::t_ec26ff6b1305fc 75-115,119-123,417,435-439,514
+  s_8808d9e6ee938f::t_3c57068a86bb7a 391-394,411-415,447
+  s_8808d9e6ee938f::t_e314d14b636afc 124,448-449,497-513,515-530
+  s_8808d9e6ee938f::t_9c1958662b2273 125
+.github/workflows/ci.yml
+  s_8808d9e6ee938f::t_1e6a0fd1bba0f5 110
+  s_8808d9e6ee938f::t_c8a74d212561b3 109
+test-fixtures/astgen-config-options-regression.js
+  s_8808d9e6ee938f::t_1e6a0fd1bba0f5 28-46,48-63,65-81
+  s_8808d9e6ee938f::t_228d81a5166b07 7-8,11,19-25,27,82,84
+parsa/internal/typemap/projects.go
+  s_8808d9e6ee938f::t_2b919457d79d2d 1-270
+parsa/internal/typemap/config_test.go
+  s_8808d9e6ee938f::t_e314d14b636afc 155
+  s_8808d9e6ee938f::t_10752d78a6c5b0 177,180,217-260
+  s_8808d9e6ee938f::t_38c4ec3eac7446 261
+test-fixtures/astgen-nested-configs-regression.js
+  s_8808d9e6ee938f::t_39be1c08ba14f0 5,25-33,48-49,61-66,74-82,115-137,139-152,154-161,163-171,173-179
+parsa/internal/typemap/print.go
+  s_8808d9e6ee938f::t_22fa58439c27a5 80-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "50bde3a3d308ee060543f0ccd9eae26687c1d0f6",
+  "prompts": {},
+  "sessions": {
+    "s_8808d9e6ee938f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5df8b5bb-b1b1-4554-b720-2a19c73c15c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
