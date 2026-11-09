@@ -226,4 +226,4 @@ Every run with `--tsTypes` on appends one record to `astgen_manifest.jsonl` in t
 
 Each source file becomes `<output>/<relative-path>.json` with the shape `{"fullName", "relativeName", "ast"}`, and each type-mapped file also gets `<relative-path>.typemap`. See [Output Formats](OUTPUT_FORMATS.md).
 
-`astgen --version` prints the AST format version (currently 4.7.0). It is not decorative: downstream frontends such as chen's `jssrc2cpg` fold it into their parse-cache fingerprint, so it must be bumped whenever the emitted AST or type shape changes. A stale version number means stale cached parses get silently reused, which is the one bug this contract exists to prevent.
+`astgen --version` prints the AST format version (currently 4.7.1). It is not decorative: downstream frontends such as chen's `jssrc2cpg` fold it into their parse-cache fingerprint, so it must be bumped whenever the emitted AST or type shape changes. A stale version number means stale cached parses get silently reused, which is the one bug this contract exists to prevent.

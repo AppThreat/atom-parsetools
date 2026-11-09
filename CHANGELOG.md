@@ -25,7 +25,8 @@ fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x
   TypeScript 7's type strings (union and object member order, quote style, function signatures;
   see "Differences in native type maps" below) when the binary is present, and the TypeScript 6
   strings when it is not. Set `ASTGEN_TYPES=ts6` to keep the previous output on every machine.
-  `ASTGEN_VERSION` goes to 4.7.0 so caches keyed on it, such as chen's parse cache, are rebuilt.
+  `ASTGEN_VERSION` goes to 4.7.0, and to 4.7.1 with the nested TypeScript projects below, so caches
+  keyed on it, such as chen's parse cache, are rebuilt.
 - **Output file names when astgen runs with `-i .`** (how chen runs it). Names were computed with
   the regular expression `"^" + src + "/"`, which with `src` set to `.` removed the first character
   and slash of every path, so `a/b.js` was written as `b.js`. Names are now relative to the source
@@ -64,7 +65,21 @@ fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x
   phase runs in a worker thread that astgen stops past a budget; a file past it keeps its AST and
   gets no types, and the run carries on. Each case is a `type_budget` record in
   `astgen_manifest.jsonl`. cdxgen's own `scanOnePathInner` and large bundles that redeclare the same
-  names no longer hold a run for minutes.
+  names no longer hold a run for minutes. A 10 MB minified bundle, which before this release ended
+  the TypeScript 6 phase only when the caller's timeout killed the run, now ends it with a
+  `program-wall-time` budget record and the run finishes with its ASTs.
+- Nested TypeScript projects are typed with their own configuration. A repository that keeps a
+  second project in a subdirectory with its own `tsconfig.json` (juice-shop's Angular app in
+  `frontend/`) had that project typed with the root's compiler options, and the root's files could
+  pick up the nested project's packages through the one shared program. Each project now gets a
+  program of its own. A project's own compiler options also win over astgen's defaults
+  (`moduleResolution`, `module`, `target`, `lib`, `jsx`, `exactOptionalPropertyTypes`), so a package
+  reachable only through `exports` under bundler resolution is typed, and a project whose `lib`
+  leaves out the DOM no longer gets DOM types. `ASTGEN_VERSION` goes to 4.7.1 so caches keyed on it,
+  such as chen's parse cache, are rebuilt.
+- A class member declared with `accessor` (`accessor x = 1`, decorated or not) parses: the
+  `decoratorAutoAccessors` plugin is in the syntax list and in both Flow lists, where the member
+  used to fail the whole file's parse.
 - `parsa` binaries for Linux, macOS and Windows on x64 and arm64, attached to each GitHub release with
   a `.sha256` file, build provenance and a post-build CycloneDX SBOM, and published to `ghcr.io/appthreat/parsa` (see
   `docs/PACKAGING.md`). The npm package does not include them.
