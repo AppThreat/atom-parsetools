@@ -1,0 +1,42 @@
+CHANGELOG.md
+  s_8808d9e6ee938f::t_5afdbc33996321 19-25,60,94-95
+docs/PACKAGING.md
+  s_8808d9e6ee938f::t_5afdbc33996321 59,63,70-78
+docs/ASTGEN.md
+  s_8808d9e6ee938f::t_5afdbc33996321 218
+  s_8808d9e6ee938f::t_749c641814be29 202
+.github/workflows/parsa-release.yml
+  s_8808d9e6ee938f::t_d4fcf8ebd67a48 6-8,183-226
+parsa/scripts/setup-npm-trusted-publishing.sh
+  s_8808d9e6ee938f::t_177ba6f25fd220 1-96
+.github/workflows/ci.yml
+  s_8808d9e6ee938f::t_d4fcf8ebd67a48 74-75,85-89
+test-fixtures/astgen-native-types-regression.js
+  s_8808d9e6ee938f::t_0c9c837af05f72 109,125-135,137
+parsa/scripts/npm-packages.mjs
+  s_8808d9e6ee938f::t_548309e56c690e 1-24,26-36,39-164
+  s_8808d9e6ee938f::t_af573247e2909a 25,37-38
+parsa/scripts/npm-packages.test.js
+  s_8808d9e6ee938f::t_586a65a7b4f566 4,96
+  s_8808d9e6ee938f::t_3ff41e55f2f1dc 1-3,5-95,97
+package.json
+  s_8808d9e6ee938f::t_586a65a7b4f566 10
+lib/typemap/native.mjs
+  s_8808d9e6ee938f::t_af573247e2909a 19,49-66,68-69,73,83-84,88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0c34e2b92297f7fac3f231172409110a39d36682",
+  "prompts": {},
+  "sessions": {
+    "s_8808d9e6ee938f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5df8b5bb-b1b1-4554-b720-2a19c73c15c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
