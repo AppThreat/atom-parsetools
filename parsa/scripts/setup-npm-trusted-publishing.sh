@@ -9,10 +9,13 @@
 #   sh parsa/scripts/setup-npm-trusted-publishing.sh --apply    # do it
 #
 # npm configures a trusted publisher only for a package that exists, so a package that is not on
-# the registry yet gets a placeholder first: version 0.0.0-placeholder.0, a README and nothing
-# else, published from your own login and deprecated at once. npm points `latest` at the first
-# version of a package, so `latest` names the placeholder until a final release replaces it;
-# @appthreat/atom-parsetools depends on exact versions and never resolves it.
+# the registry yet gets a placeholder first: version 0.0.0-placeholder.<UTC timestamp>, a README and
+# nothing else, published from your own login and deprecated at once. The version is new on every
+# run because npm never accepts a version twice, not even one that was only staged or unpublished.
+# When npm stages the publish for later approval instead of completing it, the script stops and
+# names the `npm stage` commands to finish it; run the script again afterwards. npm points `latest`
+# at the first version of a package, so `latest` names the placeholder until a final release
+# replaces it; @appthreat/atom-parsetools depends on exact versions and never resolves it.
 #
 # Then each package gets a trusted publisher with these values, set with `npm trust github`
 # (npm 11.10 and later) or on https://www.npmjs.com/package/<name>/access:
@@ -34,7 +37,7 @@ apply=false
 here=$(cd "$(dirname "$0")" && pwd)
 repo=AppThreat/atom-parsetools
 workflow=parsa-release.yml
-placeholder=0.0.0-placeholder.0
+placeholder="0.0.0-placeholder.$(date -u +%Y%m%d%H%M%S)"
 
 run() {
   if $apply; then
@@ -78,6 +81,19 @@ for name in $(node "$here/npm-packages.mjs" names); do
 EOF
     printf '# %s\n\nReserved for the parsa binary of @appthreat/atom-parsetools. Install @appthreat/atom-parsetools instead.\n' "$name" > "$dir/README.md"
     run sh -c "cd '$dir' && npm publish --access public --tag placeholder"
+    # the registry can take a few seconds to show a new version
+    tries=0
+    while $apply && ! npm view "$name@$placeholder" version >/dev/null 2>&1 && [ "$tries" -lt 5 ]; do
+      tries=$((tries + 1))
+      sleep 3
+    done
+    if $apply && ! npm view "$name@$placeholder" version >/dev/null 2>&1; then
+      echo "$name@$placeholder is not on the registry yet; if npm staged it, finish with:" >&2
+      echo "  npm stage list $name" >&2
+      echo "  npm stage approve <stage-id>" >&2
+      echo "then run this script again" >&2
+      exit 1
+    fi
     run npm deprecate "$name@$placeholder" "placeholder; install @appthreat/atom-parsetools"
   fi
   if npm trust --help >/dev/null 2>&1; then
