@@ -1,0 +1,23 @@
+lib/typemap/native.mjs
+  s_8808d9e6ee938f::t_f7006256a48ca8 200-201
+test-fixtures/astgen-nested-configs-regression.js
+  s_8808d9e6ee938f::t_f7006256a48ca8 82-88
+docs/ASTGEN.md
+  s_8808d9e6ee938f::t_f7006256a48ca8 182,210
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "77edc51225ae0164f8f239e20037f7e7cb75e30e",
+  "prompts": {},
+  "sessions": {
+    "s_8808d9e6ee938f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5df8b5bb-b1b1-4554-b720-2a19c73c15c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
