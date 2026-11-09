@@ -1,6 +1,6 @@
 # phpastgen: PHP
 
-`phpastgen` parses PHP source into AST JSON using a vendored copy of nikic/php-parser 5.8.0. It has two modes: batch mode, selected by `-i`, which walks a directory with a worker pool and writes one JSON file per PHP file plus run records; and a legacy passthrough, used when `-i` is absent, which forwards every argument to the vendored `php-parse` command unchanged.
+`phpastgen` parses PHP source into AST JSON using a vendored copy of nikic/php-parser 5.9.0. It has two modes: batch mode, selected by `-i`, which walks a directory with a worker pool and writes one JSON file per PHP file plus run records; and a legacy passthrough, used when `-i` is absent, which forwards every argument to the vendored `php-parse` command unchanged.
 
 ```text
 Usage: phpastgen [options] [-- <legacy php-parse args>]
@@ -29,7 +29,7 @@ The parser ships inside the package under `plugins/`, installed by Composer at b
 `--parser-info` reports the exact backend, which matters when comparing output across machines:
 
 ```text
-Parser backend: nikic/php-parser@5.8.0
+Parser backend: nikic/php-parser@5.9.0
 PHP version: 8.4.14
 Generator version: 2.1.0
 Supported target versions: 8.0, 8.1, 8.2, 8.3, 8.4, 8.5 (default)

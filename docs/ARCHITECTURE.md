@@ -14,7 +14,7 @@ flowchart LR
     end
     subgraph parsetools["atom-parsetools"]
         astgen["astgen\nBabel 8 + hermes +\ntypescript6 checker"]
-        phpastgen["phpastgen\nnikic/php-parser 5.8.0\n(vendored)"]
+        phpastgen["phpastgen\nnikic/php-parser 5.9.0\n(vendored)"]
         rbastgen["rbastgen\nruby_ast_gen 2.0.1\n(vendored bundle)"]
         scalasem["scalasem\nscalac -print-tasty"]
     end

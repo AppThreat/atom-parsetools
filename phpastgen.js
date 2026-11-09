@@ -161,7 +161,7 @@ export function resolvePhpParseBin() {
  * is not hard-coded (design §Milestone A task 1). Falls back to reading the package composer.json
  * and finally to "unknown" if neither is readable.
  *
- * @returns {string} the vendored parser version (e.g. "5.8.0") or "unknown"
+ * @returns {string} the vendored parser version (e.g. "5.9.0") or "unknown"
  */
 export function vendoredParserVersion() {
   for (const home of [PLUGINS_HOME, PARENT_NODE_PLUGINS_HOME]) {

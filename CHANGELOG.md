@@ -4,11 +4,27 @@ Every release lists what changed and, under "Breaking changes", what a consumer 
 (chen, atom, cdxgen, or a script of your own) has to change. Releases before 2.0.0 are described on
 the GitHub releases page.
 
-## 2.0.0 (unreleased)
+## 2.0.0
 
-Pre-releases of 2.0.0 (`2.0.0-rc.1` first) are published to npm under the `next` dist-tag
-(`npm install @appthreat/atom-parsetools@next`), with the `parsa` binaries attached to their GitHub
-releases.
+`2.0.0-rc.1` was published under the npm dist-tag `next` and install-tested on Debian (glibc),
+Alpine (musl, arm64 and amd64), macOS arm64 and Windows 11 on ARM64. 2.0.0 adds the changes below
+to it and is published under `latest`.
+
+Since 2.0.0-rc.1: `parsa` is built from microsoft/TypeScript main at `c19df28` (2026-11-09; rc.1
+used `622d4f7` of 2026-11-02), @babel/parser is 8.1.0, svelte 5.57.3, the vendored
+nikic/php-parser 5.9.0 (which parses PHP 8.6 partial function application) and the bundled parser
+gem 3.3.13.0. Each `@appthreat/parsa-<os>-<cpu>` package now carries the release's post-build SBOM,
+`sbom-parsa-postbuild.cdx.json`, beside the binary.
+
+The corpus round for 2.0.0 found the new TypeScript commit changes no output: on the 19 JavaScript
+and TypeScript inputs, the native type maps agree with 1.10.6's and with this release's TypeScript 6
+path exactly as rc.1's did (88.7 to 100 percent of the keys per input against TypeScript 6, one key
+in no difference class), and are byte-identical at 1 and 8 checkers. On the nine projects with
+callsites truth, atom finds the same calls with either engine: callsites recall is 0.928 with both,
+precision 0.758 with native type maps against 0.765 with TypeScript 6, and usages recall 0.639
+against 0.637 with precision 0.617 against 0.619. The native engine wrote the type maps of
+cdxgen's own repository in 20.9 s against 88.3 s, juice-shop's in 5.0 s against 21.3 s and
+outline's in 5.5 s against 21.4 s.
 
 The first release with native type maps: `parsa` ("parse for atom"), a Go binary that writes
 JavaScript and TypeScript type maps with TypeScript 7's checker (typescript-go). astgen calls it by
@@ -92,7 +108,7 @@ under the npm dist-tag `release-1.x`.
 - `parsa` binaries for Linux, macOS and Windows on x64 and arm64, attached to each GitHub release with
   a `.sha256` file, build provenance and a post-build CycloneDX SBOM, and published to `ghcr.io/appthreat/parsa` (see
   `docs/PACKAGING.md`), and as the npm packages `@appthreat/parsa-<os>-<cpu>`, published with
-  provenance through npm trusted publishing.
+  provenance through npm trusted publishing, each with the same SBOM.
 - `lib/typemap/diff.mjs` compares two type map trees after normalizing member order and quote
   style, and fails on any difference class not on its allow-list (`test-fixtures/typemap-allow.json`).
 

@@ -8,6 +8,6 @@ source "https://rubygems.org"
 # published bundle to the single Ruby version it was built with.
 group :frontend do
     gem "ruby_ast_gen", github: 'appthreat/ruby_ast_gen', ref: '4ac84327b3af4a8003bb9ece2566df6471cdd851'
-    gem "parser", "~> 3.3.12.0"
+    gem "parser", "~> 3.3.13.0"
     gem "ostruct", "~> 0.6.3"
 end
