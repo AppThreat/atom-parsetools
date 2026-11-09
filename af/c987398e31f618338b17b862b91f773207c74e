@@ -1,0 +1,74 @@
+CHANGELOG.md
+  s_8808d9e6ee938f::t_ea62e643547237 7,9-17,101
+parsa/scripts/npm-packages.test.js
+  s_8808d9e6ee938f::t_943941d56b6788 9,22,31-32,41-44
+docs/README.md
+  s_8808d9e6ee938f::t_fc8849d128b86c 10
+build.ps1
+  s_8808d9e6ee938f::t_fc8849d128b86c 6
+parsa/go.mod
+  s_8808d9e6ee938f::t_2ebd4d21efa732 8-9,13-15
+docs/PHPASTGEN.md
+  s_8808d9e6ee938f::t_fc8849d128b86c 3,32
+docs/ARCHITECTURE.md
+  s_8808d9e6ee938f::t_fc8849d128b86c 17
+phpastgen.js
+  s_8808d9e6ee938f::t_fc8849d128b86c 164
+docs/LESSON4.md
+  s_8808d9e6ee938f::t_fc8849d128b86c 21,52
+README.md
+  s_8808d9e6ee938f::t_5ed18c352a4645 3-5,7-54,58-60,62,64-67,69,84,87-101,103-113,139-141,145-149,170-176,184,190-195,199-207,214-224
+build.sh
+  s_8808d9e6ee938f::t_fc8849d128b86c 12
+package.json
+  s_8808d9e6ee938f::t_fc8849d128b86c 3,42,45
+parsa/scripts/npm-packages.mjs
+  s_8808d9e6ee938f::t_943941d56b6788 12-13,46-48,62,75-77,83-84,98
+docs/PACKAGING.md
+  s_8808d9e6ee938f::t_90ee81982ee379 74,78
+  s_8808d9e6ee938f::t_fc8849d128b86c 13
+package-lock.json
+  s_8808d9e6ee938f::t_2869588dd08042 3,9,13,16,35-37,44-46,53-55,58,68-70,73-74,274-276,279-283,287,289
+parsa/go.sum
+  s_8808d9e6ee938f::t_ee59bb47fb99a1 1-2,5-6,15-20
+parsa/internal/typemap/pin.txt
+  s_37bfda6c407908::t_25eba81a1958ae 1
+parsa/third_party/typescript.pin
+  s_37bfda6c407908::t_34754b1b622e96 1
+plugins/rubyastgen/Gemfile
+  s_8808d9e6ee938f::t_87c67bf2ee4eaa 11
+plugins/rubyastgen/Gemfile.lock
+  s_8808d9e6ee938f::t_94cd900b8b5f42 13,24
+parsa/shim/ast/shim.go
+  s_8808d9e6ee938f::t_b9c21233ab0e1f 91-92,96,195-196
+parsa/shim/checker/shim.go
+  s_8808d9e6ee938f::t_0b765fae2aa714 472
+parsa/shim/core/shim.go
+  s_8808d9e6ee938f::t_fc79f3d2fd9f33 109,184-185
+parsa/shim/go.sum
+  s_8808d9e6ee938f::t_9c83f90b927303 1-2,5-6,15-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "afc987398e31f618338b17b862b91f773207c74e",
+  "prompts": {},
+  "sessions": {
+    "s_37bfda6c407908": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "20163303-79d6-40c8-9d79-ea3a8d8b3758",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    },
+    "s_8808d9e6ee938f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5df8b5bb-b1b1-4554-b720-2a19c73c15c2",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Prabhu Subramanian <prabhu@appthreat.com>"
+    }
+  }
+}
