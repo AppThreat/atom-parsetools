@@ -71,6 +71,8 @@ jobs:
         bun test-fixtures/astgen-vue-regression.js
     # A tag publishes the version package.json names, which must be the tag's. A prerelease
     # (2.0.0-rc.1) goes to the `next` dist-tag, so `npm install` keeps resolving to the last release.
+    # optionalDependencies on the parsa platform packages are written here, not kept in git, so
+    # that npm ci in this repository never asks for packages of an unpublished version.
     - name: publish
       env:
         REF_NAME: ${{ github.ref_name }}
@@ -80,10 +82,11 @@ jobs:
           echo "tag $REF_NAME does not match package.json version $version" >&2
           exit 1
         fi
-        case "$version" in
-          *-*) dist_tag=next ;;
-          *) dist_tag=latest ;;
-        esac
+        dist_tag=$(node parsa/scripts/npm-packages.mjs dist-tag "$version")
+        # the parsa platform packages come from parsa-release.yml on the GitHub release; the root
+        # package depends on them at the exact version, so it waits until all six are published
+        node parsa/scripts/npm-packages.mjs wait "$version" 2700
+        node parsa/scripts/npm-packages.mjs optional-deps package.json "$version"
         npm publish --provenance --access=public --tag "$dist_tag"
       if: startsWith(github.ref, 'refs/tags/')
 

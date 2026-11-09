@@ -56,18 +56,26 @@ The main CI job exercises the whole surface under both runtimes: `npm test` and 
 
 ## The parsa binaries
 
-`parsa` is not part of the npm package. `.github/workflows/parsa-release.yml` cross-compiles it on one Linux machine with `parsa/scripts/build-release.sh`, which needs no cgo yet: Linux, macOS and Windows on x64 and arm64, six files of about 19 MB, each with a `.sha256` file. The Linux binaries are static, so the same file runs on glibc and musl. The build is reproducible (`-trimpath`, no build id, no VCS stamp): building the same commit twice gives the same bytes. The job then runs the Linux arm64, Windows x64 and macOS x64 (Intel) binaries on their own runners, and for a release every binary, Apple silicon and Windows arm64 included.
+`parsa` is not in the atom-parsetools tarball itself; it ships in npm platform packages, described below. `.github/workflows/parsa-release.yml` cross-compiles it on one Linux machine with `parsa/scripts/build-release.sh`, which needs no cgo yet: Linux, macOS and Windows on x64 and arm64, six files of about 19 MB, each with a `.sha256` file. The Linux binaries are static, so the same file runs on glibc and musl. The build is reproducible (`-trimpath`, no build id, no VCS stamp): building the same commit twice gives the same bytes. The job then runs the Linux arm64, Windows x64 and macOS x64 (Intel) binaries on their own runners, and for a release every binary, Apple silicon and Windows arm64 included.
 
 The same job writes a post-build SBOM, `sbom-parsa-postbuild.cdx.json`, of what the binaries link: cdxgen reads `parsa/go.mod`, `parsa/scripts/prune-go-sbom.js` (shared with cdxgen-plugins-bin) keeps the modules the binaries' build info names, and `parsa/scripts/annotate-sbom.js` records microsoft/TypeScript by its pinned commit, with the patches in `parsa/patches` as its pedigree. The Go release the binaries were built with is recorded in the SBOM's formulation (`formula:go-build`), not as a component. `cdx-validate` fails the build on a schema or reference error.
 
-Each push to main that touches `parsa/` publishes the binaries to `ghcr.io/appthreat/parsa` with oras, each with its `.sha256` file and the SBOM, tagged `<os>-<arch>-<commit>` and `<os>-<arch>-main`, so atom, chen and cdxgen-plugins-bin can test a build before it is released:
+Each push to main that touches `parsa/` publishes the binaries to `ghcr.io/appthreat/parsa` with oras, each with its `.sha256` file and the SBOM, tagged `<os>-<arch>-<commit>` and `<os>-<arch>-main`, so atom and chen can test a build before it is released, and a manual run of the workflow on main does the same:
 
 ```shell
 oras pull ghcr.io/appthreat/parsa:linux-amd64-main
 sha256sum -c parsa-linux-amd64.sha256
 ```
 
-A published GitHub release gets the binaries, their `.sha256` files and the SBOM as assets, with build provenance (`gh attestation verify parsa-linux-amd64 --repo AppThreat/atom-parsetools`), and on ghcr.io the tags `<os>-<arch>-<version>`. cdxgen-plugins-bin downloads the release assets, checks the hashes and bakes the binaries into its platform packages.
+A published GitHub release gets the binaries, their `.sha256` files and the SBOM as assets, with build provenance (`gh attestation verify parsa-linux-amd64 --repo AppThreat/atom-parsetools`), and on ghcr.io the tags `<os>-<arch>-<version>`.
+
+### The npm platform packages
+
+A release also publishes one npm package per binary: `@appthreat/parsa-linux-x64`, `-linux-arm64`, `-darwin-x64`, `-darwin-arm64`, `-win32-x64` and `-win32-arm64`. Each holds `bin/parsa` (`bin/parsa.exe` on Windows), its README and the license, and declares its `os` and `cpu` so that npm installs only the one for the host. The Linux packages declare no `libc`: the binaries are static and run on musl as well. `parsa/scripts/npm-packages.mjs` builds them from the release binaries, and the `npm-packages` job of `parsa-release.yml` publishes them with provenance through npm trusted publishing, under `next` for a prerelease and `latest` otherwise.
+
+`@appthreat/atom-parsetools` lists them as `optionalDependencies` at its own exact version. They are written into `package.json` by the tag publish step of `ci.yml`, after it has waited for all six to reach the registry, and are not kept in git, so `npm ci` in this repository never asks for packages of a version that is not published yet. astgen looks for the binary in the installed package after `ASTGEN_NATIVE_BIN` and `astgen.js`'s own directory (`packagedNativeBinary` in `lib/typemap/native.mjs`). `npm install --omit=optional`, or a host with no package (linux-arm, riscv64, ppc64), keeps astgen on TypeScript 6.
+
+The packages need a trusted publisher on npmjs before the first release that publishes them, and npm accepts one only for a package that already exists. `parsa/scripts/setup-npm-trusted-publishing.sh` does both for a maintainer of the `@appthreat` scope: it publishes a deprecated `0.0.0-placeholder.0` of any package that is missing and sets the trusted publisher (GitHub Actions, `AppThreat/atom-parsetools`, `parsa-release.yml`) with `npm trust`. Without `--apply` it only prints what it would do.
 
 ## Publishing this documentation site
 
