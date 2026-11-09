@@ -6,17 +6,23 @@ the GitHub releases page.
 
 ## 2.0.0 (unreleased)
 
+Pre-releases of 2.0.0 (`2.0.0-rc.1` first) are published to npm under the `next` dist-tag
+(`npm install @appthreat/atom-parsetools@next`), with the `parsa` binaries attached to their GitHub
+releases.
+
 The first release with native type maps: `parsa` ("parse for atom"), a Go binary that writes
 JavaScript and TypeScript type maps with TypeScript 7's checker (typescript-go). astgen calls it by
 default and falls back to TypeScript 6 in this process when the binary is missing or fails, so a
 plain `npm install` still works and always produces types. Babel still parses every file, the four
 commands keep their names, and Node stays a requirement.
 
-The npm package does not carry `parsa`, and there are no npm packages for it. The binaries are
-attached to each GitHub release (see `docs/PACKAGING.md`), and consumers that ship them, such as
-cdxgen with the platform packages of `@cdxgen/cdxgen-plugins-bin` and atom's container images,
-point astgen at the binary through `ASTGEN_NATIVE_BIN` or place it next to `astgen.js`. 1.x keeps getting
-fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x`.
+`parsa` ships as one npm package per platform, `@appthreat/parsa-<os>-<cpu>` (linux, darwin and
+win32 on x64 and arm64; the Linux packages serve glibc and musl), which this package lists as
+optional dependencies at its own exact version. npm installs the one that matches the host and
+astgen finds it on its own, so cdxgen, atom and chen need no setting; `npm install --omit=optional`
+or a host without a package keeps TypeScript 6. The binaries are also attached to each GitHub
+release (see `docs/PACKAGING.md`). 1.x keeps getting fixes on the `release/1.x` branch, published
+under the npm dist-tag `release-1.x`.
 
 ### Breaking changes
 
@@ -51,7 +57,7 @@ fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x
   times out or its output cannot be moved into place, astgen types with TypeScript 6 instead: under
   the default with one quiet line on stderr, after an explicit `ASTGEN_TYPES=native` with one
   warning. `ASTGEN_NATIVE_BIN` names the binary (otherwise astgen looks next to `astgen.js`, then
-  on `PATH`), and `ASTGEN_NATIVE_MEMORY_MB` caps its heap for the whole run (default 6,144 MB).
+  in the installed `@appthreat/parsa-<os>-<cpu>` package, then on `PATH`), and `ASTGEN_NATIVE_MEMORY_MB` caps its heap for the whole run (default 6,144 MB).
 - `.typespans` (native runs only): the type of each node keyed by `"start:end"`, so a consumer can
   look a node up by its own extent instead of its start offset. See `docs/OUTPUT_FORMATS.md`.
 - `astgen_manifest.jsonl`: one record per run with types on, whichever engine ran. It says what was
@@ -85,7 +91,8 @@ fixes on the `release/1.x` branch, published under the npm dist-tag `release-1.x
   used to fail the whole file's parse.
 - `parsa` binaries for Linux, macOS and Windows on x64 and arm64, attached to each GitHub release with
   a `.sha256` file, build provenance and a post-build CycloneDX SBOM, and published to `ghcr.io/appthreat/parsa` (see
-  `docs/PACKAGING.md`). The npm package does not include them.
+  `docs/PACKAGING.md`), and as the npm packages `@appthreat/parsa-<os>-<cpu>`, published with
+  provenance through npm trusted publishing.
 - `lib/typemap/diff.mjs` compares two type map trees after normalizing member order and quote
   style, and fails on any difference class not on its allow-list (`test-fixtures/typemap-allow.json`).
 

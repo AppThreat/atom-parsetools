@@ -3,8 +3,9 @@ name: parsa binaries
 # the Linux binaries are static, for glibc and musl alike), then runs the binaries it can on their own
 # platforms, and writes a post-build SBOM of what the binaries link. A push to main, or a manual run on main, publishes the binaries to ghcr.io/appthreat/parsa with oras, tagged
 # <os>-<arch>-<commit> and <os>-<arch>-main, each with its .sha256 file and the SBOM. A published
-# release also gets them as assets, with a .sha256 file each, the SBOM and build provenance, and as <os>-<arch>-<version> on ghcr.io; cdxgen-plugins-bin
-# bakes those assets into its platform packages.
+# release also gets them as assets, with a .sha256 file each, the SBOM and build provenance, as
+# <os>-<arch>-<version> on ghcr.io, and as the npm packages @appthreat/parsa-<os>-<cpu>, which
+# @appthreat/atom-parsetools installs as optional dependencies (parsa/scripts/npm-packages.mjs).
 on:
   push:
     branches: [ "main" ]
@@ -179,3 +180,47 @@ jobs:
         GH_TOKEN: ${{ github.token }}
         TAG: ${{ github.event.release.tag_name }}
       run: gh release upload "$TAG" dist/parsa-* dist/sbom-parsa-postbuild.cdx.json --clobber --repo "$GITHUB_REPOSITORY"
+
+  # One npm package per target, published with provenance through npm trusted publishing: each
+  # package's npmjs settings name this repository and this workflow file
+  # (parsa/scripts/setup-npm-trusted-publishing.sh). ci.yml waits for all six before it publishes
+  # @appthreat/atom-parsetools with exact-version optional dependencies on them.
+  npm-packages:
+    needs: [build, run]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+      with:
+        node-version: '24.x'
+        registry-url: 'https://registry.npmjs.org'
+        package-manager-cache: false
+    - name: npm with trusted publishing
+      run: npm install -g npm@11.6.2
+    - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+      with:
+        name: parsa
+        path: dist
+    - name: publish the platform packages
+      env:
+        VERSION: ${{ needs.build.outputs.version }}
+      run: |
+        if [ "$VERSION" != "$(jq -r .version package.json)" ]; then
+          echo "release $VERSION does not match package.json $(jq -r .version package.json)" >&2
+          exit 1
+        fi
+        dist_tag=$(node parsa/scripts/npm-packages.mjs dist-tag "$VERSION")
+        for dir in $(node parsa/scripts/npm-packages.mjs stage dist npm-out "$VERSION"); do
+          name=$(jq -r .name "$dir/package.json")
+          if [ "$(npm view "$name@$VERSION" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "$name@$VERSION is already published"
+            continue
+          fi
+          (cd "$dir" && npm publish --provenance --access public --tag "$dist_tag")
+        done

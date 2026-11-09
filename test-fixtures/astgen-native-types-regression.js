@@ -106,7 +106,7 @@ test("requestedEngine: native by default, ts6 or native by environment, unknown 
   assert.match(warned[0], /tsgo/);
 });
 
-test("findNativeBinary: ASTGEN_NATIVE_BIN, then next to astgen.js, then PATH", () => {
+test("findNativeBinary: ASTGEN_NATIVE_BIN, then next to astgen.js, then the platform package, then PATH", () => {
   const a = mkdtempSync(join(root, "bin-a-"));
   const b = mkdtempSync(join(root, "bin-b-"));
   const c = mkdtempSync(join(root, "bin-c-"));
@@ -122,10 +122,19 @@ test("findNativeBinary: ASTGEN_NATIVE_BIN, then next to astgen.js, then PATH", (
   const env = { PATH: [b].join(delimiter) };
   assert.equal(findNativeBinary({ env: { ...env, ASTGEN_NATIVE_BIN: explicit }, astgenDir: a }).path, explicit, "the variable wins");
   assert.equal(findNativeBinary({ env, astgenDir: a }).path, beside, "next to astgen.js before PATH");
-  assert.equal(findNativeBinary({ env, astgenDir: join(root, "empty") }).path, onPath, "then PATH");
-  const none = findNativeBinary({ env: { PATH: "" }, astgenDir: join(root, "empty") });
+  const noPackage = () => undefined;
+  const packaged = join(c, "from-package");
+  writeFileSync(packaged, "x");
+  assert.equal(findNativeBinary({ env, astgenDir: a, packaged: () => packaged }).path, beside, "next to astgen.js before the package");
+  assert.equal(
+    findNativeBinary({ env, astgenDir: join(root, "empty"), packaged: () => packaged }).path,
+    packaged,
+    "the platform package npm installed before PATH"
+  );
+  assert.equal(findNativeBinary({ env, astgenDir: join(root, "empty"), packaged: noPackage }).path, onPath, "then PATH");
+  const none = findNativeBinary({ env: { PATH: "" }, astgenDir: join(root, "empty"), packaged: noPackage });
   assert.ok(none.error && !none.path);
-  const bad = findNativeBinary({ env: { ASTGEN_NATIVE_BIN: join(c, "missing"), PATH: b }, astgenDir: a });
+  const bad = findNativeBinary({ env: { ASTGEN_NATIVE_BIN: join(c, "missing"), PATH: b }, astgenDir: a, packaged: () => packaged });
   assert.ok(bad.error, "an explicit variable that is not a file is an error, not a reason to look elsewhere");
 });
 
