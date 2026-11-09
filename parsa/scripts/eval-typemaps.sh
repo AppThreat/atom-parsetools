@@ -19,8 +19,8 @@ repo=$(cd "$here/.." && pwd)
 wd="$here/scripts/wd.sh"
 
 usage() {
-  cat >&2 <<EOF
-usage: $0 <corpus-id|path> --secs N --mb N [options]
+  cat >&2 <<'EOF'
+usage: eval-typemaps.sh <corpus-id|path> --secs N --mb N [options]
 
   --secs N          wall time cap for every run (required)
   --mb N            memory cap in MB for every run (required)
@@ -70,7 +70,7 @@ if [ -d "$input" ]; then
 else
   id=$input
   if [ -z "$corpus_json" ]; then
-    echo "corpus id $id needs --corpus-json (or $ASTGEN_EVAL_CORPUS_JSON) naming the corpus description with its path; a source directory also works directly" >&2
+    echo "corpus id $id needs --corpus-json (or \$ASTGEN_EVAL_CORPUS_JSON) naming the corpus description with its path; a source directory also works directly" >&2
     exit 2
   fi
   proj=$(python3 - "$corpus_json" "$id" <<'PY'
@@ -118,12 +118,12 @@ if [ -n "$scorer" ] && [ ! -d "$truth" ]; then
   echo "the truth directory $truth does not exist; pass --truth" >&2; exit 2
 fi
 if [ -n "$scorer" ] && [ -z "$atom" ]; then
-  echo "slice scoring needs an atom that takes --frontend-args; pass --atom (or set $EVAL_ATOM)" >&2
+  echo "slice scoring needs an atom that takes --frontend-args; pass --atom (or set \$EVAL_ATOM)" >&2
   exit 2
 fi
 
 tmp=
-cleanup() { [ -n "$out" ] || rm -rf "$tmp"; }
+cleanup() { [ -z "$tmp" ] || rm -rf "$tmp"; }
 trap cleanup EXIT INT TERM
 if [ -n "$out" ]; then
   mkdir -p "$out"
@@ -131,6 +131,8 @@ else
   tmp=$(mktemp -d "${TMPDIR:-/tmp}/eval-typemaps.XXXXXX")
   out=$tmp
 fi
+# absolute, because astgen runs from the project directory
+out=$(cd "$out" && pwd)
 
 # Half the memory cap, as a Go soft limit for the binary astgen starts: astgen passes it to parsa
 # as --memory-mb and as GOMEMLIMIT unless the caller set one. The binary itself is named for astgen
@@ -141,8 +143,9 @@ export ASTGEN_NATIVE_BIN="$parsa_bin"
 run_astgen() { # run_astgen <mode> <outdir>
   mode=$1; dir=$2
   rm -rf "$dir"; mkdir -p "$dir"
-  echo "== astgen ($mode): $( "$wd" -t "$secs" -m "$mb" -- env ASTGEN_TYPES="$mode" \
-      ASTGEN_NATIVE_BIN="$parsa_bin" node "$repo/astgen.js" -t ts -i "$proj" -o "$dir" 2>&1 | tail -n 1 )"
+  # from the project directory with the default input, as chen's AstGenRunner starts it
+  echo "== astgen ($mode): $( cd "$proj" && "$wd" -t "$secs" -m "$mb" -- env ASTGEN_TYPES="$mode" \
+      ASTGEN_NATIVE_BIN="$parsa_bin" node "$repo/astgen.js" -t ts -o "$dir" 2>&1 | tail -n 1 )"
 }
 
 echo "== input: $id ($proj)"

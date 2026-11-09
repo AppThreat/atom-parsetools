@@ -25,7 +25,7 @@ The single most useful thing to know locally: `ci/verify-packed-tarball.sh` is t
 
 `npm run eval:typemaps -- <corpus-id|path> --secs N --mb N` is the one command for the two score
 tables of a JavaScript or TypeScript input (#44). It runs astgen under the watchdog
-(`parsa/scripts/wd.sh`) once in ts6 and once in native mode, prints the type map agreement table
+(`parsa/scripts/wd.sh`) from the project directory, as chen starts it, once in ts6 and once in native mode, prints the type map agreement table
 between them (`lib/typemap/diff.mjs`), and, when a callsites scorer is given, builds the usages and
 callsites slices with atom in both modes (`--frontend-args astgen-types=ts6|native`) and prints
 both score tables. It refuses to run without caps: `--secs` and `--mb` are required, and every
